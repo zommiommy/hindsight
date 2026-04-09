@@ -10,10 +10,7 @@ import json
 import logging
 from abc import ABC, abstractmethod
 from collections.abc import Awaitable, Callable
-from typing import TYPE_CHECKING, Any
-
-if TYPE_CHECKING:
-    import asyncpg
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -138,7 +135,7 @@ class BrokerTaskBackend(TaskBackend):
 
     def __init__(
         self,
-        pool_getter: Callable[[], "asyncpg.Pool"],
+        pool_getter: Callable[[], Any],
         schema: str | None = None,
         schema_getter: Callable[[], str | None] | None = None,
     ):
@@ -192,21 +189,24 @@ class BrokerTaskBackend(TaskBackend):
         schema = self._schema_getter() if self._schema_getter else self._schema
         table = fq_table("async_operations", schema)
 
+        from .db_utils import acquire_with_retry
+
         if operation_id:
             # Callers now include task_payload in the same INSERT that creates the
             # async_operations row (see MemoryEngine._submit_async_operation). The
             # WHERE clause guards against overwriting that payload — the UPDATE is a
             # no-op when the row is already claimable, and only fills in a NULL payload
             # for any legacy caller that still creates the row first.
-            await pool.execute(
-                f"""
-                UPDATE {table}
-                SET task_payload = $1::jsonb, updated_at = now()
-                WHERE operation_id = $2 AND task_payload IS NULL
-                """,
-                payload_json,
-                operation_id,
-            )
+            async with acquire_with_retry(pool) as conn:
+                await conn.execute(
+                    f"""
+                    UPDATE {table}
+                    SET task_payload = $1::jsonb, updated_at = now()
+                    WHERE operation_id = $2 AND task_payload IS NULL
+                    """,
+                    payload_json,
+                    operation_id,
+                )
             logger.debug(f"submit_task UPDATE for operation {operation_id} (no-op if payload already set)")
         else:
             # Insert new operation (for tasks without pre-created records)
@@ -214,16 +214,17 @@ class BrokerTaskBackend(TaskBackend):
             import uuid
 
             new_id = uuid.uuid4()
-            await pool.execute(
-                f"""
-                INSERT INTO {table} (operation_id, bank_id, operation_type, status, task_payload)
-                VALUES ($1, $2, $3, 'pending', $4::jsonb)
-                """,
-                new_id,
-                bank_id,
-                task_type,
-                payload_json,
-            )
+            async with acquire_with_retry(pool) as conn:
+                await conn.execute(
+                    f"""
+                    INSERT INTO {table} (operation_id, bank_id, operation_type, status, task_payload)
+                    VALUES ($1, $2, $3, 'pending', $4::jsonb)
+                    """,
+                    new_id,
+                    bank_id,
+                    task_type,
+                    payload_json,
+                )
             logger.debug(f"Created new operation {new_id} for task type {task_type}")
 
     async def shutdown(self):
@@ -244,6 +245,8 @@ class BrokerTaskBackend(TaskBackend):
         """
         import asyncio
 
+        from .db_utils import acquire_with_retry
+
         pool = self._pool_getter()
         schema = self._schema_getter() if self._schema_getter else self._schema
         table = fq_table("async_operations", schema)
@@ -251,12 +254,13 @@ class BrokerTaskBackend(TaskBackend):
         start_time = asyncio.get_event_loop().time()
         while asyncio.get_event_loop().time() - start_time < timeout:
             # Check if there are any pending tasks with payloads
-            count = await pool.fetchval(
-                f"""
-                SELECT COUNT(*) FROM {table}
-                WHERE status = 'pending' AND task_payload IS NOT NULL
-                """
-            )
+            async with acquire_with_retry(pool) as conn:
+                count = await conn.fetchval(
+                    f"""
+                    SELECT COUNT(*) FROM {table}
+                    WHERE status = 'pending' AND task_payload IS NOT NULL
+                    """
+                )
 
             if count == 0:
                 return

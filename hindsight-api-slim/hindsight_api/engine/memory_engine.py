@@ -599,14 +599,14 @@ class MemoryEngine(MemoryEngineInterface):
         # If no custom backend provided, use BrokerTaskBackend which stores tasks in PostgreSQL
         # The pool_getter lambda will return the pool once it's initialized
         self._task_backend = task_backend or BrokerTaskBackend(
-            pool_getter=lambda: self._pool,
+            pool_getter=lambda: self._backend,
             schema_getter=get_current_schema,
         )
 
         # Audit logger for feature usage tracking
         config = get_config()
         self._audit_logger = AuditLogger(
-            pool_getter=lambda: self._pool,
+            pool_getter=lambda: self._backend,
             schema_getter=get_current_schema,
             enabled=config.audit_log_enabled,
             allowed_actions=config.audit_log_actions,
@@ -763,8 +763,8 @@ class MemoryEngine(MemoryEngineInterface):
         if file_metadata and len(contents) == 1:
             doc_id = contents[0].get("document_id")
             if doc_id:
-                pool = await self._get_pool()
-                async with acquire_with_retry(pool) as conn:
+                backend = await self._get_backend()
+                async with acquire_with_retry(backend) as conn:
                     await conn.execute(
                         f"""
                         UPDATE {fq_table("documents")}
@@ -911,8 +911,8 @@ class MemoryEngine(MemoryEngineInterface):
         }
         payload_json = json.dumps(full_retain_payload, default=_json_default)
 
-        pool = await self._get_pool()
-        async with acquire_with_retry(pool) as conn:
+        backend = await self._get_backend()
+        async with acquire_with_retry(backend) as conn:
             async with conn.transaction():
                 await conn.execute(
                     f"""
@@ -1113,8 +1113,8 @@ class MemoryEngine(MemoryEngineInterface):
         # Check if operation was cancelled (only for tasks with operation_id)
         if operation_id:
             try:
-                pool = await self._get_pool()
-                async with acquire_with_retry(pool) as conn:
+                backend = await self._get_backend()
+                async with acquire_with_retry(backend) as conn:
                     result = await conn.fetchrow(
                         f"SELECT operation_id FROM {fq_table('async_operations')} WHERE operation_id = $1",
                         uuid.UUID(operation_id),
@@ -1315,7 +1315,7 @@ class MemoryEngine(MemoryEngineInterface):
     ) -> None:
         """Persist last HTTP attempt info into async_operations.result_metadata."""
         try:
-            pool = await self._get_pool()
+            backend = await self._get_backend()
             meta = json.dumps(
                 {
                     "last_status_code": status_code,
@@ -1323,7 +1323,7 @@ class MemoryEngine(MemoryEngineInterface):
                     "last_attempt_at": datetime.now(UTC).isoformat(),
                 }
             )
-            async with acquire_with_retry(pool) as conn:
+            async with acquire_with_retry(backend) as conn:
                 await conn.execute(
                     f"UPDATE {fq_table('async_operations')} SET result_metadata = $2::jsonb, updated_at = now() WHERE operation_id = $1",
                     uuid.UUID(operation_id),
@@ -1402,8 +1402,8 @@ class MemoryEngine(MemoryEngineInterface):
     async def _delete_operation_record(self, operation_id: str):
         """Helper to delete an operation record from the database."""
         try:
-            pool = await self._get_pool()
-            async with acquire_with_retry(pool) as conn:
+            backend = await self._get_backend()
+            async with acquire_with_retry(backend) as conn:
                 await conn.execute(
                     f"DELETE FROM {fq_table('async_operations')} WHERE operation_id = $1", uuid.UUID(operation_id)
                 )
@@ -1417,8 +1417,8 @@ class MemoryEngine(MemoryEngineInterface):
         committed batch) to detect bank deletion early and abort cleanly.
         """
         try:
-            pool = await self._get_pool()
-            async with acquire_with_retry(pool) as conn:
+            backend = await self._get_backend()
+            async with acquire_with_retry(backend) as conn:
                 row = await conn.fetchrow(
                     f"SELECT operation_id FROM {fq_table('async_operations')} WHERE operation_id = $1",
                     uuid.UUID(operation_id),
@@ -1435,12 +1435,12 @@ class MemoryEngine(MemoryEngineInterface):
         Uses a single transaction to avoid race conditions when multiple children fail simultaneously.
         """
         try:
-            pool = await self._get_pool()
+            backend = await self._get_backend()
             # Truncate error message to avoid extremely long strings
             full_error = f"{error_message}\n\nTraceback:\n{error_traceback}"
             truncated_error = full_error[:5000] if len(full_error) > 5000 else full_error
 
-            async with acquire_with_retry(pool) as conn:
+            async with acquire_with_retry(backend) as conn:
                 async with conn.transaction():
                     # Mark this operation as failed
                     row = await conn.fetchrow(
@@ -1471,8 +1471,8 @@ class MemoryEngine(MemoryEngineInterface):
         Uses a single transaction to avoid race conditions when multiple children complete simultaneously.
         """
         try:
-            pool = await self._get_pool()
-            async with acquire_with_retry(pool) as conn:
+            backend = await self._get_backend()
+            async with acquire_with_retry(backend) as conn:
                 async with conn.transaction():
                     # Mark this operation as completed
                     row = await conn.fetchrow(
@@ -1515,8 +1515,8 @@ class MemoryEngine(MemoryEngineInterface):
         from ..webhooks.models import ConsolidationEventData, WebhookEvent, WebhookEventType
 
         try:
-            pool = await self._get_pool()
-            async with acquire_with_retry(pool) as conn:
+            backend = await self._get_backend()
+            async with acquire_with_retry(backend) as conn:
                 async with conn.transaction():
                     row = await conn.fetchrow(
                         f"""
@@ -1855,14 +1855,14 @@ class MemoryEngine(MemoryEngineInterface):
 
         # Initialize entity resolver with pool and configured lookup strategy
         self.entity_resolver = EntityResolver(
-            self._pool,
+            self._backend,
             entity_lookup=self._retain_entity_lookup,
         )
 
         # Initialize config resolver for hierarchical configuration
         from ..config_resolver import ConfigResolver
 
-        self._config_resolver = ConfigResolver(pool=self._pool, tenant_extension=self._tenant_extension)
+        self._config_resolver = ConfigResolver(pool=self._backend, tenant_extension=self._tenant_extension)
         logger.debug("Config resolver initialized for hierarchical configuration")
 
         # Initialize file storage
@@ -1871,7 +1871,7 @@ class MemoryEngine(MemoryEngineInterface):
         config = get_config()
         self._file_storage = create_file_storage(
             storage_type=config.file_storage_type,
-            pool_getter=lambda: self._pool,
+            pool_getter=lambda: self._backend,
             schema_getter=get_current_schema,
         )
         logger.debug(f"File storage initialized ({config.file_storage_type})")
@@ -1910,7 +1910,7 @@ class MemoryEngine(MemoryEngineInterface):
                 )
             ]
         self._webhook_manager = WebhookManager(
-            pool=self._pool,
+            pool=self._backend,
             global_webhooks=webhook_global,
             tenant_extension=self._tenant_extension,
         )
@@ -1935,19 +1935,21 @@ class MemoryEngine(MemoryEngineInterface):
             await self.initialize()
         return self._pool
 
+    async def _get_backend(self) -> DatabaseBackend:
+        """Get the database backend, auto-initializing if needed."""
+        if not self._initialized:
+            await self.initialize()
+        return self._backend
+
     async def _acquire_connection(self):
         """
-        Acquire a connection from the pool with retry logic.
+        Acquire a connection from the database backend.
 
-        Returns an async context manager that yields a connection.
-        Retries on transient connection errors with exponential backoff.
+        Yields a DatabaseConnection from the backend's connection pool.
         """
-        pool = await self._get_pool()
-
-        async def acquire():
-            return await pool.acquire()
-
-        return await _retry_with_backoff(acquire)
+        backend = await self._get_backend()
+        async with backend.acquire() as conn:
+            yield conn
 
     async def health_check(self) -> dict:
         """
@@ -1964,8 +1966,8 @@ class MemoryEngine(MemoryEngineInterface):
             return {"status": "unhealthy", "reason": "not_initialized"}
 
         try:
-            pool = await self._get_pool()
-            async with pool.acquire() as conn:
+            backend = await self._get_backend()
+            async with backend.acquire() as conn:
                 result = await conn.fetchval("SELECT 1")
                 if result == 1:
                     return {"status": "healthy", "database": "connected"}
@@ -2401,7 +2403,7 @@ class MemoryEngine(MemoryEngineInterface):
         # Use the new modular orchestrator
         from .retain import orchestrator
 
-        pool = await self._get_pool()
+        backend = await self._get_backend()
 
         # Resolve bank-specific config for this operation
         resolved_config = await self._config_resolver.resolve_full_config(bank_id, request_context)
@@ -2421,7 +2423,7 @@ class MemoryEngine(MemoryEngineInterface):
         # Create parent span for retain operation
         with create_operation_span("retain", bank_id):
             return await orchestrator.retain_batch(
-                pool=pool,
+                pool=self._backend,
                 embeddings_model=self.embeddings,
                 llm_config=self._retain_llm_config.with_config(resolved_config),
                 entity_resolver=self.entity_resolver,
@@ -2815,7 +2817,7 @@ class MemoryEngine(MemoryEngineInterface):
         if tracer:
             tracer.start()
 
-        pool = await self._get_pool()
+        backend = await self._get_backend()
         recall_start = time.time()
 
         # Buffer logs for clean output in concurrent scenarios.
@@ -2884,7 +2886,7 @@ class MemoryEngine(MemoryEngineInterface):
                     max_connections=effective_connection_budget,
                     operation_id=f"recall-{recall_id}",
                 ) as op:
-                    budgeted_pool = op.wrap_pool(pool)
+                    budgeted_pool = op.wrap_pool(self._backend)
                     parallel_start = time.time()
                     multi_result = await retrieve_all_fact_types_parallel(
                         budgeted_pool,
@@ -3221,7 +3223,7 @@ class MemoryEngine(MemoryEngineInterface):
                 # ordered by observation rank so per-observation results stay grouped correctly.
                 obs_chunk_ids: dict[str, list[str]] = {}
                 if observation_ids_ordered:
-                    async with acquire_with_retry(pool) as obs_conn:
+                    async with acquire_with_retry(backend) as obs_conn:
                         obs_source_rows = await obs_conn.fetch(
                             f"""
                             SELECT obs.id AS obs_id, mu.chunk_id
@@ -3256,7 +3258,7 @@ class MemoryEngine(MemoryEngineInterface):
                     # Fetch all candidate chunks in a single query. Token-budget accounting
                     # happens in Python after the fetch — one round-trip is always faster
                     # than multiple batched round-trips when the candidate set is large.
-                    async with acquire_with_retry(pool) as conn:
+                    async with acquire_with_retry(backend) as conn:
                         chunks_rows = await conn.fetch(
                             f"""
                             SELECT chunk_id, chunk_text, chunk_index
@@ -3370,7 +3372,7 @@ class MemoryEngine(MemoryEngineInterface):
             if include_source_facts:
                 observation_ids = [uuid.UUID(sr.id) for sr in top_scored if sr.retrieval.fact_type == "observation"]
                 if observation_ids:
-                    async with acquire_with_retry(pool) as sf_conn:
+                    async with acquire_with_retry(backend) as sf_conn:
                         # Fetch source_memory_ids for all observation results
                         obs_rows = await sf_conn.fetch(
                             f"""
@@ -3462,7 +3464,7 @@ class MemoryEngine(MemoryEngineInterface):
             if include_entities and top_scored:
                 unit_ids = [uuid.UUID(sr.id) for sr in top_scored]
                 if unit_ids:
-                    async with acquire_with_retry(pool) as entity_conn:
+                    async with acquire_with_retry(backend) as entity_conn:
                         entity_rows = await entity_conn.fetch(
                             f"""
                             SELECT ue.unit_id, e.id as entity_id, e.canonical_name
@@ -3632,8 +3634,8 @@ class MemoryEngine(MemoryEngineInterface):
 
             ctx = BankReadContext(bank_id=bank_id, operation="get_document", request_context=request_context)
             await self._validate_operation(self._operation_validator.validate_bank_read(ctx))
-        pool = await self._get_pool()
-        async with acquire_with_retry(pool) as conn:
+        backend = await self._get_backend()
+        async with acquire_with_retry(backend) as conn:
             doc = await conn.fetchrow(
                 f"""
                 SELECT d.id, d.bank_id, d.original_text, d.content_hash,
@@ -3697,9 +3699,9 @@ class MemoryEngine(MemoryEngineInterface):
 
             ctx = BankWriteContext(bank_id=bank_id, operation="delete_document", request_context=request_context)
             await self._validate_operation(self._operation_validator.validate_bank_write(ctx))
-        pool = await self._get_pool()
+        backend = await self._get_backend()
         invalidated_obs = 0
-        async with acquire_with_retry(pool) as conn:
+        async with acquire_with_retry(backend) as conn:
             async with conn.transaction():
                 # Get memory unit IDs before deletion (for observation cleanup)
                 unit_rows = await conn.fetch(
@@ -3771,9 +3773,9 @@ class MemoryEngine(MemoryEngineInterface):
 
             ctx = BankWriteContext(bank_id=bank_id, operation="update_document", request_context=request_context)
             await self._validate_operation(self._operation_validator.validate_bank_write(ctx))
-        pool = await self._get_pool()
+        backend = await self._get_backend()
         invalidated_obs = 0
-        async with acquire_with_retry(pool) as conn:
+        async with acquire_with_retry(backend) as conn:
             async with conn.transaction():
                 set_parts: list[str] = ["updated_at = now()"]
                 params: list[Any] = []
@@ -3908,10 +3910,10 @@ class MemoryEngine(MemoryEngineInterface):
         except ValueError:
             raise ValueError(f"Invalid unit_id: '{unit_id}' is not a valid UUID")
         await self._authenticate_tenant(request_context)
-        pool = await self._get_pool()
+        backend = await self._get_backend()
         invalidated_obs = 0
         bank_id_for_consolidation: str | None = None
-        async with acquire_with_retry(pool) as conn:
+        async with acquire_with_retry(backend) as conn:
             async with conn.transaction():
                 # Get bank_id and fact_type before deletion
                 row = await conn.fetchrow(
@@ -3989,11 +3991,11 @@ class MemoryEngine(MemoryEngineInterface):
 
             ctx = BankWriteContext(bank_id=bank_id, operation="delete_bank", request_context=request_context)
             await self._validate_operation(self._operation_validator.validate_bank_write(ctx))
-        pool = await self._get_pool()
+        backend = await self._get_backend()
         invalidated_obs = 0
         result: dict[str, int] = {}
         bank_internal_id: str | None = None
-        async with acquire_with_retry(pool) as conn:
+        async with acquire_with_retry(backend) as conn:
             # Ensure connection is not in read-only mode (can happen with connection poolers)
             await conn.execute("SET SESSION CHARACTERISTICS AS TRANSACTION READ WRITE")
             async with conn.transaction():
@@ -4107,8 +4109,8 @@ class MemoryEngine(MemoryEngineInterface):
 
             ctx = BankWriteContext(bank_id=bank_id, operation="clear_observations", request_context=request_context)
             await self._validate_operation(self._operation_validator.validate_bank_write(ctx))
-        pool = await self._get_pool()
-        async with acquire_with_retry(pool) as conn:
+        backend = await self._get_backend()
+        async with acquire_with_retry(backend) as conn:
             async with conn.transaction():
                 # Count observations before deletion
                 count = await conn.fetchval(
@@ -4165,8 +4167,8 @@ class MemoryEngine(MemoryEngineInterface):
                 bank_id=bank_id, operation="retry_failed_consolidation", request_context=request_context
             )
             await self._validate_operation(self._operation_validator.validate_bank_write(ctx))
-        pool = await self._get_pool()
-        async with acquire_with_retry(pool) as conn:
+        backend = await self._get_backend()
+        async with acquire_with_retry(backend) as conn:
             count = await conn.fetchval(
                 f"""
                 SELECT COUNT(*) FROM {fq_table("memory_units")}
@@ -4219,10 +4221,10 @@ class MemoryEngine(MemoryEngineInterface):
                 bank_id=bank_id, operation="clear_observations_for_memory", request_context=request_context
             )
             await self._validate_operation(self._operation_validator.validate_bank_write(ctx))
-        pool = await self._get_pool()
+        backend = await self._get_backend()
         deleted_count = 0
 
-        async with acquire_with_retry(pool) as conn:
+        async with acquire_with_retry(backend) as conn:
             async with conn.transaction():
                 import uuid as uuid_module
 
@@ -4320,8 +4322,8 @@ class MemoryEngine(MemoryEngineInterface):
 
             ctx = BankReadContext(bank_id=bank_id, operation="get_graph_data", request_context=request_context)
             await self._validate_operation(self._operation_validator.validate_bank_read(ctx))
-        pool = await self._get_pool()
-        async with acquire_with_retry(pool) as conn:
+        backend = await self._get_backend()
+        async with acquire_with_retry(backend) as conn:
             # Get memory units, optionally filtered by bank_id and fact_type
             query_conditions = []
             query_params = []
@@ -4706,8 +4708,8 @@ class MemoryEngine(MemoryEngineInterface):
 
             ctx = BankReadContext(bank_id=bank_id, operation="list_memory_units", request_context=request_context)
             await self._validate_operation(self._operation_validator.validate_bank_read(ctx))
-        pool = await self._get_pool()
-        async with acquire_with_retry(pool) as conn:
+        backend = await self._get_backend()
+        async with acquire_with_retry(backend) as conn:
             # Build query conditions
             query_conditions = []
             query_params = []
@@ -4862,8 +4864,8 @@ class MemoryEngine(MemoryEngineInterface):
 
             ctx = BankReadContext(bank_id=bank_id, operation="get_memory_unit", request_context=request_context)
             await self._validate_operation(self._operation_validator.validate_bank_read(ctx))
-        pool = await self._get_pool()
-        async with acquire_with_retry(pool) as conn:
+        backend = await self._get_backend()
+        async with acquire_with_retry(backend) as conn:
             # Get the memory unit (include source_memory_ids for mental models)
             row = await conn.fetchrow(
                 f"""
@@ -4972,8 +4974,8 @@ class MemoryEngine(MemoryEngineInterface):
 
             ctx = BankReadContext(bank_id=bank_id, operation="get_observation_history", request_context=request_context)
             await self._validate_operation(self._operation_validator.validate_bank_read(ctx))
-        pool = await self._get_pool()
-        async with acquire_with_retry(pool) as conn:
+        backend = await self._get_backend()
+        async with acquire_with_retry(backend) as conn:
             row = await conn.fetchrow(
                 f"""
                 SELECT fact_type, history, source_memory_ids
@@ -5075,8 +5077,8 @@ class MemoryEngine(MemoryEngineInterface):
 
             ctx = BankReadContext(bank_id=bank_id, operation="list_documents", request_context=request_context)
             await self._validate_operation(self._operation_validator.validate_bank_read(ctx))
-        pool = await self._get_pool()
-        async with acquire_with_retry(pool) as conn:
+        backend = await self._get_backend()
+        async with acquire_with_retry(backend) as conn:
             # Build query conditions
             query_conditions = []
             query_params = []
@@ -5219,8 +5221,8 @@ class MemoryEngine(MemoryEngineInterface):
             Dict with chunk details including chunk_text, or None if not found
         """
         await self._authenticate_tenant(request_context)
-        pool = await self._get_pool()
-        async with acquire_with_retry(pool) as conn:
+        backend = await self._get_backend()
+        async with acquire_with_retry(backend) as conn:
             chunk = await conn.fetchrow(
                 f"""
                 SELECT
@@ -5279,8 +5281,8 @@ class MemoryEngine(MemoryEngineInterface):
 
             ctx = BankReadContext(bank_id=bank_id, operation="get_bank_profile", request_context=request_context)
             await self._validate_operation(self._operation_validator.validate_bank_read(ctx))
-        pool = await self._get_pool()
-        profile, created = await bank_utils.get_or_create_bank_profile(pool, bank_id)
+        backend = await self._get_backend()
+        profile, created = await bank_utils.get_or_create_bank_profile(self._backend, bank_id)
 
         # Apply HINDSIGHT_API_DEFAULT_BANK_TEMPLATE to freshly-created banks. Done
         # before reading the resolved config below so the template's overrides
@@ -5390,8 +5392,8 @@ class MemoryEngine(MemoryEngineInterface):
                 bank_id=bank_id, operation="update_bank_disposition", request_context=request_context
             )
             await self._validate_operation(self._operation_validator.validate_bank_write(ctx))
-        pool = await self._get_pool()
-        await bank_utils.update_bank_disposition(pool, bank_id, disposition)
+        backend = await self._get_backend()
+        await bank_utils.update_bank_disposition(self._backend, bank_id, disposition)
 
     async def set_bank_mission(
         self,
@@ -5417,8 +5419,8 @@ class MemoryEngine(MemoryEngineInterface):
 
             ctx = BankWriteContext(bank_id=bank_id, operation="set_bank_mission", request_context=request_context)
             await self._validate_operation(self._operation_validator.validate_bank_write(ctx))
-        pool = await self._get_pool()
-        await bank_utils.set_bank_mission(pool, bank_id, mission)
+        backend = await self._get_backend()
+        await bank_utils.set_bank_mission(self._backend, bank_id, mission)
         return {"bank_id": bank_id, "mission": mission}
 
     async def merge_bank_mission(
@@ -5446,8 +5448,8 @@ class MemoryEngine(MemoryEngineInterface):
 
             ctx = BankWriteContext(bank_id=bank_id, operation="merge_bank_mission", request_context=request_context)
             await self._validate_operation(self._operation_validator.validate_bank_write(ctx))
-        pool = await self._get_pool()
-        return await bank_utils.merge_bank_mission(pool, self._reflect_llm_config, bank_id, new_info)
+        backend = await self._get_backend()
+        return await bank_utils.merge_bank_mission(self._backend, self._reflect_llm_config, bank_id, new_info)
 
     async def list_banks(
         self,
@@ -5464,8 +5466,8 @@ class MemoryEngine(MemoryEngineInterface):
             List of dicts with bank_id, name, disposition, mission, created_at, updated_at
         """
         await self._authenticate_tenant(request_context)
-        pool = await self._get_pool()
-        banks = await bank_utils.list_banks(pool)
+        backend = await self._get_backend()
+        banks = await bank_utils.list_banks(self._backend)
         if self._operation_validator:
             from hindsight_api.extensions import BankListContext
 
@@ -5584,7 +5586,7 @@ class MemoryEngine(MemoryEngineInterface):
 
         # Run agentic loop - acquire connections only when needed for DB operations
         # (not held during LLM calls which can be slow)
-        pool = await self._get_pool()
+        backend = await self._get_backend()
 
         # Get bank stats for freshness info
         bank_stats = await self.get_bank_stats(bank_id, request_context=request_context)
@@ -5598,7 +5600,7 @@ class MemoryEngine(MemoryEngineInterface):
             # Generate embedding for the query
             embeddings = await embedding_utils.generate_embeddings_batch(self.embeddings, [q])
             query_embedding = embeddings[0]
-            async with pool.acquire() as conn:
+            async with backend.acquire() as conn:
                 return await tool_search_mental_models(
                     self,
                     conn,
@@ -5678,7 +5680,7 @@ class MemoryEngine(MemoryEngineInterface):
             )
 
         async def expand_fn(memory_ids: list[str], depth: str) -> dict[str, Any]:
-            async with pool.acquire() as conn:
+            async with backend.acquire() as conn:
                 return await tool_expand(conn, bank_id, memory_ids, depth)
 
         # Load directives from the dedicated directives table
@@ -5700,7 +5702,7 @@ class MemoryEngine(MemoryEngineInterface):
         # Check if the bank has any mental models (skip check if all mental models are excluded)
         has_mental_models = False
         if not exclude_mental_models:
-            async with pool.acquire() as conn:
+            async with backend.acquire() as conn:
                 mental_model_count = await conn.fetchval(
                     f"SELECT COUNT(*) FROM {fq_table('mental_models')} WHERE bank_id = $1",
                     bank_id,
@@ -5972,8 +5974,8 @@ class MemoryEngine(MemoryEngineInterface):
 
             ctx = BankReadContext(bank_id=bank_id, operation="list_entities", request_context=request_context)
             await self._validate_operation(self._operation_validator.validate_bank_read(ctx))
-        pool = await self._get_pool()
-        async with acquire_with_retry(pool) as conn:
+        backend = await self._get_backend()
+        async with acquire_with_retry(backend) as conn:
             # Get total count
             total_row = await conn.fetchrow(
                 f"""
@@ -6166,8 +6168,8 @@ class MemoryEngine(MemoryEngineInterface):
 
             ctx = BankReadContext(bank_id=bank_id, operation="list_tags", request_context=request_context)
             await self._validate_operation(self._operation_validator.validate_bank_read(ctx))
-        pool = await self._get_pool()
-        async with acquire_with_retry(pool) as conn:
+        backend = await self._get_backend()
+        async with acquire_with_retry(backend) as conn:
             # Build pattern filter if provided (convert * to % for ILIKE)
             pattern_clause = ""
             params: list[Any] = [bank_id]
@@ -6266,9 +6268,9 @@ class MemoryEngine(MemoryEngineInterface):
 
             ctx = BankReadContext(bank_id=bank_id, operation="get_bank_stats", request_context=request_context)
             await self._validate_operation(self._operation_validator.validate_bank_read(ctx))
-        pool = await self._get_pool()
+        backend = await self._get_backend()
 
-        async with acquire_with_retry(pool) as conn:
+        async with acquire_with_retry(backend) as conn:
             # Get node counts by fact_type
             node_stats = await conn.fetch(
                 f"""
@@ -6447,9 +6449,9 @@ class MemoryEngine(MemoryEngineInterface):
 
             ctx = BankReadContext(bank_id=bank_id, operation="get_entity", request_context=request_context)
             await self._validate_operation(self._operation_validator.validate_bank_read(ctx))
-        pool = await self._get_pool()
+        backend = await self._get_backend()
 
-        async with acquire_with_retry(pool) as conn:
+        async with acquire_with_retry(backend) as conn:
             entity_row = await conn.fetchrow(
                 f"""
                 SELECT id, canonical_name, mention_count, first_seen, last_seen, metadata
@@ -6512,7 +6514,7 @@ class MemoryEngine(MemoryEngineInterface):
         self,
         bank_id: str,
         since_timestamp: str | None,
-        pool=None,
+        backend=None,
     ) -> int:
         """
         Count memories created after a given timestamp.
@@ -6520,15 +6522,15 @@ class MemoryEngine(MemoryEngineInterface):
         Args:
             bank_id: Bank identifier
             since_timestamp: ISO timestamp string. If None, returns total count.
-            pool: Optional database pool (uses default if not provided)
+            backend: Optional database backend (uses default if not provided)
 
         Returns:
             Number of memories created since the timestamp
         """
-        if pool is None:
-            pool = await self._get_pool()
+        if backend is None:
+            backend = await self._get_backend()
 
-        async with acquire_with_retry(pool) as conn:
+        async with acquire_with_retry(backend) as conn:
             if since_timestamp:
                 # Parse the timestamp
                 from datetime import datetime
@@ -6601,9 +6603,9 @@ class MemoryEngine(MemoryEngineInterface):
             List of observation dicts
         """
         await self._authenticate_tenant(request_context)
-        pool = await self._get_pool()
+        backend = await self._get_backend()
 
-        async with acquire_with_retry(pool) as conn:
+        async with acquire_with_retry(backend) as conn:
             # Build tag filter
             tag_filter = ""
             params: list[Any] = [bank_id, limit, offset]
@@ -6649,9 +6651,9 @@ class MemoryEngine(MemoryEngineInterface):
             Observation dict or None if not found
         """
         await self._authenticate_tenant(request_context)
-        pool = await self._get_pool()
+        backend = await self._get_backend()
 
-        async with acquire_with_retry(pool) as conn:
+        async with acquire_with_retry(backend) as conn:
             row = await conn.fetchrow(
                 f"""
                 SELECT id, bank_id, text, proof_count, history, tags, source_memory_ids, created_at, updated_at
@@ -6755,9 +6757,9 @@ class MemoryEngine(MemoryEngineInterface):
 
             ctx = BankReadContext(bank_id=bank_id, operation="list_mental_models", request_context=request_context)
             await self._validate_operation(self._operation_validator.validate_bank_read(ctx))
-        pool = await self._get_pool()
+        backend = await self._get_backend()
 
-        async with acquire_with_retry(pool) as conn:
+        async with acquire_with_retry(backend) as conn:
             # Build tag filter
             tag_filter = ""
             params: list[Any] = [bank_id, limit, offset]
@@ -6817,9 +6819,9 @@ class MemoryEngine(MemoryEngineInterface):
             )
             await self._validate_operation(self._operation_validator.validate_mental_model_get(ctx))
 
-        pool = await self._get_pool()
+        backend = await self._get_backend()
 
-        async with acquire_with_retry(pool) as conn:
+        async with acquire_with_retry(backend) as conn:
             row = await conn.fetchrow(
                 f"""
                 SELECT id, bank_id, name, source_query, content, tags,
@@ -6871,8 +6873,8 @@ class MemoryEngine(MemoryEngineInterface):
 
         """
         await self._authenticate_tenant(request_context)
-        pool = await self._get_pool()
-        async with acquire_with_retry(pool) as conn:
+        backend = await self._get_backend()
+        async with acquire_with_retry(backend) as conn:
             row = await conn.fetchrow(
                 f"""
                 SELECT history
@@ -6926,7 +6928,7 @@ class MemoryEngine(MemoryEngineInterface):
 
             ctx = BankWriteContext(bank_id=bank_id, operation="create_mental_model", request_context=request_context)
             await self._validate_operation(self._operation_validator.validate_bank_write(ctx))
-        pool = await self._get_pool()
+        backend = await self._get_backend()
 
         # Generate embedding for the content
         embedding_text = f"{name} {content}"
@@ -6934,7 +6936,7 @@ class MemoryEngine(MemoryEngineInterface):
         # Convert embedding to string for asyncpg vector type
         embedding_str = str(embedding[0]) if embedding else None
 
-        async with acquire_with_retry(pool) as conn:
+        async with acquire_with_retry(backend) as conn:
             if mental_model_id:
                 row = await conn.fetchrow(
                     f"""
@@ -7319,9 +7321,9 @@ class MemoryEngine(MemoryEngineInterface):
 
             ctx = BankWriteContext(bank_id=bank_id, operation="update_mental_model", request_context=request_context)
             await self._validate_operation(self._operation_validator.validate_bank_write(ctx))
-        pool = await self._get_pool()
+        backend = await self._get_backend()
 
-        async with acquire_with_retry(pool) as conn:
+        async with acquire_with_retry(backend) as conn:
             # If content is changing, fetch current content + reflect_response to record history
             previous_content: str | None = None
             previous_reflect_response: dict[str, Any] | None = None
@@ -7450,9 +7452,9 @@ class MemoryEngine(MemoryEngineInterface):
 
             ctx = BankWriteContext(bank_id=bank_id, operation="delete_mental_model", request_context=request_context)
             await self._validate_operation(self._operation_validator.validate_bank_write(ctx))
-        pool = await self._get_pool()
+        backend = await self._get_backend()
 
-        async with acquire_with_retry(pool) as conn:
+        async with acquire_with_retry(backend) as conn:
             result = await conn.execute(
                 f"DELETE FROM {fq_table('mental_models')} WHERE bank_id = $1 AND id = $2",
                 bank_id,
@@ -7619,9 +7621,9 @@ class MemoryEngine(MemoryEngineInterface):
 
             ctx = BankReadContext(bank_id=bank_id, operation="list_directives", request_context=request_context)
             await self._validate_operation(self._operation_validator.validate_bank_read(ctx))
-        pool = await self._get_pool()
+        backend = await self._get_backend()
 
-        async with acquire_with_retry(pool) as conn:
+        async with acquire_with_retry(backend) as conn:
             # Build filters
             filters = ["bank_id = $1"]
             params: list[Any] = [bank_id]
@@ -7688,9 +7690,9 @@ class MemoryEngine(MemoryEngineInterface):
 
             ctx = BankReadContext(bank_id=bank_id, operation="get_directive", request_context=request_context)
             await self._validate_operation(self._operation_validator.validate_bank_read(ctx))
-        pool = await self._get_pool()
+        backend = await self._get_backend()
 
-        async with acquire_with_retry(pool) as conn:
+        async with acquire_with_retry(backend) as conn:
             row = await conn.fetchrow(
                 f"""
                 SELECT id, bank_id, name, content, priority, is_active, tags, created_at, updated_at
@@ -7734,9 +7736,9 @@ class MemoryEngine(MemoryEngineInterface):
 
             ctx = BankWriteContext(bank_id=bank_id, operation="create_directive", request_context=request_context)
             await self._validate_operation(self._operation_validator.validate_bank_write(ctx))
-        pool = await self._get_pool()
+        backend = await self._get_backend()
 
-        async with acquire_with_retry(pool) as conn:
+        async with acquire_with_retry(backend) as conn:
             row = await conn.fetchrow(
                 f"""
                 INSERT INTO {fq_table("directives")}
@@ -7788,7 +7790,7 @@ class MemoryEngine(MemoryEngineInterface):
 
             ctx = BankWriteContext(bank_id=bank_id, operation="update_directive", request_context=request_context)
             await self._validate_operation(self._operation_validator.validate_bank_write(ctx))
-        pool = await self._get_pool()
+        backend = await self._get_backend()
 
         # Build update query dynamically
         updates = ["updated_at = now()"]
@@ -7822,7 +7824,7 @@ class MemoryEngine(MemoryEngineInterface):
 
         params.extend([bank_id, directive_id])
 
-        async with acquire_with_retry(pool) as conn:
+        async with acquire_with_retry(backend) as conn:
             row = await conn.fetchrow(
                 f"""
                 UPDATE {fq_table("directives")}
@@ -7858,9 +7860,9 @@ class MemoryEngine(MemoryEngineInterface):
 
             ctx = BankWriteContext(bank_id=bank_id, operation="delete_directive", request_context=request_context)
             await self._validate_operation(self._operation_validator.validate_bank_write(ctx))
-        pool = await self._get_pool()
+        backend = await self._get_backend()
 
-        async with acquire_with_retry(pool) as conn:
+        async with acquire_with_retry(backend) as conn:
             result = await conn.execute(
                 f"DELETE FROM {fq_table('directives')} WHERE bank_id = $1 AND id = $2",
                 bank_id,
@@ -7912,9 +7914,9 @@ class MemoryEngine(MemoryEngineInterface):
 
             ctx = BankReadContext(bank_id=bank_id, operation="list_operations", request_context=request_context)
             await self._validate_operation(self._operation_validator.validate_bank_read(ctx))
-        pool = await self._get_pool()
+        backend = await self._get_backend()
 
-        async with acquire_with_retry(pool) as conn:
+        async with acquire_with_retry(backend) as conn:
             # Build WHERE clause
             where_conditions = ["bank_id = $1"]
             params: list[Any] = [bank_id]
@@ -8003,11 +8005,11 @@ class MemoryEngine(MemoryEngineInterface):
 
             ctx = BankReadContext(bank_id=bank_id, operation="get_operation_status", request_context=request_context)
             await self._validate_operation(self._operation_validator.validate_bank_read(ctx))
-        pool = await self._get_pool()
+        backend = await self._get_backend()
 
         op_uuid = uuid.UUID(operation_id)
 
-        async with acquire_with_retry(pool) as conn:
+        async with acquire_with_retry(backend) as conn:
             payload_column = ", task_payload" if include_payload else ""
             row = await conn.fetchrow(
                 f"""
@@ -8141,11 +8143,11 @@ class MemoryEngine(MemoryEngineInterface):
 
             ctx = BankWriteContext(bank_id=bank_id, operation="cancel_operation", request_context=request_context)
             await self._validate_operation(self._operation_validator.validate_bank_write(ctx))
-        pool = await self._get_pool()
+        backend = await self._get_backend()
 
         op_uuid = uuid.UUID(operation_id)
 
-        async with acquire_with_retry(pool) as conn:
+        async with acquire_with_retry(backend) as conn:
             # Check if operation exists and belongs to this memory bank
             result = await conn.fetchrow(
                 f"SELECT bank_id FROM {fq_table('async_operations')} WHERE operation_id = $1 AND bank_id = $2",
@@ -8182,11 +8184,11 @@ class MemoryEngine(MemoryEngineInterface):
 
             ctx = BankWriteContext(bank_id=bank_id, operation="retry_operation", request_context=request_context)
             await self._validate_operation(self._operation_validator.validate_bank_write(ctx))
-        pool = await self._get_pool()
+        backend = await self._get_backend()
 
         op_uuid = uuid.UUID(operation_id)
 
-        async with acquire_with_retry(pool) as conn:
+        async with acquire_with_retry(backend) as conn:
             row = await conn.fetchrow(
                 f"SELECT bank_id, status FROM {fq_table('async_operations')} WHERE operation_id = $1 AND bank_id = $2",
                 op_uuid,
@@ -8239,9 +8241,9 @@ class MemoryEngine(MemoryEngineInterface):
 
             ctx = BankWriteContext(bank_id=bank_id, operation="update_bank", request_context=request_context)
             await self._validate_operation(self._operation_validator.validate_bank_write(ctx))
-        pool = await self._get_pool()
+        backend = await self._get_backend()
 
-        async with acquire_with_retry(pool) as conn:
+        async with acquire_with_retry(backend) as conn:
             if name is not None:
                 await conn.execute(
                     f"""
@@ -8292,14 +8294,14 @@ class MemoryEngine(MemoryEngineInterface):
         """
         import json
 
-        pool = await self._get_pool()
+        backend = await self._get_backend()
 
         # Check for existing pending task if deduplication is enabled
         # Note: We only check 'pending', not 'processing', because a processing task
         # uses a watermark from when it started - new memories added after that point
         # would need another consolidation run to be processed.
         if dedupe_by_bank:
-            async with acquire_with_retry(pool) as conn:
+            async with acquire_with_retry(backend) as conn:
                 existing = await conn.fetchrow(
                     f"""
                     SELECT operation_id FROM {fq_table("async_operations")}
@@ -8333,7 +8335,7 @@ class MemoryEngine(MemoryEngineInterface):
         }
 
         # Insert operation record with task_payload in a single atomic statement
-        async with acquire_with_retry(pool) as conn:
+        async with acquire_with_retry(backend) as conn:
             await conn.execute(
                 f"""
                 INSERT INTO {fq_table("async_operations")} (operation_id, bank_id, operation_type, result_metadata, status, task_payload)
@@ -8438,11 +8440,11 @@ class MemoryEngine(MemoryEngineInterface):
         import uuid
 
         parent_operation_id = uuid.uuid4()
-        pool = await self._get_pool()
+        backend = await self._get_backend()
 
         # Ensure the bank row exists before inserting async_operations (which now has a FK).
         # Banks are created lazily on first retain, but the FK requires the row to exist first.
-        _, created = await bank_utils.get_or_create_bank_profile(pool, bank_id)
+        _, created = await bank_utils.get_or_create_bank_profile(self._backend, bank_id)
         if created:
             await self._apply_default_bank_template(bank_id, request_context)
 
@@ -8453,7 +8455,7 @@ class MemoryEngine(MemoryEngineInterface):
             num_sub_batches=len(sub_batches),
         )
 
-        async with acquire_with_retry(pool) as conn:
+        async with acquire_with_retry(backend) as conn:
             await conn.execute(
                 f"""
                 INSERT INTO {fq_table("async_operations")} (operation_id, bank_id, operation_type, result_metadata, status)

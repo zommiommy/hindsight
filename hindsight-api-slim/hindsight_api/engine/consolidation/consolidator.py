@@ -27,6 +27,7 @@ from typing import TYPE_CHECKING, Any
 from pydantic import BaseModel, field_validator
 
 from ...config import get_config
+from ..db_utils import acquire_with_retry
 from ..llm_wrapper import sanitize_llm_output
 from ..memory_engine import fq_table
 from ..retain import embedding_utils
@@ -255,10 +256,10 @@ async def run_consolidation_job(
         logger.debug(f"Consolidation disabled for bank {bank_id}")
         return {"status": "disabled", "bank_id": bank_id}
 
-    pool = memory_engine._pool
+    pool = memory_engine._backend
 
     # Get bank profile
-    async with pool.acquire() as conn:
+    async with acquire_with_retry(pool) as conn:
         t0 = time.time()
         bank_row = await conn.fetchrow(
             f"""
@@ -322,7 +323,7 @@ async def run_consolidation_job(
         )
 
         # Fetch next batch of unconsolidated memories
-        async with pool.acquire() as conn:
+        async with acquire_with_retry(pool) as conn:
             t0 = time.time()
             memories = await conn.fetch(
                 f"""
@@ -386,7 +387,7 @@ async def run_consolidation_job(
             while pending:
                 sub_batch = pending.pop(0)
 
-                async with pool.acquire() as conn:
+                async with acquire_with_retry(pool) as conn:
                     # Determine observation_scopes for this sub-batch. All memories share
                     # the same tags (enforced by tag_groups), so we only check the first memory.
                     # asyncpg returns JSONB columns as raw JSON strings, so parse if needed.
@@ -494,7 +495,7 @@ async def run_consolidation_job(
                     all_results.extend(sub_results)
 
             # Commit consolidated_at / consolidation_failed_at in a single DB round-trip
-            async with pool.acquire() as conn:
+            async with acquire_with_retry(pool) as conn:
                 if succeeded_ids:
                     await conn.executemany(
                         f"UPDATE {fq_table('memory_units')} SET consolidated_at = NOW() WHERE id = $1",
@@ -653,13 +654,13 @@ async def _trigger_mental_model_refreshes(
     Returns:
         Number of mental models scheduled for refresh
     """
-    pool = memory_engine._pool
+    pool = memory_engine._backend
 
     # Find mental models with refresh_after_consolidation=true that are actually stale.
     # The tag filter on the SELECT enforces the security boundary (never look outside the
     # relevant tag scope); compute_mental_model_is_stale then verifies that new memories
     # in the MM's scope really were ingested since its last refresh.
-    async with pool.acquire() as conn:
+    async with acquire_with_retry(pool) as conn:
         if consolidated_tags:
             candidates = await conn.fetch(
                 f"""
