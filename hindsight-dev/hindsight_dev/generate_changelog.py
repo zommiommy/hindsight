@@ -237,6 +237,46 @@ def get_detailed_diff(
     return result.stdout.strip()
 
 
+def get_commit_authors(commits: list[Commit]) -> list[str]:
+    """Fetch unique GitHub logins for the given commits via the GitHub API.
+
+    Bots (e.g. dependabot, github-actions) are excluded.
+    """
+    logins: dict[str, None] = {}
+    for commit in commits:
+        result = subprocess.run(
+            ["gh", "api", f"/repos/{GITHUB_REPO}/commits/{commit.hash}", "--jq", ".author.login // \"\""],
+            cwd=REPO_PATH,
+            capture_output=True,
+            text=True,
+        )
+        login = result.stdout.strip()
+        if not login or login.endswith("[bot]"):
+            continue
+        logins.setdefault(login, None)
+    return list(logins.keys())
+
+
+def build_contributors_section(logins: list[str]) -> str:
+    """Render a contributors grid of GitHub avatars linking to profiles."""
+    if not logins:
+        return ""
+    lines = ["**Contributors**", ""]
+    lines.append(
+        '<div style={{display: "flex", flexWrap: "wrap", gap: "8px", marginTop: "8px", marginBottom: "8px"}}>'
+    )
+    for login in logins:
+        avatar = f"https://github.com/{login}.png?size=96"
+        lines.append(
+            f'<a href="https://github.com/{login}" title="@{login}" target="_blank" rel="noopener noreferrer">'
+            f'<img src="{avatar}" alt="@{login}" width="48" height="48" '
+            f'style={{{{borderRadius: "50%"}}}} /></a>'
+        )
+    lines.append("</div>")
+    lines.append("")
+    return "\n".join(lines)
+
+
 def analyze_commits_with_llm(
     client: OpenAI,
     model: str,
@@ -286,6 +326,7 @@ def build_changelog_markdown(
     tag: str,
     entries: list[ChangelogEntry],
     integration: str | None = None,
+    contributors: list[str] | None = None,
 ) -> str:
     """Build markdown changelog from structured entries."""
     tag_url = (
@@ -328,6 +369,9 @@ def build_changelog_markdown(
     if not has_entries:
         lines.append("*This release contains internal maintenance and infrastructure changes only.*")
         lines.append("")
+
+    if contributors:
+        lines.append(build_contributors_section(contributors))
 
     return "\n".join(lines)
 
@@ -416,7 +460,11 @@ def generate_changelog_entry(
     for entry in entries:
         console.print(f"  [{entry.category}] {entry.summary} ({entry.commit_id})")
 
-    new_entry = build_changelog_markdown(display_version, tag, entries)
+    console.print("[blue]Fetching GitHub authors for contributors grid...[/blue]")
+    contributors = get_commit_authors(commits)
+    console.print(f"[blue]Found {len(contributors)} contributors: {', '.join('@' + c for c in contributors)}[/blue]")
+
+    new_entry = build_changelog_markdown(display_version, tag, entries, contributors=contributors)
 
     default_header = """---
 hide_table_of_contents: true
@@ -499,8 +547,17 @@ def generate_integration_changelog_entry(
         for entry in entries:
             console.print(f"  [{entry.category}] {entry.summary} ({entry.commit_id})")
 
+    if commits:
+        console.print("[blue]Fetching GitHub authors for contributors grid...[/blue]")
+        contributors = get_commit_authors(commits)
+        console.print(f"[blue]Found {len(contributors)} contributors: {', '.join('@' + c for c in contributors)}[/blue]")
+    else:
+        contributors = []
+
     integration_tag = f"integrations/{integration}/v{display_version}"
-    new_entry = build_changelog_markdown(display_version, integration_tag, entries, integration=integration)
+    new_entry = build_changelog_markdown(
+        display_version, integration_tag, entries, integration=integration, contributors=contributors
+    )
 
     package_name = _get_package_name(integration)
     default_header = f"""---

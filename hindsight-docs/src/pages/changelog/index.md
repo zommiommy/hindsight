@@ -28,6 +28,15 @@ import PageHero from '@site/src/components/PageHero';
 - TypeScript SDK now re-exports BankTemplate types from the package root for simpler imports. ([`581bbf3f`](https://github.com/vectorize-io/hindsight/commit/581bbf3f))
 - Bank template configuration validation was aligned with configurable fields to prevent invalid/ignored settings. ([`099f4c92`](https://github.com/vectorize-io/hindsight/commit/099f4c92))
 
+**Contributors**
+
+<div style={{display: "flex", flexWrap: "wrap", gap: "8px", marginTop: "8px", marginBottom: "8px"}}>
+<a href="https://github.com/nicoloboschi" title="@nicoloboschi" target="_blank" rel="noopener noreferrer"><img src="https://github.com/nicoloboschi.png?size=96" alt="@nicoloboschi" width="48" height="48" style={{borderRadius: "50%"}} /></a>
+<a href="https://github.com/r266-tech" title="@r266-tech" target="_blank" rel="noopener noreferrer"><img src="https://github.com/r266-tech.png?size=96" alt="@r266-tech" width="48" height="48" style={{borderRadius: "50%"}} /></a>
+<a href="https://github.com/mrkhachaturov" title="@mrkhachaturov" target="_blank" rel="noopener noreferrer"><img src="https://github.com/mrkhachaturov.png?size=96" alt="@mrkhachaturov" width="48" height="48" style={{borderRadius: "50%"}} /></a>
+<a href="https://github.com/benfrank241" title="@benfrank241" target="_blank" rel="noopener noreferrer"><img src="https://github.com/benfrank241.png?size=96" alt="@benfrank241" width="48" height="48" style={{borderRadius: "50%"}} /></a>
+</div>
+
 ## [0.5.1](https://github.com/vectorize-io/hindsight/releases/tag/v0.5.1)
 
 **Breaking Changes**
