@@ -268,8 +268,17 @@ def cmd_install(source_dir: Path, model: str | None = None) -> None:
     info(f"skills:     {', '.join(skills) if skills else '(none listed)'}")
     if agent_dir.exists():
         ok(f"workspace exists, syncing on top of it")
-    shutil.copytree(source_dir, agent_dir, dirs_exist_ok=True)
-    ok(f"copied boilerplate → {agent_dir}")
+    # Skip `skills/` from the boilerplate. Task-specific skills are the
+    # agent's job to build on demand via the `hindsight-skill-builder`
+    # meta-skill — not the installer's. The boilerplate should ship the
+    # agent's identity + mission + bank config, nothing else.
+    shutil.copytree(
+        source_dir,
+        agent_dir,
+        dirs_exist_ok=True,
+        ignore=shutil.ignore_patterns("skills", "skills/*"),
+    )
+    ok(f"copied boilerplate → {agent_dir} (excluding skills/)")
 
     setup_yaml_path = agent_dir / "setup" / "hindsight-config.yaml"
 
@@ -282,11 +291,15 @@ def cmd_install(source_dir: Path, model: str | None = None) -> None:
             "plugin config has no hindsightApiUrl. Configure the plugin first "
             "(`hindsight-openclaw-setup`)."
         )
-    token = resolve_secret(plugin_cfg.get("hindsightApiToken"))
-    if not token:
+    # Token is optional — local/self-hosted instances often don't require one.
+    # Only error if the config explicitly names a SecretRef that we failed to
+    # resolve (typo'd env var, missing file), not when the field is absent.
+    raw_token = plugin_cfg.get("hindsightApiToken")
+    token = resolve_secret(raw_token) or ""
+    if raw_token and not token:
         die(
-            "could not resolve hindsightApiToken from plugin config "
-            "(check SecretRef env var is exported)"
+            "hindsightApiToken is a SecretRef but could not be resolved "
+            "(check the env var / file / exec source is available)"
         )
     hindsight_health(api_url, token)
 
@@ -374,20 +387,19 @@ def cmd_install(source_dir: Path, model: str | None = None) -> None:
         save_openclaw_config(cfg)
         ok(f"plugin config updated: {', '.join(plugin_overrides)}")
 
-    # 4. Copy the hindsight-skill-builder meta-skill into the agent's
-    # workspace if listed and missing.
-    if "hindsight-skill-builder" in skills:
-        target = agent_dir / "skills" / "hindsight-skill-builder"
-        if target.exists():
-            ok("hindsight-skill-builder already present in workspace")
-        elif META_SKILL_DIR.exists():
-            shutil.copytree(META_SKILL_DIR, target)
-            ok(f"copied hindsight-skill-builder → {target}")
-        else:
-            warn(
-                f"hindsight-skill-builder listed but source skill not found "
-                f"at {META_SKILL_DIR} — skipping"
-            )
+    # 4. Copy the hindsight-skill-builder meta-skill. This is the ONE skill
+    # the installer ships — every agent needs it, because every other skill
+    # gets built by the agent itself (via this meta-skill) on demand as the
+    # user asks for new capabilities.
+    target = agent_dir / "skills" / "hindsight-skill-builder"
+    if target.exists():
+        # Always refresh it so the agent picks up meta-skill improvements.
+        shutil.rmtree(target)
+    if META_SKILL_DIR.exists():
+        shutil.copytree(META_SKILL_DIR, target)
+        ok(f"installed hindsight-skill-builder → {target}")
+    else:
+        die(f"hindsight-skill-builder source not found at {META_SKILL_DIR}")
 
     # 5. Provision Hindsight bank + mental models from setup/hindsight-config.yaml.
     if not setup_yaml_path.exists():
@@ -410,8 +422,16 @@ def cmd_install(source_dir: Path, model: str | None = None) -> None:
                 updates[key] = val.strip()
         patch_bank_config(api_url, token, bank_id, updates)
 
-        for mm in spec.get("mental_models") or []:
-            upsert_mental_model(api_url, token, bank_id, mm)
+        # Mental models are the agent's job to create on demand, via the
+        # hindsight-skill-builder meta-skill. Each skill the agent builds
+        # gets its own MM. The installer intentionally stays out of MM
+        # provisioning — if a boilerplate ships with `mental_models:` in
+        # its setup/hindsight-config.yaml they're ignored on purpose.
+        if spec.get("mental_models"):
+            info(
+                "setup/hindsight-config.yaml lists mental_models — ignoring "
+                "(the agent builds MMs on demand via hindsight-skill-builder)"
+            )
 
     # 6. Restart the gateway so plugin-config changes + the new agent
     # registration take effect, then bootstrap a starter session — without
