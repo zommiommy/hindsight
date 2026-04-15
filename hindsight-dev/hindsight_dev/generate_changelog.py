@@ -245,7 +245,7 @@ def get_commit_authors(commits: list[Commit]) -> dict[str, str]:
     authors: dict[str, str] = {}
     for commit in commits:
         result = subprocess.run(
-            ["gh", "api", f"/repos/{GITHUB_REPO}/commits/{commit.hash}", "--jq", ".author.login // \"\""],
+            ["gh", "api", f"/repos/{GITHUB_REPO}/commits/{commit.hash}", "--jq", '.author.login // ""'],
             cwd=REPO_PATH,
             capture_output=True,
             text=True,
