@@ -261,8 +261,8 @@ def _render_entry_meta(commit_id: str, commit_url: str, login: str | None) -> st
     """Render the muted metadata span (avatar + handle + commit hash) for an entry."""
     parts: list[str] = [
         '<span style={{fontSize: "0.85em", color: "var(--ifm-color-emphasis-700)", '
-        'marginLeft: "0.5em", display: "inline-flex", alignItems: "center", gap: "6px", '
-        'verticalAlign: "middle"}}>'
+        'display: "inline-flex", alignItems: "center", gap: "6px", flexShrink: 0, '
+        'whiteSpace: "nowrap"}}>'
     ]
     if login:
         avatar = f"https://github.com/{login}.png?size=40"
@@ -371,7 +371,12 @@ def build_changelog_markdown(
                 commit_url = f"{GITHUB_COMMIT_URL}/{entry.commit_id}"
                 login = _lookup_author(entry.commit_id, authors) if authors else None
                 meta = _render_entry_meta(entry.commit_id, commit_url, login)
-                lines.append(f"- {entry.summary} {meta}")
+                row = (
+                    '<span style={{display: "flex", justifyContent: "space-between", '
+                    'alignItems: "baseline", gap: "1.5rem", flexWrap: "wrap"}}>'
+                    f"<span>{entry.summary}</span>{meta}</span>"
+                )
+                lines.append(f"- {row}")
             lines.append("")
 
     if not has_entries:
