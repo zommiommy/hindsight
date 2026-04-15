@@ -30,11 +30,7 @@ export class HindsightClient {
     return h;
   }
 
-  private async request<T>(
-    method: string,
-    path: string,
-    body?: unknown,
-  ): Promise<T> {
+  private async request<T>(method: string, path: string, body?: unknown): Promise<T> {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 15_000);
 
@@ -57,11 +53,7 @@ export class HindsightClient {
     }
   }
 
-  async recall(
-    bankId: string,
-    query: string,
-    budget = "mid",
-  ): Promise<RecallResponse> {
+  async recall(bankId: string, query: string, budget = "mid"): Promise<RecallResponse> {
     const path = `/v1/default/banks/${encodeURIComponent(bankId)}/memories/recall`;
     return this.request<RecallResponse>("POST", path, {
       query,
@@ -74,7 +66,7 @@ export class HindsightClient {
     bankId: string,
     content: string,
     documentId?: string,
-    metadata?: Record<string, string>,
+    metadata?: Record<string, string>
   ): Promise<void> {
     const path = `/v1/default/banks/${encodeURIComponent(bankId)}/memories`;
     const item: Record<string, unknown> = {

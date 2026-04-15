@@ -16,9 +16,7 @@ const builds = [
 ];
 
 if (watch) {
-  const contexts = await Promise.all(
-    builds.map((b) => esbuild.context({ ...sharedConfig, ...b })),
-  );
+  const contexts = await Promise.all(builds.map((b) => esbuild.context({ ...sharedConfig, ...b })));
   await Promise.all(contexts.map((ctx) => ctx.watch()));
   console.log("Watching for changes…");
 } else {

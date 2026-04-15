@@ -39,13 +39,15 @@ interface RunFinishedPayload {
   result?: string;
 }
 
-async function getConfig(ctx: { config: { get(): Promise<Record<string, unknown>> } }): Promise<PluginConfig> {
+async function getConfig(ctx: {
+  config: { get(): Promise<Record<string, unknown>> };
+}): Promise<PluginConfig> {
   return (await ctx.config.get()) as unknown as PluginConfig;
 }
 
 async function resolveApiKey(
   ctx: { secrets: { resolve(ref: string): Promise<string | null> } },
-  config: PluginConfig,
+  config: PluginConfig
 ): Promise<string | undefined> {
   if (!config.hindsightApiKeyRef) return undefined;
   const resolved = await ctx.secrets.resolve(config.hindsightApiKeyRef);
@@ -73,17 +75,13 @@ const plugin = definePlugin({
         const client = new HindsightClient(config.hindsightApiUrl, apiKey);
         const bankId = deriveBankId({ companyId, agentId }, config);
 
-        const response = await client.recall(
-          bankId,
-          query,
-          config.recallBudget ?? "mid",
-        );
+        const response = await client.recall(bankId, query, config.recallBudget ?? "mid");
 
         const memories = formatMemories(response.results);
         if (memories) {
           await ctx.state.set(
             { scopeKind: "run", scopeId: runId, stateKey: "recalled-memories" },
-            memories,
+            memories
           );
           ctx.logger.info("Recalled memories for run", {
             runId,
@@ -137,8 +135,7 @@ const plugin = definePlugin({
       "hindsight_recall",
       {
         displayName: "Recall from Memory",
-        description:
-          "Search Hindsight long-term memory for context relevant to a query.",
+        description: "Search Hindsight long-term memory for context relevant to a query.",
         parametersSchema: {
           type: "object",
           required: ["query"],
@@ -152,7 +149,7 @@ const plugin = definePlugin({
         const config = await getConfig(ctx);
         const bankId = deriveBankId(
           { companyId: runCtx.companyId, agentId: runCtx.agentId },
-          config,
+          config
         );
 
         // Return cached memories from run start if available
@@ -175,7 +172,7 @@ const plugin = definePlugin({
         } catch (err) {
           return { content: `Memory recall failed: ${String(err)}` };
         }
-      },
+      }
     );
 
     // ---------------------------------------------------------------------------
@@ -203,7 +200,7 @@ const plugin = definePlugin({
         const config = await getConfig(ctx);
         const bankId = deriveBankId(
           { companyId: runCtx.companyId, agentId: runCtx.agentId },
-          config,
+          config
         );
 
         try {
@@ -218,7 +215,7 @@ const plugin = definePlugin({
         } catch (err) {
           return { content: `Failed to save memory: ${String(err)}` };
         }
-      },
+      }
     );
 
     ctx.logger.info("Hindsight memory plugin ready");

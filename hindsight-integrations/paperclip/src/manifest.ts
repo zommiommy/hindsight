@@ -49,16 +49,14 @@ const manifest: PaperclipPluginManifestV1 = {
       recallBudget: {
         type: "string",
         title: "Recall Budget",
-        description:
-          "'low' is fastest, 'mid' balances speed and depth, 'high' is most thorough.",
+        description: "'low' is fastest, 'mid' balances speed and depth, 'high' is most thorough.",
         enum: ["low", "mid", "high"],
         default: "mid",
       },
       autoRetain: {
         type: "boolean",
         title: "Auto-retain on Run Finished",
-        description:
-          "Automatically retain agent run output to Hindsight when a run completes.",
+        description: "Automatically retain agent run output to Hindsight when a run completes.",
         default: true,
       },
     },

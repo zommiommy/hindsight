@@ -19,7 +19,7 @@ import plugin from "../src/worker.js";
 function mockFetch(responses: Array<{ url: string | RegExp; body: unknown; status?: number }>) {
   return vi.fn(async (url: string) => {
     const match = responses.find((r) =>
-      typeof r.url === "string" ? url.includes(r.url) : r.url.test(url),
+      typeof r.url === "string" ? url.includes(r.url) : r.url.test(url)
     );
     if (!match) {
       return new Response(JSON.stringify({ error: "unmatched url" }), { status: 404 });
@@ -59,28 +59,22 @@ describe("bank ID derivation", () => {
     expect(
       deriveBankId(
         { companyId: "co-1", agentId: "ag-1" },
-        { bankGranularity: ["company", "agent"] },
-      ),
+        { bankGranularity: ["company", "agent"] }
+      )
     ).toBe("paperclip::co-1::ag-1");
   });
 
   it("company only", async () => {
     const { deriveBankId } = await import("../src/bank.js");
     expect(
-      deriveBankId(
-        { companyId: "co-1", agentId: "ag-1" },
-        { bankGranularity: ["company"] },
-      ),
+      deriveBankId({ companyId: "co-1", agentId: "ag-1" }, { bankGranularity: ["company"] })
     ).toBe("paperclip::co-1");
   });
 
   it("agent only", async () => {
     const { deriveBankId } = await import("../src/bank.js");
     expect(
-      deriveBankId(
-        { companyId: "co-1", agentId: "ag-1" },
-        { bankGranularity: ["agent"] },
-      ),
+      deriveBankId({ companyId: "co-1", agentId: "ag-1" }, { bankGranularity: ["agent"] })
     ).toBe("paperclip::ag-1");
   });
 });
@@ -109,13 +103,16 @@ describe("agent.run.started", () => {
 
     await harness.emit(
       "agent.run.started",
-      { agentId: "ag-1", runId: "run-1", issueTitle: "Refactor auth module", issueDescription: "Migrate to JWT" },
-      { companyId: "co-1" },
+      {
+        agentId: "ag-1",
+        runId: "run-1",
+        issueTitle: "Refactor auth module",
+        issueDescription: "Migrate to JWT",
+      },
+      { companyId: "co-1" }
     );
 
-    const recallCall = fetchMock.mock.calls.find(([url]: [string]) =>
-      url.includes("recall"),
-    );
+    const recallCall = fetchMock.mock.calls.find(([url]: [string]) => url.includes("recall"));
     expect(recallCall).toBeDefined();
     expect(recallCall?.[0]).toContain("paperclip%3A%3Aco-1%3A%3Aag-1");
 
@@ -134,14 +131,17 @@ describe("agent.run.started", () => {
     await harness.emit(
       "agent.run.started",
       { agentId: "ag-1", runId: "run-2" },
-      { companyId: "co-1" },
+      { companyId: "co-1" }
     );
 
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("does not throw when Hindsight is unreachable", async () => {
-    vi.stubGlobal("fetch", vi.fn(async () => new Response("", { status: 503 })));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response("", { status: 503 }))
+    );
     const harness = buildHarness();
     await setupPlugin(harness);
 
@@ -149,8 +149,8 @@ describe("agent.run.started", () => {
       harness.emit(
         "agent.run.started",
         { agentId: "ag-1", runId: "run-3", issueTitle: "Fix bug" },
-        { companyId: "co-1" },
-      ),
+        { companyId: "co-1" }
+      )
     ).resolves.not.toThrow();
   });
 });
@@ -177,13 +177,15 @@ describe("agent.run.finished", () => {
 
     await harness.emit(
       "agent.run.finished",
-      { agentId: "ag-1", runId: "run-1", output: "Refactored auth. Migrated to JWT with 24h expiry." },
-      { companyId: "co-1" },
+      {
+        agentId: "ag-1",
+        runId: "run-1",
+        output: "Refactored auth. Migrated to JWT with 24h expiry.",
+      },
+      { companyId: "co-1" }
     );
 
-    const retainCall = fetchMock.mock.calls.find(([url]: [string]) =>
-      /memories$/.test(url),
-    );
+    const retainCall = fetchMock.mock.calls.find(([url]: [string]) => /memories$/.test(url));
     expect(retainCall).toBeDefined();
 
     const body = JSON.parse(retainCall?.[1]?.body as string) as {
@@ -200,7 +202,7 @@ describe("agent.run.finished", () => {
     await harness.emit(
       "agent.run.finished",
       { agentId: "ag-1", runId: "run-2", output: "" },
-      { companyId: "co-1" },
+      { companyId: "co-1" }
     );
 
     expect(fetchMock).not.toHaveBeenCalled();
@@ -213,7 +215,7 @@ describe("agent.run.finished", () => {
     await harness.emit(
       "agent.run.finished",
       { agentId: "ag-1", runId: "run-3", output: "Some output" },
-      { companyId: "co-1" },
+      { companyId: "co-1" }
     );
 
     expect(fetchMock).not.toHaveBeenCalled();
@@ -230,19 +232,22 @@ describe("hindsight_recall tool", () => {
   });
 
   it("returns cached memories from run start without additional API call", async () => {
-    vi.stubGlobal("fetch", vi.fn(async () => new Response("{}", { status: 200 })));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response("{}", { status: 200 }))
+    );
     const harness = buildHarness();
     await setupPlugin(harness);
 
     // Emit agent.run.started so recall fires and caches state
     vi.stubGlobal(
       "fetch",
-      mockFetch([{ url: /recall/, body: { results: [{ text: "User prefers dark mode" }] } }]),
+      mockFetch([{ url: /recall/, body: { results: [{ text: "User prefers dark mode" }] } }])
     );
     await harness.emit(
       "agent.run.started",
       { agentId: "ag-1", runId: "run-1", issueTitle: "Update UI" },
-      { companyId: "co-1" },
+      { companyId: "co-1" }
     );
 
     // Now recall tool should return cached state, not hit the API again
@@ -250,7 +255,7 @@ describe("hindsight_recall tool", () => {
     const result = await harness.executeTool(
       "hindsight_recall",
       { query: "preferences" },
-      { agentId: "ag-1", runId: "run-1", companyId: "co-1", projectId: "proj-1" },
+      { agentId: "ag-1", runId: "run-1", companyId: "co-1", projectId: "proj-1" }
     );
 
     expect((result as { content: string }).content).toContain("dark mode");
@@ -262,7 +267,7 @@ describe("hindsight_recall tool", () => {
   it("falls back to live recall when no cached state", async () => {
     vi.stubGlobal(
       "fetch",
-      mockFetch([{ url: /recall/, body: { results: [{ text: "Agent is a Python specialist" }] } }]),
+      mockFetch([{ url: /recall/, body: { results: [{ text: "Agent is a Python specialist" }] } }])
     );
     const harness = buildHarness();
     await setupPlugin(harness);
@@ -270,7 +275,7 @@ describe("hindsight_recall tool", () => {
     const result = await harness.executeTool(
       "hindsight_recall",
       { query: "specialization" },
-      { agentId: "ag-1", runId: "run-2", companyId: "co-1", projectId: "proj-1" },
+      { agentId: "ag-1", runId: "run-2", companyId: "co-1", projectId: "proj-1" }
     );
 
     expect((result as { content: string }).content).toContain("Python specialist");
@@ -295,7 +300,7 @@ describe("hindsight_retain tool", () => {
     const result = await harness.executeTool(
       "hindsight_retain",
       { content: "Decision: use Postgres not MySQL" },
-      { agentId: "ag-1", runId: "run-1", companyId: "co-1", projectId: "proj-1" },
+      { agentId: "ag-1", runId: "run-1", companyId: "co-1", projectId: "proj-1" }
     );
 
     expect((result as { content: string }).content).toBe("Memory saved.");
@@ -319,7 +324,10 @@ describe("onValidateConfig", () => {
   });
 
   it("fails when Hindsight is unreachable", async () => {
-    vi.stubGlobal("fetch", vi.fn(async () => new Response("", { status: 503 })));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response("", { status: 503 }))
+    );
     const result = await plugin.definition.onValidateConfig!({
       hindsightApiUrl: "http://localhost:8888",
     });
@@ -328,7 +336,10 @@ describe("onValidateConfig", () => {
   });
 
   it("passes with a reachable Hindsight instance", async () => {
-    vi.stubGlobal("fetch", vi.fn(async () => new Response("{}", { status: 200 })));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response("{}", { status: 200 }))
+    );
     const result = await plugin.definition.onValidateConfig!({
       hindsightApiUrl: "http://localhost:8888",
     });
