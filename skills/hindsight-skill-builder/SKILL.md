@@ -208,7 +208,33 @@ description: <one-line what this does + the trigger phrasings that should fire t
 
 This skill's entire playbook lives in the `<mm_id>` mental model in bank `<bank_id>`. Read it, follow it literally.
 
+## Mental model spec (source of truth for this skill's MM)
+
+- **Bank:** `<bank_id>`
+- **MM id:** `<mm_id>`
+- **MM name:** `<mm_display_name>`
+- **Trigger:** `refresh_after_consolidation`
+
+The full `source_query` that defines what this MM synthesizes lives in
+step 0 below, as a heredoc. If you ever need to regenerate or inspect
+it, that's the canonical copy.
+
 ## Procedure
+
+0. **Ensure the MM exists** (idempotent — safe to run every turn; NO-OP when the MM is already there):
+
+   ```bash
+   SRC_QUERY=$(cat <<'EOF'
+   <paste the exact source_query the meta-skill approved, verbatim, here>
+   EOF
+   )
+   hindsight mental-model get <bank_id> <mm_id> --output json >/dev/null 2>&1 || \
+     hindsight mental-model create <bank_id> "<mm_display_name>" "$SRC_QUERY" \
+       --id <mm_id> \
+       --trigger-refresh-after-consolidation
+   ```
+
+   If the MM was missing, this creates it with empty `content`. A subsequent consolidation cycle populates it from retained facts. On the very next turn the fetch in step 1 will still return empty `content` → follow step 2.
 
 1. **Fetch the playbook:**
    ```bash
@@ -216,7 +242,7 @@ This skill's entire playbook lives in the `<mm_id>` mental model in bank `<bank_
    ```
    The `content` field is the complete set of instructions for this task. Follow it as-is.
 
-2. **If the MM returns empty / "no information" content**, surface that to the user and ask what to do — do not fall back to improvising. The source_query is designed to return a competent default playbook even with no user history, so empty content means something is wrong (MM missing, bank unreachable, etc.).
+2. **If the MM returns empty / "no information" content**, surface that to the user and ask what to do — do not fall back to improvising. On a brand-new MM (just created in step 0) this is expected for the first turn; explain that and ask the user to seed with their initial preferences so retain + consolidation can populate the playbook.
 
 3. **Do the task** using only these tools: <tool allowlist>. Respect all invariants the playbook states.
 
@@ -234,6 +260,17 @@ This skill's entire playbook lives in the `<mm_id>` mental model in bank `<bank_
 
 The plugin retains every turn. The bank's retain + observations missions extract guidance from the user's feedback. Consolidation merges it. `refresh_after_consolidation` rebuilds `<mm_id>`. Next run reads the updated playbook automatically — no local state.
 ```
+
+### Why step 0 (idempotent MM create) matters
+
+The MM lives server-side, the SKILL.md lives in the workspace. Those can drift:
+- Someone resets the bank or deletes the MM by hand
+- Workspace gets copied to a fresh machine with an empty Hindsight instance
+- Consolidation never ran so the MM was created lazily but then purged
+
+With step 0, the skill **self-heals** on its next invocation. The SKILL.md is the source of truth for the `source_query`; if the server lost the MM, the skill recreates it. The `get || create` pattern makes this a no-op when the MM is already present.
+
+Important: step 0 does NOT update an existing MM's `source_query`. If the meta-skill needs to change the source_query (rare — it's the *spec* of the MM), that's an explicit operation via `hindsight mental-model update …`, not a silent side-effect of every turn.
 
 Wait for approval, then write the file to:
 
