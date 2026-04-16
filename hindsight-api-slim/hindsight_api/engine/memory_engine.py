@@ -6999,10 +6999,7 @@ class MemoryEngine(MemoryEngineInterface):
                 # still uses the existing markdown as the baseline — users who
                 # write a doc and then enable delta mode expect their content to
                 # be the starting point, not discarded by a one-time full rebuild.
-                use_delta = (
-                    last_refreshed_source_query is None
-                    or last_refreshed_source_query == current_source_query
-                )
+                use_delta = last_refreshed_source_query is None or last_refreshed_source_query == current_source_query
                 if tracking_row is not None:
                     raw_struct = tracking_row["structured_content"]
                     if isinstance(raw_struct, str):
@@ -7160,7 +7157,7 @@ class MemoryEngine(MemoryEngineInterface):
                             if text.startswith("```"):
                                 text = text.split("\n", 1)[1] if "\n" in text else ""
                                 if text.endswith("```"):
-                                    text = text[: -3].rstrip()
+                                    text = text[:-3].rstrip()
                             op_list = DeltaOperationList.model_validate_json(text)
                         outcome = apply_operations(current_doc, op_list.operations)
                         final_structured = outcome.document
@@ -7229,9 +7226,7 @@ class MemoryEngine(MemoryEngineInterface):
                 content=final_content,
                 reflect_response=reflect_response_payload,
                 last_refreshed_source_query=current_source_query,
-                structured_content=(
-                    final_structured.model_dump() if final_structured is not None else None
-                ),
+                structured_content=(final_structured.model_dump() if final_structured is not None else None),
                 request_context=request_context,
             )
 

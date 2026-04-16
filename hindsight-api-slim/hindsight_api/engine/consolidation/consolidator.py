@@ -1263,8 +1263,7 @@ async def _consolidate_batch_with_llm(
         except Exception as exc:
             last_exc = exc
             logger.warning(
-                f"[CONSOLIDATION] LLM batch call failed (attempt {attempt}/{max_attempts}) "
-                f"for {batch_label}: {exc}"
+                f"[CONSOLIDATION] LLM batch call failed (attempt {attempt}/{max_attempts}) for {batch_label}: {exc}"
             )
 
     logger.error(

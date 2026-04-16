@@ -350,9 +350,7 @@ async def handle_document_tracking(
         )
         existing_unit_ids = [row["id"] for row in existing_unit_rows]
         if existing_unit_ids:
-            invalidated = await delete_stale_observations_for_memories(
-                conn, bank_id, existing_unit_ids
-            )
+            invalidated = await delete_stale_observations_for_memories(conn, bank_id, existing_unit_ids)
             if invalidated:
                 logger.info(
                     f"[RETAIN] Document {document_id} re-ingested: invalidated "

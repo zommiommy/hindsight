@@ -180,10 +180,7 @@ function normToken(t: string): string {
 /** Word-level LCS over two single lines, returning inline spans for
  *  before/after. Pure-whitespace differences are folded into "same" so
  *  the diff highlights actual content changes only. */
-function diffTokensInline(
-  a: string,
-  b: string,
-): { left: TokenSpan[]; right: TokenSpan[] } {
+function diffTokensInline(a: string, b: string): { left: TokenSpan[]; right: TokenSpan[] } {
   const aTok = tokenize(a);
   const bTok = tokenize(b);
   const m = aTok.length;
@@ -287,12 +284,8 @@ function diffLines(a: string, b: string): { left: AnnotatedLine[]; right: Annota
         const inline = diffTokensInline(r0, a0);
         // Demote whole-line classification to "same" if every span is
         // already "same" (purely whitespace-only difference).
-        const leftKind: LineKind = inline.left.some((s) => s.type !== "same")
-          ? "removed"
-          : "same";
-        const rightKind: LineKind = inline.right.some((s) => s.type !== "same")
-          ? "added"
-          : "same";
+        const leftKind: LineKind = inline.left.some((s) => s.type !== "same") ? "removed" : "same";
+        const rightKind: LineKind = inline.right.some((s) => s.type !== "same") ? "added" : "same";
         left.push({ type: leftKind, spans: inline.left });
         right.push({ type: rightKind, spans: inline.right });
       } else if (r0 !== null) {
@@ -1007,10 +1000,7 @@ function ConfigurationTab({ mentalModel }: { mentalModel: MentalModel }) {
           label="Refresh mode"
           value={
             t.mode === "delta" ? (
-              <Pill
-                label="Delta"
-                color="bg-purple-500/10 text-purple-600 dark:text-purple-400"
-              />
+              <Pill label="Delta" color="bg-purple-500/10 text-purple-600 dark:text-purple-400" />
             ) : (
               <Pill label="Full" />
             )

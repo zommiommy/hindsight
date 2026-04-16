@@ -439,6 +439,72 @@ class TestDeltaRefreshPlumbing:
 
         await memory.delete_bank(bank_id, request_context=request_context)
 
+    async def test_empty_reflect_answer_preserves_existing_content(
+        self,
+        memory: MemoryEngine,
+        request_context: RequestContext,
+        patch_reflect,
+        patch_llm_call,
+        monkeypatch,
+    ):
+        """Regression: when the reflect agent returns an empty answer (small models
+        sometimes hit this after exhausting tool-call retries), the refresh must
+        NOT overwrite the existing content with an empty string.
+
+        Previously this destroyed the working document on every transient upstream
+        failure, and the next refresh saw current_content == "" and skipped the
+        delta path entirely — a snowball that emptied valuable mental models.
+
+        The scenario covered here is the realistic failure path: the structured
+        delta call also fails (because the empty supporting facts produce empty
+        / invalid JSON) so the fallback path kicks in. Without the guard, the
+        fallback would write "" to the DB; with it, the existing content stays.
+        """
+        bank_id = f"test-empty-reflect-{uuid.uuid4().hex[:8]}"
+        await memory.get_bank_profile(bank_id, request_context=request_context)
+
+        existing = (
+            "# Team\n"
+            "\n"
+            "Alice is the lead.\n"
+            "\n"
+            "## Members\n"
+            "\n"
+            "- Alice\n"
+        )
+        mm = await memory.create_mental_model(
+            bank_id=bank_id,
+            name="Team Info",
+            source_query="Tell me about the team",
+            content=existing,
+            trigger={"mode": "delta"},
+            request_context=request_context,
+        )
+
+        # Reflect returns "" — this is the upstream failure mode.
+        patch_reflect(memory, text="")
+
+        # Delta call also fails (mirrors the real groq behaviour where empty
+        # supporting facts often produce empty / invalid JSON). Refresh then
+        # falls back to the empty candidate, which the guard rejects.
+        async def boom(*, messages, **kwargs):
+            raise RuntimeError("simulated empty/invalid JSON from provider")
+
+        monkeypatch.setattr(memory._reflect_llm_config, "call", boom)
+
+        refreshed = await memory.refresh_mental_model(
+            bank_id=bank_id, mental_model_id=mm["id"], request_context=request_context
+        )
+
+        # Existing content preserved exactly.
+        assert refreshed["content"] == existing, (
+            "Empty reflect answer overwrote existing content — guard regressed"
+        )
+        rr = refreshed.get("reflect_response") or {}
+        assert rr.get("refresh_skipped") == "empty_candidate"
+
+        await memory.delete_bank(bank_id, request_context=request_context)
+
 
 # ---------------------------------------------------------------------------
 # Real-Gemini evaluation tests
