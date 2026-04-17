@@ -56,14 +56,25 @@ This is how you deduplicate across runs and answer "what did you show me yesterd
 - Things already in the skill files or BRIEF.md
 - Trivial acknowledgements ("got it", "ok")
 
-### Write order (mandatory)
+### Write order (mandatory — your turn is NOT complete until step 4)
 
 1. **Respond** to the user's request (the actual task output)
 2. **Repair** any structural issues found during the read phase — missing `_index.md`, duplicate files, unnormalized names. Do this every time, not "later".
 3. **Update** knowledge files and activity logs with what you learned / produced this turn
-4. **Commit** to git (see "Version control" below)
+4. **Commit** to git and print the checklist (see below)
 
-You may do structural reads (step 1 of the read sequence) at any time. All writes — repairs, updates, commits — happen after the user sees their answer. Memory updates are a visible post-script, not a silent side-effect.
+**Your turn is not finished until you print the memory checklist.** After every turn where memory applies, end with this exact block (silently, after the user's answer, as the final thing you output):
+
+```
+📝 Memory: [wrote: <files touched> | logged: <yes/no> | committed: <yes/no>]
+```
+
+Examples:
+- `📝 Memory: [wrote: preferences.md | logged: yes (feed-log.md) | committed: yes]`
+- `📝 Memory: [wrote: none | logged: yes (feed-log.md) | committed: yes]`
+- `📝 Memory: [wrote: none | logged: no (no task output) | committed: no]`
+
+If you completed a task run and the checklist says `logged: no`, you have a bug — go back and fix it before ending the turn. The checklist is a self-check, not decoration.
 
 ## Two kinds of memory files
 
