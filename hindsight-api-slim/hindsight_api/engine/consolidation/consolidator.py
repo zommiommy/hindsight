@@ -806,7 +806,11 @@ async def _run_knowledge_base_updates(
                         "Generating content...",
                         mental_model_id=mm_id,
                         kb_id=kb_id,
-                        trigger={"refresh_after_consolidation": True},
+                        trigger={
+                            "refresh_after_consolidation": True,
+                            "exclude_mental_models": True,
+                            "mode": "delta",
+                        },
                         request_context=request_context,
                     )
                     stats["mms_created"] += 1
