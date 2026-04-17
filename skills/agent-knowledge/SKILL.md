@@ -17,19 +17,50 @@ Your knowledge is stored in Hindsight as a **Knowledge Base** (KB) — a collect
 
 ## How to use your knowledge
 
-### Step 1: Mount your knowledge (once per session)
+### Step 0: Bootstrap the KB (first session only, idempotent)
 
-At the start of a session, sync your KB to local files so you can browse with normal tools:
+On your very first run, the Knowledge Base won't exist yet. Create it:
 
 ```bash
-hindsight-mount <bank_id> [<kb_id>]
+# Resolve your bank_id from the openclaw plugin config
+BANK_ID=$(python3 -c "
+import json, pathlib
+c = json.loads(pathlib.Path('~/.openclaw/openclaw.json').expanduser().read_text())
+cfg = c['plugins']['entries']['hindsight-openclaw']['config']
+prefix = cfg.get('bankIdPrefix', '')
+# For dynamicBankGranularity=['agent'], bank = <prefix>-<agentName>
+# Read the agent name from the session key: agent:<name>:...
+print(prefix + '-' + '<AGENT_NAME>' if prefix else '<AGENT_NAME>')
+")
+```
+
+Replace `<AGENT_NAME>` with your agent id (from the session key, e.g. `news-feed`).
+
+Then ensure the KB exists (safe to run every session — no-op if already created):
+
+```bash
+# Check if KB exists
+hindsight kb list $BANK_ID --output json 2>/dev/null | grep -q '"id"' || \
+  hindsight kb create $BANK_ID agent-kb \
+    --name "Agent Knowledge Base" \
+    --mission "Organize knowledge from conversations into topic pages. Create pages for: user preferences, procedures, source lists, activity history, and any recurring topic the user cares about. Split pages when they exceed 30 statements. Create new pages when observations don't fit existing ones." \
+    --tags "" \
+    --auto-create
+```
+
+This creates the KB with `auto_create=true` so the system will automatically create new topic pages (mental models) as it discovers new topics in your conversations.
+
+### Step 1: Mount your knowledge (once per session)
+
+Sync your KB to local files so you can browse with normal tools:
+
+```bash
+hindsight-mount $BANK_ID [agent-kb]
 ```
 
 This writes markdown files to `~/.agent-knowledge/<bank_id>/`:
 - `_index.md` — one line per topic with name + summary
 - `<topic>.md` — each topic page rendered as markdown
-
-If you don't know your bank_id, check the session key or read the openclaw plugin config.
 
 ### Step 2: Browse the index
 
