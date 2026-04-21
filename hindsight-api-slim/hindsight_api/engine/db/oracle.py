@@ -164,7 +164,12 @@ def _is_uuid_column(col: str) -> bool:
 
 
 def _convert_row_from_oracle(columns: list[str], row: tuple) -> tuple:
-    """Convert Oracle result row values back to Python-friendly types."""
+    """Convert Oracle result row values back to Python-friendly types.
+
+    JSON columns (tags, metadata, etc.) are parsed from their CLOB string
+    representation into Python objects so that Pydantic models and engine code
+    receive the same types as asyncpg provides for PG jsonb columns.
+    """
     result = []
     for i, val in enumerate(row):
         col = columns[i] if i < len(columns) else ""
@@ -268,6 +273,26 @@ def _rewrite_pg_to_oracle(query: str) -> RewriteResult:
     # Must happen BEFORE cast strip so we can detect ::jsonb
     query = re.sub(r"(\w+)\s*\|\|\s*(:\w+)::jsonb", r"JSON_MERGEPATCH(\1, \2)", query, flags=re.IGNORECASE)
 
+    # JSONB merge with complex left-hand expression (e.g. COALESCE(...)):
+    #   COALESCE(col, '[]'::jsonb) || :N::jsonb
+    #   → JSON_MERGEPATCH(COALESCE(col, TO_CLOB('[]')), :N)
+    # The simple \w+ regex above won't match a closing paren.  We also
+    # wrap any JSON string literals inside the COALESCE with TO_CLOB to
+    # prevent ORA-00932 (CHAR vs CLOB type mismatch with CLOB columns).
+    def _rewrite_coalesce_merge(m: re.Match) -> str:
+        coalesce_expr = m.group(1)
+        bind_param = m.group(2)
+        # Wrap any 'literal'::jsonb inside COALESCE with TO_CLOB
+        coalesce_expr = re.sub(r"'([^']*)'::(jsonb|json)", r"TO_CLOB('\1')", coalesce_expr, flags=re.IGNORECASE)
+        return f"JSON_MERGEPATCH({coalesce_expr}, {bind_param})"
+
+    query = re.sub(
+        r"(COALESCE\([^)]+\))\s*\|\|\s*(:\w+)::jsonb",
+        _rewrite_coalesce_merge,
+        query,
+        flags=re.IGNORECASE,
+    )
+
     # JSONB text extract + boolean cast + comparison (must run BEFORE cast strip)
     # (trigger->>'refresh_after_consolidation')::boolean = true → JSON_VALUE("trigger", '$.key') = 'true'
     def _rewrite_json_bool(m: re.Match) -> str:
@@ -286,7 +311,7 @@ def _rewrite_pg_to_oracle(query: str) -> RewriteResult:
         flags=re.IGNORECASE,
     )
 
-    # Strip ::type casts
+    # Strip ::type casts (including bare ::jsonb on literals in generic contexts)
     query = _PG_CAST_RE.sub("", query)
 
     # PG-specific SET SESSION commands → skip (Oracle doesn't need these)
@@ -300,6 +325,8 @@ def _rewrite_pg_to_oracle(query: str) -> RewriteResult:
     # Boolean literals: Oracle uses NUMBER(1) for booleans
     query = re.sub(r"\b=\s*TRUE\b", "= 1", query, flags=re.IGNORECASE)
     query = re.sub(r"\b=\s*FALSE\b", "= 0", query, flags=re.IGNORECASE)
+    # FOR SHARE → FOR UPDATE (Oracle doesn't support FOR SHARE)
+    query = re.sub(r"\bFOR\s+SHARE\b", "FOR UPDATE", query, flags=re.IGNORECASE)
 
     # Oracle reserved word: quote "trigger" column name
     if '"trigger"' not in query:
@@ -570,7 +597,7 @@ class OracleConnection(DatabaseConnection):
         """Tell oracledb to bind JSON-shaped strings as CLOB.
 
         Must be called AFTER _expand_any_lists so we only register sizes for
-        params that still exist in the final query. Oracle's thin driver
+        params that still exist in the final query.  Oracle's thin driver
         defaults short strings like '[]' to VARCHAR2 which fails with
         ORA-00932 when the target column is CLOB.
         """

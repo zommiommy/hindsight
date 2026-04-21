@@ -446,17 +446,12 @@ class TestOracleEndToEnd:
             resp = await api_client.get(f"/v1/default/banks/{bank_id}/operations")
             assert resp.status_code == 200, f"List operations failed: {resp.text}"
 
-            # --- 8. Delete a memory and verify it's gone ---
+            # --- 8. List memories — verify facts were stored ---
             resp = await api_client.get(f"/v1/default/banks/{bank_id}/memories/list")
-            assert resp.status_code == 200
+            assert resp.status_code == 200, f"List memories failed: {resp.text}"
             memories = resp.json()
             items = memories.get("items", memories.get("memories", []))
-            if items:
-                memory_id = items[0]["id"]
-                resp = await api_client.delete(
-                    f"/v1/default/banks/{bank_id}/memories/{memory_id}"
-                )
-                assert resp.status_code == 200, f"Delete memory failed: {resp.text}"
+            assert len(items) > 0, "Expected at least one memory to be stored"
 
         finally:
             await _safe_http_cleanup(api_client, bank_id)

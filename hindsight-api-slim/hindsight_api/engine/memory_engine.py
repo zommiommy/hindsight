@@ -1585,7 +1585,8 @@ class MemoryEngine(MemoryEngineInterface):
             if not row:
                 return
 
-            result_metadata = json.loads(row["result_metadata"]) if row["result_metadata"] else {}
+            raw_rm = row["result_metadata"]
+            result_metadata = json.loads(raw_rm) if isinstance(raw_rm, str) else (raw_rm or {})
             parent_operation_id = result_metadata.get("parent_operation_id")
 
             if not parent_operation_id:
@@ -8062,9 +8063,11 @@ class MemoryEngine(MemoryEngineInterface):
 
             if row:
                 # Check if this is a parent operation
-                result_metadata = json.loads(row["result_metadata"]) if row["result_metadata"] else {}
+                raw_rm = row["result_metadata"]
+                result_metadata = json.loads(raw_rm) if isinstance(raw_rm, str) else (raw_rm or {})
                 is_parent = result_metadata.get("is_parent", False)
-                task_payload = json.loads(row["task_payload"]) if include_payload and row["task_payload"] else None
+                raw_tp = row["task_payload"] if include_payload else None
+                task_payload = json.loads(raw_tp) if isinstance(raw_tp, str) else raw_tp
 
                 # Use status from database (parent status is updated when all children complete/fail)
                 db_status = row["status"]
@@ -8092,8 +8095,9 @@ class MemoryEngine(MemoryEngineInterface):
                     all_completed = True
 
                     for child_row in child_rows:
+                        raw_crm = child_row["result_metadata"]
                         child_metadata = (
-                            json.loads(child_row["result_metadata"]) if child_row["result_metadata"] else {}
+                            json.loads(raw_crm) if isinstance(raw_crm, str) else (raw_crm or {})
                         )
                         child_status = child_row["status"]
 

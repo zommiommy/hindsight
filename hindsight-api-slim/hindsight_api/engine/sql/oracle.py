@@ -14,6 +14,18 @@ class OracleDialect(SQLDialect):
     # Characters that need escaping in Oracle Text CONTAINS queries.
     _ORACLE_TEXT_SPECIAL = frozenset("&|!{}()[]~*?%-$>")
 
+    # Oracle Text reserved words that must be escaped with curly braces
+    # when used as plain search terms.  Full list from Oracle Text docs:
+    # ABOUT, AND, BT, BTG, BTI, BTP, EQUIV, FUZZY, HASPATH, INPATH,
+    # MINUS, NEAR, NOT, NT, NTG, NTI, NTP, OR, PT, RT, SQE, SYN,
+    # TR, TRSYN, TT, WITHIN.
+    _ORACLE_TEXT_RESERVED = frozenset({
+        "about", "and", "bt", "btg", "bti", "btp", "equiv", "fuzzy",
+        "haspath", "inpath", "minus", "near", "not", "nt", "ntg",
+        "nti", "ntp", "or", "pt", "rt", "sqe", "syn", "tr", "trsyn",
+        "tt", "within",
+    })
+
     # -- Parameter binding -----------------------------------------------
 
     def param(self, n: int) -> str:
@@ -259,6 +271,14 @@ class OracleDialect(SQLDialect):
         *,
         text_search_extension: str = "native",
     ) -> str:
-        # Oracle Text: filter tokens with special chars and join with OR.
-        safe_tokens = [t for t in tokens if not any(c in self._ORACLE_TEXT_SPECIAL for c in t)]
-        return " OR ".join(safe_tokens) if safe_tokens else tokens[0]
+        # Oracle Text: filter tokens with special chars, escape reserved words
+        # with curly braces (e.g. "about" → "{about}"), and join with OR.
+        safe: list[str] = []
+        for t in tokens:
+            if any(c in self._ORACLE_TEXT_SPECIAL for c in t):
+                continue
+            if t.lower() in self._ORACLE_TEXT_RESERVED:
+                safe.append(f"{{{t}}}")
+            else:
+                safe.append(t)
+        return " OR ".join(safe) if safe else f"{{{tokens[0]}}}"

@@ -1270,35 +1270,35 @@ class TestEdgeCases:
         """Verify retain → delete → retain cycle works (no stale data)."""
         bank_id = _bank_id("cycle")
         try:
-            # First cycle
+            # First cycle — use substantive content so fact extraction is reliable
             await oracle_memory.retain_async(
                 bank_id=bank_id,
-                content="First cycle content.",
-                context="test",
+                content="Alice is a senior backend engineer who specializes in Python and distributed systems.",
+                context="team",
                 event_date=datetime(2024, 1, 1, tzinfo=timezone.utc),
                 request_context=request_context,
             )
             await _safe_cleanup(oracle_memory, bank_id, request_context)
 
-            # Second cycle — same bank_id, different content
+            # Second cycle — same bank_id, completely different content
             await oracle_memory.retain_async(
                 bank_id=bank_id,
-                content="Second cycle content — completely different.",
-                context="test2",
+                content="Bob is a frontend developer with deep expertise in React, TypeScript, and design systems.",
+                context="team",
                 event_date=datetime(2024, 6, 1, tzinfo=timezone.utc),
                 request_context=request_context,
             )
             result = await oracle_memory.recall_async(
                 bank_id=bank_id,
-                query="second cycle",
+                query="Who is Bob and what does he do?",
                 budget=Budget.LOW,
                 max_tokens=500,
                 request_context=request_context,
             )
             assert len(result.results) > 0
-            # Should only have second cycle content
+            # Should only have second cycle content (Alice's data was deleted)
             all_text = " ".join(r.text for r in result.results).lower()
-            assert "first cycle" not in all_text
+            assert "alice" not in all_text
         finally:
             await _safe_cleanup(oracle_memory, bank_id, request_context)
 
