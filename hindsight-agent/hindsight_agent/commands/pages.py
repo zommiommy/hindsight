@@ -1,6 +1,6 @@
 """hindsight-agent pages — manage knowledge pages for an agent.
 
-All commands resolve agent_id → bank/kb via the global config,
+All commands resolve agent_id → bank via the global config,
 so the caller never needs to know Hindsight internals.
 """
 
@@ -56,7 +56,6 @@ def create_page(agent_id: str, name: str, source_query: str, page_id: str | None
     api = HindsightAPI(cfg.api_url)
     result = api.create_page(
         cfg.bank_id,
-        cfg.kb_id,
         name=name,
         source_query=source_query,
         page_id=page_id,

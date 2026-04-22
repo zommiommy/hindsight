@@ -1,6 +1,6 @@
 """hindsight-agent setup — one-shot agent onboarding.
 
-Creates the Hindsight bank + KB, installs the agent-knowledge skill
+Creates the Hindsight bank, installs the agent-knowledge skill
 (with the agent ID baked in), and does harness-specific setup.
 """
 
@@ -23,12 +23,6 @@ OPENCLAW_PLUGIN_DIR = Path(__file__).resolve().parent.parent.parent / "plugin" /
 @click.command()
 @click.argument("agent_id")
 @click.option("--bank-id", required=True, help="Hindsight bank ID for this agent")
-@click.option("--kb-id", default="knowledge", show_default=True, help="Knowledge Base ID")
-@click.option(
-    "--kb-mission",
-    default=None,
-    help="KB mission description (default: auto-generated from agent ID)",
-)
 @click.option(
     "--api-url",
     default="http://localhost:8888",
@@ -49,8 +43,6 @@ OPENCLAW_PLUGIN_DIR = Path(__file__).resolve().parent.parent.parent / "plugin" /
 def setup(
     agent_id: str,
     bank_id: str,
-    kb_id: str,
-    kb_mission: str | None,
     api_url: str,
     harness: str,
     workspace: str | None,
@@ -62,14 +54,10 @@ def setup(
 
     AGENT_ID is the unique identifier for this agent.
     """
-    if kb_mission is None:
-        kb_mission = f"Knowledge and preferences for the {agent_id} agent"
-
     workspace_path = _resolve_workspace(agent_id, harness, workspace)
 
     click.echo(f"Setting up agent '{agent_id}'")
     click.echo(f"  Bank:      {bank_id}")
-    click.echo(f"  KB:        {kb_id}")
     click.echo(f"  API:       {api_url}")
     click.echo(f"  Harness:   {harness}")
     click.echo(f"  Workspace: {workspace_path}")
@@ -88,21 +76,15 @@ def setup(
         api.ensure_bank(bank_id)
     click.echo("  Done.")
 
-    # 2. Create KB
-    click.echo("Creating Knowledge Base...")
-    api.ensure_kb(bank_id, kb_id, kb_mission)
-    click.echo("  Done.")
-
-    # 3. Ingest content directory if provided
+    # 2. Ingest content directory if provided
     if content:
         _ingest_content(api, bank_id, Path(content).expanduser().resolve())
 
-    # 4. Save to global config
+    # 3. Save to global config
     click.echo("Saving agent config...")
     agents = load_config()
     agents[agent_id] = AgentConfig(
         bank_id=bank_id,
-        kb_id=kb_id,
         api_url=api_url,
         harness=harness,
         workspace=str(workspace_path),
@@ -110,12 +92,12 @@ def setup(
     save_config(agents)
     click.echo("  Done.")
 
-    # 3. Install skill into workspace
+    # 4. Install skill into workspace
     click.echo("Installing agent-knowledge skill...")
     _install_skill(agent_id, workspace_path)
     click.echo("  Done.")
 
-    # 4. Harness-specific setup
+    # 5. Harness-specific setup
     if harness == "openclaw":
         click.echo("Configuring OpenClaw...")
         _setup_openclaw(agent_id, workspace_path, model)

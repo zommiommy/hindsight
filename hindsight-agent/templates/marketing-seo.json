@@ -11,7 +11,6 @@
   "mental_models": [
     {
       "id": "seo-best-practices",
-      "kb_id": "knowledge",
       "name": "SEO Best Practices",
       "max_tokens": 4096,
       "source_query": "What are the SEO best practices for our content, combining industry standards with what has actually worked for us? Include on-page SEO rules, meta descriptions, title tags, schema markup, internal linking, and content structure. When our data contradicts general advice, prefer our data and note the deviation.",
@@ -24,7 +23,6 @@
     },
     {
       "id": "content-performance",
-      "kb_id": "knowledge",
       "name": "Content Performance",
       "max_tokens": 4096,
       "source_query": "What content strategies have performed well or poorly based on analytics and user feedback? Include specific numbers when available (CTR, traffic, engagement, conversions). What patterns emerge about what formats, topics, lengths, and structures work vs what doesn't?",
@@ -37,7 +35,6 @@
     },
     {
       "id": "editorial-preferences",
-      "kb_id": "knowledge",
       "name": "Editorial Preferences",
       "max_tokens": 4096,
       "source_query": "What are the user's editorial preferences for blog content, including tone, voice, length, formatting, heading style, CTA approach, audience assumptions, and any explicit rules they've stated? Include patterns from corrections and feedback.",

@@ -1,7 +1,7 @@
 """Global config for hindsight-agent.
 
 Config lives at ~/.hindsight-agent/config.json and maps agent IDs to their
-Hindsight environment (bank, kb, api url).
+Hindsight environment (bank, api url).
 """
 
 from __future__ import annotations
@@ -17,7 +17,6 @@ CONFIG_FILE = CONFIG_DIR / "config.json"
 @dataclass
 class AgentConfig:
     bank_id: str
-    kb_id: str
     api_url: str
     harness: str
     workspace: str
@@ -29,7 +28,6 @@ class AgentConfig:
     def from_dict(d: dict) -> AgentConfig:
         return AgentConfig(
             bank_id=d["bank_id"],
-            kb_id=d["kb_id"],
             api_url=d["api_url"],
             harness=d["harness"],
             workspace=d["workspace"],

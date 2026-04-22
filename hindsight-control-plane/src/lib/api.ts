@@ -929,38 +929,13 @@ export class ControlPlaneClient {
     }>(bankApi(bankId, `/observations/${encodeURIComponent(observationId)}`));
   }
 
-  // ============= KNOWLEDGE BASES =============
-
-  /**
-   * List knowledge bases for a bank
-   */
-  async listKnowledgeBases(bankId: string) {
-    return this.fetchApi<{
-      items: Array<{
-        id: string;
-        bank_id: string;
-        name: string;
-        mission: string;
-        tags: string[];
-        auto_create: boolean;
-        split_threshold: number;
-        created_at: string;
-        updated_at: string;
-        mental_model_count: number;
-      }>;
-    }>(bankApi(bankId, "/knowledge-bases"));
-  }
-
   // ============= MENTAL MODELS (stored reflect responses) =============
 
   /**
    * List mental models for a bank
    */
-  async listMentalModels(bankId: string, tags?: string[], tagsMatch?: string, kb?: string) {
+  async listMentalModels(bankId: string, tags?: string[], tagsMatch?: string) {
     const params = new URLSearchParams();
-    if (kb) {
-      params.append("kb", kb);
-    }
     if (tags && tags.length > 0) {
       tags.forEach((t) => params.append("tags", t));
     }
@@ -1011,7 +986,6 @@ export class ControlPlaneClient {
       source_query: string;
       tags?: string[];
       max_tokens?: number;
-      kb_id?: string;
       trigger?: {
         mode?: "full" | "delta";
         refresh_after_consolidation: boolean;

@@ -12,11 +12,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ bank
       return NextResponse.json({ error: "bank_id is required" }, { status: 400 });
     }
 
-    const kb = searchParams.get("kb");
     const queryParams = new URLSearchParams();
-    if (kb) {
-      queryParams.append("kb", kb);
-    }
     if (tags.length > 0) {
       tags.forEach((t) => queryParams.append("tags", t));
     }

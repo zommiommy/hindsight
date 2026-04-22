@@ -31,29 +31,6 @@ class HindsightAPI:
         if r.status_code not in (200, 201, 422):
             r.raise_for_status()
 
-    # ── Knowledge Base ────────────────────────────────────
-
-    def ensure_kb(self, bank_id: str, kb_id: str, mission: str) -> None:
-        """Create KB if it doesn't exist."""
-        url = f"{self._bank_url(bank_id)}/knowledge-bases"
-        # Check if exists
-        r = self.client.get(url)
-        r.raise_for_status()
-        for kb in r.json().get("items", []):
-            if kb["id"] == kb_id:
-                return
-        # Create
-        r = self.client.post(
-            url,
-            json={
-                "id": kb_id,
-                "name": f"{kb_id} KB",
-                "mission": mission,
-                "auto_create": False,
-            },
-        )
-        r.raise_for_status()
-
     # ── Retain ────────────────────────────────────────────
 
     def retain(
@@ -73,13 +50,9 @@ class HindsightAPI:
 
     # ── Mental Models (pages) ─────────────────────────────
 
-    def list_pages(self, bank_id: str, kb_id: str | None = None) -> list[dict]:
-        params = {}
-        if kb_id:
-            params["kb"] = kb_id
+    def list_pages(self, bank_id: str) -> list[dict]:
         r = self.client.get(
             f"{self._bank_url(bank_id)}/mental-models",
-            params=params,
         )
         r.raise_for_status()
         return r.json().get("items", [])
@@ -94,7 +67,6 @@ class HindsightAPI:
     def create_page(
         self,
         bank_id: str,
-        kb_id: str,
         *,
         name: str,
         source_query: str,
@@ -103,7 +75,6 @@ class HindsightAPI:
         payload: dict = {
             "name": name,
             "source_query": source_query,
-            "kb_id": kb_id,
             "trigger": {
                 "mode": "delta",
                 "refresh_after_consolidation": True,

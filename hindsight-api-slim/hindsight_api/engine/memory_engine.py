@@ -6734,236 +6734,6 @@ class MemoryEngine(MemoryEngineInterface):
         }
 
     # =========================================================================
-    # KNOWLEDGE BASE CRUD
-    # =========================================================================
-
-    async def create_knowledge_base(
-        self,
-        bank_id: str,
-        kb_id: str,
-        *,
-        name: str = "",
-        mission: str = "",
-        tags: list[str] | None = None,
-        auto_create: bool = True,
-        split_threshold: int = 30,
-        request_context: "RequestContext",
-    ) -> dict[str, Any]:
-        """Create a new knowledge base.
-
-        A knowledge base is a named collection of related mental models
-        maintained by a shared mission/policy. The KB routes tagged
-        observations to its mental models and auto-creates new MMs when
-        observations don't fit existing ones.
-        """
-        await self._authenticate_tenant(request_context)
-        pool = await self._get_pool()
-
-        async with acquire_with_retry(pool) as conn:
-            row = await conn.fetchrow(
-                f"""
-                INSERT INTO {fq_table("knowledge_bases")}
-                (id, bank_id, name, mission, tags, auto_create, split_threshold)
-                VALUES ($1, $2, $3, $4, $5, $6, $7)
-                RETURNING *
-                """,
-                kb_id,
-                bank_id,
-                name or kb_id,
-                mission,
-                tags or [],
-                auto_create,
-                split_threshold,
-            )
-            return self._row_to_knowledge_base(row)
-
-    async def list_knowledge_bases(
-        self,
-        bank_id: str,
-        *,
-        request_context: "RequestContext",
-    ) -> list[dict[str, Any]]:
-        """List all knowledge bases in a bank."""
-        await self._authenticate_tenant(request_context)
-        pool = await self._get_pool()
-
-        async with acquire_with_retry(pool) as conn:
-            rows = await conn.fetch(
-                f"""
-                SELECT kb.*, COUNT(mm.id) as mental_model_count
-                FROM {fq_table("knowledge_bases")} kb
-                LEFT JOIN {fq_table("mental_models")} mm
-                    ON mm.bank_id = kb.bank_id AND mm.kb_id = kb.id
-                WHERE kb.bank_id = $1
-                GROUP BY kb.bank_id, kb.id
-                ORDER BY kb.created_at
-                """,
-                bank_id,
-            )
-            return [self._row_to_knowledge_base(row) for row in rows]
-
-    async def get_knowledge_base(
-        self,
-        bank_id: str,
-        kb_id: str,
-        *,
-        request_context: "RequestContext",
-    ) -> dict[str, Any] | None:
-        """Get a knowledge base by ID, including its mental model list."""
-        await self._authenticate_tenant(request_context)
-        pool = await self._get_pool()
-
-        async with acquire_with_retry(pool) as conn:
-            row = await conn.fetchrow(
-                f"""
-                SELECT * FROM {fq_table("knowledge_bases")}
-                WHERE bank_id = $1 AND id = $2
-                """,
-                bank_id,
-                kb_id,
-            )
-            if not row:
-                return None
-
-            kb = self._row_to_knowledge_base(row)
-
-            # Include the list of mental model IDs + names in this KB
-            mm_rows = await conn.fetch(
-                f"""
-                SELECT id, name FROM {fq_table("mental_models")}
-                WHERE bank_id = $1 AND kb_id = $2
-                ORDER BY created_at
-                """,
-                bank_id,
-                kb_id,
-            )
-            kb["mental_models"] = [{"id": r["id"], "name": r["name"]} for r in mm_rows]
-            return kb
-
-    async def update_knowledge_base(
-        self,
-        bank_id: str,
-        kb_id: str,
-        *,
-        name: str | None = None,
-        mission: str | None = None,
-        tags: list[str] | None = None,
-        auto_create: bool | None = None,
-        split_threshold: int | None = None,
-        request_context: "RequestContext",
-    ) -> dict[str, Any] | None:
-        """Update a knowledge base."""
-        await self._authenticate_tenant(request_context)
-        pool = await self._get_pool()
-
-        set_clauses: list[str] = ["updated_at = NOW()"]
-        params: list[Any] = [bank_id, kb_id]
-        idx = 3
-
-        if name is not None:
-            set_clauses.append(f"name = ${idx}")
-            params.append(name)
-            idx += 1
-        if mission is not None:
-            set_clauses.append(f"mission = ${idx}")
-            params.append(mission)
-            idx += 1
-        if tags is not None:
-            set_clauses.append(f"tags = ${idx}")
-            params.append(tags)
-            idx += 1
-        if auto_create is not None:
-            set_clauses.append(f"auto_create = ${idx}")
-            params.append(auto_create)
-            idx += 1
-        if split_threshold is not None:
-            set_clauses.append(f"split_threshold = ${idx}")
-            params.append(split_threshold)
-            idx += 1
-
-        if len(set_clauses) == 1:
-            # Only updated_at — nothing to update
-            return await self.get_knowledge_base(bank_id, kb_id, request_context=request_context)
-
-        async with acquire_with_retry(pool) as conn:
-            row = await conn.fetchrow(
-                f"""
-                UPDATE {fq_table("knowledge_bases")}
-                SET {", ".join(set_clauses)}
-                WHERE bank_id = $1 AND id = $2
-                RETURNING *
-                """,
-                *params,
-            )
-            return self._row_to_knowledge_base(row) if row else None
-
-    async def delete_knowledge_base(
-        self,
-        bank_id: str,
-        kb_id: str,
-        *,
-        delete_mental_models: bool = False,
-        request_context: "RequestContext",
-    ) -> bool:
-        """Delete a knowledge base.
-
-        If delete_mental_models is True, also delete all MMs that belong
-        to this KB. Otherwise, MMs are orphaned (kb_id set to NULL).
-        """
-        await self._authenticate_tenant(request_context)
-        pool = await self._get_pool()
-
-        async with acquire_with_retry(pool) as conn:
-            if delete_mental_models:
-                await conn.execute(
-                    f"""
-                    DELETE FROM {fq_table("mental_models")}
-                    WHERE bank_id = $1 AND kb_id = $2
-                    """,
-                    bank_id,
-                    kb_id,
-                )
-            else:
-                await conn.execute(
-                    f"""
-                    UPDATE {fq_table("mental_models")}
-                    SET kb_id = NULL
-                    WHERE bank_id = $1 AND kb_id = $2
-                    """,
-                    bank_id,
-                    kb_id,
-                )
-
-            result = await conn.execute(
-                f"""
-                DELETE FROM {fq_table("knowledge_bases")}
-                WHERE bank_id = $1 AND id = $2
-                """,
-                bank_id,
-                kb_id,
-            )
-            return result == "DELETE 1"
-
-    @staticmethod
-    def _row_to_knowledge_base(row: Any) -> dict[str, Any]:
-        """Convert a database row to a knowledge base dict."""
-        result: dict[str, Any] = {
-            "id": row["id"],
-            "bank_id": row["bank_id"],
-            "name": row["name"],
-            "mission": row["mission"],
-            "tags": row["tags"] or [],
-            "auto_create": row["auto_create"],
-            "split_threshold": row["split_threshold"],
-            "created_at": row["created_at"].isoformat() if row["created_at"] else None,
-            "updated_at": row["updated_at"].isoformat() if row["updated_at"] else None,
-        }
-        # Optional: populated by list query with JOIN
-        if "mental_model_count" in row.keys():
-            result["mental_model_count"] = row["mental_model_count"]
-        return result
-
-    # =========================================================================
     # MENTAL MODELS CRUD
     # =========================================================================
 
@@ -6973,7 +6743,6 @@ class MemoryEngine(MemoryEngineInterface):
         *,
         tags: list[str] | None = None,
         tags_match: str = "any",
-        kb_id: str | None = None,
         detail: str = "full",
         limit: int = 100,
         offset: int = 0,
@@ -6985,7 +6754,6 @@ class MemoryEngine(MemoryEngineInterface):
             bank_id: Bank identifier
             tags: Optional tags to filter by
             tags_match: How to match tags - 'any', 'all', or 'exact'
-            kb_id: Optional knowledge base ID to filter by
             detail: Detail level - 'metadata', 'content', or 'full'
             limit: Maximum number of results
             offset: Offset for pagination
@@ -7018,16 +6786,11 @@ class MemoryEngine(MemoryEngineInterface):
                 params.append(tags)
                 next_idx += 1
 
-            if kb_id is not None:
-                extra_filters += f" AND kb_id = ${next_idx}"
-                params.append(kb_id)
-                next_idx += 1
-
             rows = await conn.fetch(
                 f"""
                 SELECT id, bank_id, name, source_query, content, tags,
                        last_refreshed_at, created_at, reflect_response,
-                       max_tokens, trigger, structured_content, kb_id
+                       max_tokens, trigger, structured_content
                 FROM {fq_table("mental_models")}
                 WHERE bank_id = $1 {extra_filters}
                 ORDER BY last_refreshed_at DESC
@@ -7155,7 +6918,6 @@ class MemoryEngine(MemoryEngineInterface):
         tags: list[str] | None = None,
         max_tokens: int | None = None,
         trigger: dict[str, Any] | None = None,
-        kb_id: str | None = None,
         request_context: "RequestContext",
     ) -> dict[str, Any]:
         """Create a new pinned mental model.
@@ -7169,7 +6931,6 @@ class MemoryEngine(MemoryEngineInterface):
             tags: Optional tags for scoped visibility
             max_tokens: Token limit for content generation during refresh
             trigger: Trigger settings (e.g., refresh_after_consolidation)
-            kb_id: Optional knowledge base ID to associate this MM with
             request_context: Request context for authentication
 
         Returns:
@@ -7194,11 +6955,11 @@ class MemoryEngine(MemoryEngineInterface):
                 row = await conn.fetchrow(
                     f"""
                     INSERT INTO {fq_table("mental_models")}
-                    (id, bank_id, name, source_query, content, embedding, tags, max_tokens, trigger, kb_id)
-                    VALUES ($1, $2, $3, $4, $5, $6, $7, COALESCE($8, 2048), COALESCE($9, '{{"refresh_after_consolidation": false}}'::jsonb), $10)
+                    (id, bank_id, name, source_query, content, embedding, tags, max_tokens, trigger)
+                    VALUES ($1, $2, $3, $4, $5, $6, $7, COALESCE($8, 2048), COALESCE($9, '{{"refresh_after_consolidation": false}}'::jsonb))
                     RETURNING id, bank_id, name, source_query, content, tags,
                               last_refreshed_at, created_at, reflect_response,
-                              max_tokens, trigger, structured_content, kb_id
+                              max_tokens, trigger, structured_content
                     """,
                     mental_model_id,
                     bank_id,
@@ -7209,17 +6970,16 @@ class MemoryEngine(MemoryEngineInterface):
                     tags or [],
                     max_tokens,
                     json.dumps(trigger) if trigger else None,
-                    kb_id,
                 )
             else:
                 row = await conn.fetchrow(
                     f"""
                     INSERT INTO {fq_table("mental_models")}
-                    (bank_id, name, source_query, content, embedding, tags, max_tokens, trigger, kb_id)
-                    VALUES ($1, $2, $3, $4, $5, $6, COALESCE($7, 2048), COALESCE($8, '{{"refresh_after_consolidation": false}}'::jsonb), $9)
+                    (bank_id, name, source_query, content, embedding, tags, max_tokens, trigger)
+                    VALUES ($1, $2, $3, $4, $5, $6, COALESCE($7, 2048), COALESCE($8, '{{"refresh_after_consolidation": false}}'::jsonb))
                     RETURNING id, bank_id, name, source_query, content, tags,
                               last_refreshed_at, created_at, reflect_response,
-                              max_tokens, trigger, structured_content, kb_id
+                              max_tokens, trigger, structured_content
                     """,
                     bank_id,
                     name,
@@ -7229,7 +6989,6 @@ class MemoryEngine(MemoryEngineInterface):
                     tags or [],
                     max_tokens,
                     json.dumps(trigger) if trigger else None,
-                    kb_id,
                 )
 
         logger.info(f"[MENTAL_MODELS] Created pinned mental model '{name}' for bank {bank_id}")
@@ -7804,9 +7563,6 @@ class MemoryEngine(MemoryEngineInterface):
             "last_refreshed_at": row["last_refreshed_at"].isoformat() if row["last_refreshed_at"] else None,
             "created_at": row["created_at"].isoformat() if row["created_at"] else None,
         }
-        # Include kb_id if the column is present in the row
-        if "kb_id" in row.keys():
-            result["kb_id"] = row["kb_id"]
         if detail == "metadata":
             return result
 

@@ -1640,7 +1640,6 @@ class MentalModelResponse(BaseModel):
     id: str
     bank_id: str
     name: str
-    kb_id: str | None = None
     source_query: str | None = None
     content: str | None = Field(
         default=None,
@@ -1695,7 +1694,6 @@ class CreateMentalModelRequest(BaseModel):
     tags: list[str] = FieldWithDefault(list, description="Tags for scoped visibility")
     max_tokens: int = Field(default=2048, ge=256, le=8192, description="Maximum tokens for generated content")
     trigger: MentalModelTrigger = FieldWithDefault(MentalModelTrigger, description="Trigger settings")
-    kb_id: str | None = Field(None, description="Knowledge base ID to associate this mental model with")
 
 
 class CreateMentalModelResponse(BaseModel):
@@ -1742,7 +1740,6 @@ class BankTemplateMentalModel(BaseModel):
     name: str = Field(description="Human-readable name for the mental model")
     source_query: str = Field(description="The query to run to generate content")
     tags: list[str] = FieldWithDefault(list, description="Tags for scoped visibility")
-    kb_id: str | None = Field(default=None, description="Knowledge base ID to assign this mental model to")
     max_tokens: int = Field(default=2048, ge=256, le=8192, description="Maximum tokens for generated content")
     trigger: MentalModelTrigger = FieldWithDefault(MentalModelTrigger, description="Trigger settings")
 
@@ -2054,7 +2051,6 @@ async def apply_bank_template_manifest(
                     tags=mm.tags if mm.tags else None,
                     max_tokens=mm.max_tokens,
                     trigger=mm.trigger.model_dump() if mm.trigger else None,
-                    kb_id=mm.kb_id,
                     request_context=request_context,
                 )
                 result = await memory.submit_async_refresh_mental_model(
@@ -3597,133 +3593,7 @@ def _register_routes(app: FastAPI):
             detail="This endpoint is deprecated. Entity observations are no longer supported.",
         )
 
-    # =========================================================================
-    # KNOWLEDGE BASE ENDPOINTS
-    # =========================================================================
-
-    class CreateKnowledgeBaseRequest(BaseModel):
-        id: str = Field(..., description="Knowledge base identifier (lowercase with hyphens)")
-        name: str = Field("", description="Human-readable name")
-        mission: str = Field(
-            "",
-            description="Policy for how to organize knowledge: what topics to maintain, when to create/split MMs, structural conventions",
-        )
-        tags: list[str] = Field(default_factory=list, description="Tags to scope which observations feed this KB")
-        auto_create: bool = Field(
-            True, description="Auto-create new mental models when observations don't fit existing ones"
-        )
-        split_threshold: int = Field(30, description="Max statements per mental model before proposing a split")
-
-    class UpdateKnowledgeBaseRequest(BaseModel):
-        name: str | None = None
-        mission: str | None = None
-        tags: list[str] | None = None
-        auto_create: bool | None = None
-        split_threshold: int | None = None
-
-    @app.post(
-        "/v1/default/banks/{bank_id}/knowledge-bases",
-        summary="Create a knowledge base",
-        description="Create a named collection of related mental models maintained by a shared mission/policy.",
-        operation_id="create_knowledge_base",
-        tags=["Knowledge Bases"],
-    )
-    async def api_create_knowledge_base(
-        bank_id: str,
-        body: CreateKnowledgeBaseRequest,
-        request_context: RequestContext = Depends(get_request_context),
-    ):
-        result = await app.state.memory.create_knowledge_base(
-            bank_id,
-            body.id,
-            name=body.name,
-            mission=body.mission,
-            tags=body.tags,
-            auto_create=body.auto_create,
-            split_threshold=body.split_threshold,
-            request_context=request_context,
-        )
-        return result
-
-    @app.get(
-        "/v1/default/banks/{bank_id}/knowledge-bases",
-        summary="List knowledge bases",
-        description="List all knowledge bases in a bank.",
-        operation_id="list_knowledge_bases",
-        tags=["Knowledge Bases"],
-    )
-    async def api_list_knowledge_bases(
-        bank_id: str,
-        request_context: RequestContext = Depends(get_request_context),
-    ):
-        items = await app.state.memory.list_knowledge_bases(bank_id, request_context=request_context)
-        return {"items": items}
-
-    @app.get(
-        "/v1/default/banks/{bank_id}/knowledge-bases/{kb_id}",
-        summary="Get a knowledge base",
-        description="Get a knowledge base by ID, including its mental model list.",
-        operation_id="get_knowledge_base",
-        tags=["Knowledge Bases"],
-    )
-    async def api_get_knowledge_base(
-        bank_id: str,
-        kb_id: str,
-        request_context: RequestContext = Depends(get_request_context),
-    ):
-        result = await app.state.memory.get_knowledge_base(bank_id, kb_id, request_context=request_context)
-        if result is None:
-            raise HTTPException(status_code=404, detail=f"Knowledge base '{kb_id}' not found")
-        return result
-
-    @app.patch(
-        "/v1/default/banks/{bank_id}/knowledge-bases/{kb_id}",
-        summary="Update a knowledge base",
-        description="Update knowledge base properties (mission, tags, policy).",
-        operation_id="update_knowledge_base",
-        tags=["Knowledge Bases"],
-    )
-    async def api_update_knowledge_base(
-        bank_id: str,
-        kb_id: str,
-        body: UpdateKnowledgeBaseRequest,
-        request_context: RequestContext = Depends(get_request_context),
-    ):
-        result = await app.state.memory.update_knowledge_base(
-            bank_id,
-            kb_id,
-            name=body.name,
-            mission=body.mission,
-            tags=body.tags,
-            auto_create=body.auto_create,
-            split_threshold=body.split_threshold,
-            request_context=request_context,
-        )
-        if result is None:
-            raise HTTPException(status_code=404, detail=f"Knowledge base '{kb_id}' not found")
-        return result
-
-    @app.delete(
-        "/v1/default/banks/{bank_id}/knowledge-bases/{kb_id}",
-        summary="Delete a knowledge base",
-        description="Delete a knowledge base. Mental models are orphaned unless delete_mental_models=true.",
-        operation_id="delete_knowledge_base",
-        tags=["Knowledge Bases"],
-    )
-    async def api_delete_knowledge_base(
-        bank_id: str,
-        kb_id: str,
-        delete_mental_models: bool = Query(False, description="Also delete all mental models in this KB"),
-        request_context: RequestContext = Depends(get_request_context),
-    ):
-        deleted = await app.state.memory.delete_knowledge_base(
-            bank_id, kb_id, delete_mental_models=delete_mental_models, request_context=request_context
-        )
-        if not deleted:
-            raise HTTPException(status_code=404, detail=f"Knowledge base '{kb_id}' not found")
-        return {"deleted": True, "id": kb_id}
-
-    # =========================================================================
+    #
     # =========================================================================
     # MENTAL MODELS ENDPOINTS (stored reflect responses)
     # =========================================================================
@@ -3746,7 +3616,6 @@ def _register_routes(app: FastAPI):
         ),
         limit: int = Query(100, ge=1, le=1000),
         offset: int = Query(0, ge=0),
-        kb: str | None = Query(None, description="Filter by knowledge base ID"),
         request_context: RequestContext = Depends(get_request_context),
     ):
         """List mental models for a bank."""
@@ -3755,7 +3624,6 @@ def _register_routes(app: FastAPI):
                 bank_id=bank_id,
                 tags=tags_filter,
                 tags_match=tags_match,
-                kb_id=kb,
                 detail=detail,
                 limit=limit,
                 offset=offset,
@@ -3880,7 +3748,6 @@ def _register_routes(app: FastAPI):
                 tags=body.tags if body.tags else None,
                 max_tokens=body.max_tokens,
                 trigger=body.trigger.model_dump() if body.trigger else None,
-                kb_id=body.kb_id,
                 request_context=request_context,
             )
             # 2. Schedule a refresh to generate the actual content
