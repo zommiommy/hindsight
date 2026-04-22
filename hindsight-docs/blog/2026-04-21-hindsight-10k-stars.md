@@ -1,7 +1,7 @@
 ---
 title: "Hindsight Reaches 10,000 Stars: The Community's Choice for Agent Memory"
 description: "How Hindsight became the community's choice for agent memory in 4.5 months. 10,000 stars, 1,000+ Cloud sign-ups, and a thriving ecosystem of real-world use cases."
-slug: "hindsight-10k-stars"
+slug: "2026/04/22/hindsight-10k-stars"
 date: "2026-04-22"
 image: "/img/blog/hindsight-10k-stars.png"
 ---
