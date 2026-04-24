@@ -70,9 +70,19 @@ def setup(
     click.echo(f"  Workspace: {workspace_path}")
     click.echo()
 
+    # 0. Health check
+    api = HindsightAPI(api_url, api_token=api_token)
+    try:
+        r = api.client.get("/health")
+        r.raise_for_status()
+    except Exception:
+        raise click.ClickException(
+            f"Cannot reach Hindsight at {api_url}. "
+            "Make sure the server is running or pass --api-url / --api-token."
+        )
+
     # 1. Create bank on Hindsight
     click.echo("Creating Hindsight bank...")
-    api = HindsightAPI(api_url, api_token=api_token)
 
     # If template provided, import it first (this also creates the bank)
     if template:
