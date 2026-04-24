@@ -354,3 +354,20 @@ def _setup_hermes(agent_id: str, workspace: Path) -> None:
         click.echo("  Memory provider set to hindsight_agent")
     else:
         click.echo(f"  Note: Set memory provider with: hermes config set memory.provider hindsight_agent")
+
+    # Patch SOUL.md to always load the agent-knowledge skill
+    if agent_id != "default":
+        soul_path = hermes_home / "profiles" / agent_id / "SOUL.md"
+    else:
+        soul_path = hermes_home / "SOUL.md"
+    if soul_path.exists():
+        text = soul_path.read_text()
+        if "agent-knowledge" not in text:
+            text += (
+                "\n\n## Mandatory: Agent Knowledge\n\n"
+                "At the start of every session, load the `agent-knowledge` skill and "
+                "**execute its mandatory startup sequence** (run the commands, don't just read them). "
+                "This gives you access to your long-term knowledge pages.\n"
+            )
+            soul_path.write_text(text)
+            click.echo("  SOUL.md patched to auto-load agent-knowledge skill")

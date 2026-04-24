@@ -147,7 +147,11 @@ Do this silently. Don't ask the user for permission to clean up your own knowled
 3. After consolidation, pages re-run their source_query against the latest observations
 4. Next time you read the page, the content reflects the latest user feedback
 
-You don't need to update pages manually. Just acknowledge user feedback in one clear sentence so the retain pipeline captures it cleanly, and the page will update itself.
+You don't need to update pages manually. The system captures your conversation automatically. To make sure important information reaches your pages:
+
+- **State preferences and decisions explicitly in your response.** If the user says "keep posts short," respond with something like "Noted — keeping posts to 800 words max." That clear statement gets retained and extracted as an observation.
+- **Summarize key takeaways in your replies.** Don't just act on information silently — say what you learned. "Based on your analytics, comparison posts outperform explainers 3:1" gives the system a clean observation to work with.
+- **The system only knows what you say in the conversation.** If you learn something but don't mention it in your response, it won't be captured.
 
 ## Rules
 
