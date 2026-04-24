@@ -283,12 +283,3 @@ Once you connect ChatGPT and Perplexity to Hindsight, a few practices maximize v
 
 Over weeks and months, as your memory bank grows, you'll notice ChatGPT and Perplexity give increasingly personalized, informed answers, because they're now working with your accumulated context instead of starting fresh every time.
 
-## What's Next
-
-Future releases will bring:
-- **Mental models**, Hindsight automatically synthesizes memories into living documents
-- **Cross-tool workflows**, memories flow between ChatGPT, Perplexity, Claude, and other tools
-- **Team memory**, share memory banks with colleagues (coming soon)
-- **Structured queries**, filter memories by date, project, tag, or metadata
-
-For now, enjoy persistent memory in ChatGPT and Perplexity. Questions? Drop us a note on [GitHub](https://github. com/vectorize-io/hindsight) or join the community on [Discord](https://discord. gg/hindsight).
