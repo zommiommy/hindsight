@@ -790,17 +790,30 @@ class TestWorkerPoller:
 
         # Set up a bank the task handler can address.
         bank_id = f"test-defer-passthrough-{uuid.uuid4().hex[:8]}"
+        operation_id = uuid.uuid4()
+        # execute_task short-circuits if the async_operations row is missing
+        # (treats it as cancelled), so insert a pending row first.
         async with memory._pool.acquire() as conn:
             await conn.execute(
                 "INSERT INTO banks (bank_id) VALUES ($1) ON CONFLICT DO NOTHING",
                 bank_id,
+            )
+            await conn.execute(
+                """
+                INSERT INTO async_operations
+                    (operation_id, bank_id, operation_type, status, task_payload)
+                VALUES ($1, $2, 'retain', 'pending', $3::jsonb)
+                """,
+                operation_id,
+                bank_id,
+                json.dumps({"type": "batch_retain", "bank_id": bank_id}),
             )
 
         task_dict = {
             "type": "batch_retain",
             "bank_id": bank_id,
             "contents": [{"content": "x"}],
-            "operation_id": str(uuid.uuid4()),
+            "operation_id": str(operation_id),
             "_tenant_id": "default",
         }
 
@@ -869,10 +882,16 @@ class TestWorkerPoller:
 
         claimed = await poller.claim_batch()
 
+        # Filter to banks this test created — other test files running in
+        # parallel may have pending async_operations that the poller would
+        # legitimately claim; we only care about our own rows here.
+        test_banks = {bank_id, other_bank_id}
+        my_claims = [c for c in claimed if c.task_dict.get("bank_id") in test_banks]
+
         # Should only claim the consolidation for the other bank
-        assert len(claimed) == 1
-        assert claimed[0].operation_id == str(other_op_id)
-        assert claimed[0].task_dict["bank_id"] == other_bank_id
+        assert len(my_claims) == 1, f"Expected 1 claim for our banks, got {len(my_claims)}: {my_claims}"
+        assert my_claims[0].operation_id == str(other_op_id)
+        assert my_claims[0].task_dict["bank_id"] == other_bank_id
 
         # Verify the pending consolidation for first bank is still pending
         row = await pool.fetchrow(
@@ -1162,7 +1181,9 @@ class TestConcurrentWorkers:
         )
 
         claimed = await poller.claim_batch()
-        assert len(claimed) == 3, "Worker should only claim pending tasks"
+        # Filter to this test's bank — parallel tests may contribute other claims.
+        my_claims = [c for c in claimed if c.task_dict.get("bank_id") == bank_id]
+        assert len(my_claims) == 3, f"Worker should only claim the 3 pending tasks for our bank, got {len(my_claims)}"
 
         # Verify other worker's tasks are still owned by them
         row = await pool.fetchrow(
@@ -1341,8 +1362,7 @@ class TestWorkerTaskBackend:
         await backend.submit_task({"type": "consolidation", "bank_id": "b1"})
 
         assert len(executed) == 0, (
-            "WorkerTaskBackend must not execute tasks inline — "
-            "child tasks should be picked up by the poller"
+            "WorkerTaskBackend must not execute tasks inline — child tasks should be picked up by the poller"
         )
 
     @pytest.mark.asyncio
@@ -1403,10 +1423,7 @@ class TestWorkerTaskBackend:
         assert execution_order == [
             "parent:start",
             "parent:end",
-        ], (
-            f"WorkerTaskBackend must not execute child tasks inline. "
-            f"Got: {execution_order}"
-        )
+        ], f"WorkerTaskBackend must not execute child tasks inline. Got: {execution_order}"
 
     @pytest.mark.asyncio
     async def test_worker_backend_child_task_stays_pending_in_db(self, pool, clean_operations):
@@ -2148,9 +2165,7 @@ async def test_per_operation_slot_reservations(pool, clean_operations):
         retain_started = [op for op, t in started.items() if t == "retain"]
         consolidation_started = [op for op, t in started.items() if t == "consolidation"]
 
-        assert len(retain_started) == 6, (
-            f"Retain should use 3 reserved + 3 shared = 6 slots, got {len(retain_started)}"
-        )
+        assert len(retain_started) == 6, f"Retain should use 3 reserved + 3 shared = 6 slots, got {len(retain_started)}"
         assert len(consolidation_started) == 2, (
             f"Consolidation should use its 2 reserved slots, got {len(consolidation_started)}"
         )
@@ -2227,9 +2242,7 @@ async def test_shared_pool_usable_by_reserved_types(pool, clean_operations):
             await asyncio.sleep(0.01)
 
         retain_started = [op for op, t in started.items() if t == "retain"]
-        assert len(retain_started) == 5, (
-            f"Retain should use 2 reserved + 3 shared = 5 slots, got {len(retain_started)}"
-        )
+        assert len(retain_started) == 5, f"Retain should use 2 reserved + 3 shared = 5 slots, got {len(retain_started)}"
 
         # Should not exceed max_slots
         await asyncio.sleep(0.1)
@@ -2717,11 +2730,10 @@ class TestClaimBatchRotation:
             executor=lambda x: None,
         )
 
-        # No pending rows → scan returns empty
-        result = await poller._scan_active_schemas([None])
-        assert None not in result, "Scan found work in schema with no pending rows"
-
-        # Insert a pending row
+        # Insert a pending row and verify the scan finds its schema.
+        # Note: we can't assert the "no pending rows" case here because
+        # parallel test files may add their own pending rows to the public
+        # schema during this test.
         op_id = uuid.uuid4()
         await pool.execute(
             """INSERT INTO async_operations
@@ -2733,7 +2745,6 @@ class TestClaimBatchRotation:
         )
 
         try:
-            # Now scan should find work
             result = await poller._scan_active_schemas([None])
             assert None in result, "Scan missed schema with pending work"
         finally:
@@ -2775,7 +2786,9 @@ class TestClaimBatchRotation:
 
         claimed = await poller.claim_batch()
 
-        assert len(claimed) == 1, f"Expected 1 claimed task, got {len(claimed)}"
+        # Filter to our bank — parallel test files may contribute other claims in public schema.
+        my_claims = [c for c in claimed if c.task_dict.get("bank_id") == bank_id]
+        assert len(my_claims) == 1, f"Expected 1 claim for our bank, got {len(my_claims)}"
         assert len(schemas_claimed) <= 3, (
             f"Claim called on {len(schemas_claimed)} schemas — should only visit schemas the scan identified as active"
         )
@@ -2883,15 +2896,11 @@ class TestDecommissionAllWorkers:
         assert result[0]["operation_id"] == processing_id
 
         # Pending task unchanged
-        pending_row = await pool.fetchrow(
-            "SELECT status FROM async_operations WHERE operation_id = $1", pending_id
-        )
+        pending_row = await pool.fetchrow("SELECT status FROM async_operations WHERE operation_id = $1", pending_id)
         assert pending_row["status"] == "pending"
 
         # Completed task unchanged
-        completed_row = await pool.fetchrow(
-            "SELECT status FROM async_operations WHERE operation_id = $1", completed_id
-        )
+        completed_row = await pool.fetchrow("SELECT status FROM async_operations WHERE operation_id = $1", completed_id)
         assert completed_row["status"] == "completed"
 
     @pytest.mark.asyncio
