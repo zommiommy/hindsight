@@ -166,11 +166,10 @@ class TestEndOfCall:
         async def _fake_retain(content: str) -> None:
             retained.append(content)
 
-        ensure = asyncio.ensure_future
-        with patch.object(svc, "_retain", side_effect=_fake_retain):
-            with patch("hindsight_vapi.webhook.asyncio.create_task", side_effect=ensure):
-                await svc.handle(_make_end_of_call(transcript))
-                await asyncio.sleep(0)  # allow the task to run
+        with patch.object(svc, "_retain", new_callable=AsyncMock, side_effect=_fake_retain):
+            await svc.handle(_make_end_of_call(transcript))
+            # Let the scheduled task run
+            await asyncio.sleep(0)
 
         assert retained == [transcript]
 
