@@ -55,20 +55,22 @@ Use recall when:
 
 ## Ingesting documents
 
-Upload content directly into your memory without needing to say it in conversation. Use this for reference docs, research, data, or anything you want indexed.
+Upload content directly into your memory. The system handles chunking, extraction, and indexing — you just pass the raw content through. **Never summarize or truncate content before ingesting.** Pass it raw, no matter how large. The system can handle it.
 
 ```bash
-# From a file
+# From a file (preferred for large content)
 hindsight-agent ingest-document {{AGENT_ID}} "Document Title" -f /path/to/file.md
 
-# Inline
+# Inline for short content
 hindsight-agent ingest-document {{AGENT_ID}} "Document Title" -c "content here..."
 
-# From stdin (e.g., pipe from another command)
+# Pipe from another command (e.g., fetched web content)
 cat data.txt | hindsight-agent ingest-document {{AGENT_ID}} "Document Title"
 ```
 
 The title is used as the document ID — re-ingesting the same title replaces the previous version.
+
+**Important:** When ingesting web pages or large documents, save the content to a file first, then ingest with `-f`. Do NOT try to pass large content inline with `-c` — write it to a temp file and use `-f`. Do NOT summarize, rewrite, or "optimize" the content — the system extracts what it needs from raw text.
 
 ## Listing reference documents
 
