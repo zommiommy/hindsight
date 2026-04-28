@@ -14,8 +14,15 @@ hermes-agent's plugin code, hindsight_embed, hindsight_client, pytest):
 Skipped automatically if `HINDSIGHT_LLM_API_KEY` (or `OPENAI_API_KEY`) is not
 set, since embedded mode needs an LLM to extract facts during retain.
 
-Defaults: openai / gpt-4o-mini. Override via `HINDSIGHT_LLM_PROVIDER` and
+Defaults: openai / gpt-4o. Override via `HINDSIGHT_LLM_PROVIDER` and
 `HINDSIGHT_LLM_MODEL`.
+
+Why not gpt-4o-mini for the default? The smaller model is unreliable on
+Hindsight's fact-extraction structured-output schema — observed runs
+where the LLM is called (>100 output tokens) but returns an empty
+`facts` array, leaving the bank with 0 memory units. Recall then has
+nothing to surface and the test flakes. gpt-4o produces consistent
+extractions for this content.
 """
 
 from __future__ import annotations
@@ -34,7 +41,7 @@ import pytest
 HERMES_VENV_SITE = Path.home() / ".hermes" / "hermes-agent"
 LLM_API_KEY = os.environ.get("HINDSIGHT_LLM_API_KEY") or os.environ.get("OPENAI_API_KEY", "")
 LLM_PROVIDER = os.environ.get("HINDSIGHT_LLM_PROVIDER", "openai")
-LLM_MODEL = os.environ.get("HINDSIGHT_LLM_MODEL", "gpt-4o-mini")
+LLM_MODEL = os.environ.get("HINDSIGHT_LLM_MODEL", "gpt-4o")
 
 pytestmark = [
     pytest.mark.skipif(
@@ -125,14 +132,26 @@ def test_retain_then_recall_roundtrip(embedded_provider):
 
     This exercises the full Hermes plugin path: sync_turn -> aretain_batch ->
     daemon -> LLM fact extraction -> indexing -> recall -> prefetch.
+
+    Content style matters: the fact extractor mines first-person statements
+    the user makes about themselves. Synthetic Q&A where the assistant
+    asserts a fact about the user yields 0 extracted units and an empty
+    bank, even though the HTTP retain returns 200. Use a natural turn
+    where the user states the preference directly.
     """
-    fact = "The user's favorite programming language is Rust"
     embedded_provider.sync_turn(
-        user_content="What's my favorite programming language?",
-        assistant_content=fact,
+        user_content=(
+            "I've been writing Rust for the past three years and it's easily "
+            "my favorite programming language — the borrow checker just clicks "
+            "for me."
+        ),
+        assistant_content=(
+            "Got it — I'll remember that Rust is your favorite language."
+        ),
     )
-    if embedded_provider._sync_thread:
-        embedded_provider._sync_thread.join(timeout=60.0)
+    # Wait for the writer thread to drain the queued retain. Bounded by
+    # _DEFAULT_TIMEOUT (120s) inside the plugin per request.
+    embedded_provider._retain_queue.join()
 
     deadline = time.time() + 60.0
     last_result = ""
