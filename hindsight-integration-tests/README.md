@@ -87,4 +87,4 @@ This runs both types. Self-contained tests won't conflict with the external serv
 
 - `HINDSIGHT_API_URL` — Base URL for external-server tests (default: `http://localhost:8888`)
 - `HINDSIGHT_LLM_API_KEY` / `OPENAI_API_KEY` — required by the Hermes embedded smoke test
-- `HINDSIGHT_LLM_PROVIDER`, `HINDSIGHT_LLM_MODEL` — override defaults (`openai` / `gpt-4o-mini`)
+- `HINDSIGHT_LLM_PROVIDER`, `HINDSIGHT_LLM_MODEL` — override defaults (`openai` / `gpt-4o`)

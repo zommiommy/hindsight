@@ -125,11 +125,22 @@ def test_retain_then_recall_roundtrip(embedded_provider):
 
     This exercises the full Hermes plugin path: sync_turn -> aretain_batch ->
     daemon -> LLM fact extraction -> indexing -> recall -> prefetch.
+
+    Content style matters: the fact extractor mines first-person statements
+    the user makes about themselves. Synthetic Q&A where the assistant
+    asserts a fact about the user yields 0 extracted units and an empty
+    bank, even though the HTTP retain returns 200. Use a natural turn
+    where the user states the preference directly.
     """
-    fact = "The user's favorite programming language is Rust"
     embedded_provider.sync_turn(
-        user_content="What's my favorite programming language?",
-        assistant_content=fact,
+        user_content=(
+            "I've been writing Rust for the past three years and it's easily "
+            "my favorite programming language — the borrow checker just clicks "
+            "for me."
+        ),
+        assistant_content=(
+            "Got it — I'll remember that Rust is your favorite language."
+        ),
     )
     if embedded_provider._sync_thread:
         embedded_provider._sync_thread.join(timeout=60.0)
