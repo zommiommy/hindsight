@@ -13,6 +13,8 @@ Adding **Pipecat persistent memory** doesn't require building a custom RAG syste
 
 <!-- truncate -->
 
+![Pipecat Voice AI Persistent Memory](/img/blog/pipecat-voice-ai-persistent-memory.png)
+
 ## TL;DR
 
 - Pipecat voice pipelines have no built-in memory; each conversation starts from scratch.
