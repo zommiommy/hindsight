@@ -245,7 +245,6 @@ class DataAccessOps(ABC):
         seed_ids: list,
         budget: int,
         per_entity_limit: int,
-        causal_weight_threshold: float,
     ) -> tuple[list[ResultRow], list[ResultRow], list[ResultRow]]:
         """Observation-specific graph expansion.
 

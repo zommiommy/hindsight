@@ -84,6 +84,7 @@ class TestOracleHTTP:
             assert resp.status_code == 200
             results = resp.json()
             assert "results" in results
+            assert len(results["results"]) > 0, "Recall should return results for retained fact about Alice"
         finally:
             await _safe_http_cleanup(api_client, bank_id)
 
@@ -109,6 +110,7 @@ class TestOracleHTTP:
             assert resp.status_code == 200
             body = resp.json()
             assert "text" in body
+            assert len(body["text"]) > 10, "Reflect should return a meaningful text response"
         finally:
             await _safe_http_cleanup(api_client, bank_id)
 
@@ -292,6 +294,9 @@ class TestOracleHTTP:
             # Search documents
             resp = await api_client.get(f"/v1/default/banks/{bank_id}/documents")
             assert resp.status_code == 200
+            docs = resp.json()
+            items = docs.get("items", docs.get("documents", []))
+            assert len(items) > 0, "Should have at least one document after retain"
         finally:
             await _safe_http_cleanup(api_client, bank_id)
 
@@ -309,6 +314,9 @@ class TestOracleHTTP:
             )
             resp = await api_client.get(f"/v1/default/banks/{bank_id}/operations")
             assert resp.status_code == 200
+            ops = resp.json()
+            items = ops.get("items", ops) if isinstance(ops, dict) else ops
+            assert len(items) > 0, "Retain should create at least one async operation"
         finally:
             await _safe_http_cleanup(api_client, bank_id)
 
@@ -318,7 +326,7 @@ class TestOracleHTTP:
         try:
             # Use document_tags at the request level (item-level tags may not work
             # the same way across backends)
-            await api_client.post(
+            resp = await api_client.post(
                 f"/v1/default/banks/{bank_id}/memories",
                 json={
                     "items": [
@@ -331,14 +339,20 @@ class TestOracleHTTP:
                     "document_tags": ["http-tag", "oracle-tag"],
                 },
             )
+            assert resp.status_code == 200, f"Retain failed: {resp.text}"
+            retain_body = resp.json()
+            assert retain_body.get("success") is True, f"Retain not successful: {retain_body}"
+
             resp = await api_client.get(f"/v1/default/banks/{bank_id}/tags")
             assert resp.status_code == 200
             tags_data = resp.json()
             # Should contain the tags we inserted (or at least the endpoint works)
             all_tags = tags_data if isinstance(tags_data, list) else tags_data.get("tags", tags_data.get("items", []))
             tag_names = [t if isinstance(t, str) else t.get("tag", t.get("name", "")) for t in all_tags]
-            # Tags depend on LLM fact extraction tagging the content correctly.
-            # Non-deterministic — verify endpoint works; if tags present, check values.
+            # TODO: Tags should appear via document_tags, but HTTP endpoint may not
+            # propagate them to memory_units consistently. Core tag functionality
+            # works (verified in test_oracle_integration.py::test_list_tags).
+            # Verify at least the endpoint returns valid data.
             if len(all_tags) > 0:
                 assert "http-tag" in tag_names or "oracle-tag" in tag_names, (
                     f"Expected 'http-tag' or 'oracle-tag' in tags, got: {tag_names}"

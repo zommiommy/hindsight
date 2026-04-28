@@ -112,15 +112,8 @@ class LinkExpansionRetriever(GraphRetriever):
     The Python merge step applies per-signal score transformations.
     """
 
-    def __init__(
-        self,
-        causal_weight_threshold: float = 0.3,
-    ):
-        """
-        Args:
-            causal_weight_threshold: Minimum weight for causal links to follow.
-        """
-        self.causal_weight_threshold = causal_weight_threshold
+    def __init__(self):
+        pass
 
     @property
     def name(self) -> str:
@@ -395,5 +388,4 @@ class LinkExpansionRetriever(GraphRetriever):
             seed_ids,
             budget,
             per_entity_limit,
-            self.causal_weight_threshold,
         )

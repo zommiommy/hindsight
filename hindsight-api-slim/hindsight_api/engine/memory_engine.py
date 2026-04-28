@@ -208,6 +208,24 @@ from .search.tags import TagGroup, TagsMatch, build_tags_where_clause
 from .task_backend import TaskBackend
 
 
+def _is_oracledb_connection_error(e: Exception) -> bool:
+    """Check if an exception is an Oracle connection/interface error."""
+    try:
+        import oracledb  # type: ignore[import-not-found]
+    except ImportError:
+        return False
+    return isinstance(e, (oracledb.InterfaceError, oracledb.OperationalError))
+
+
+def _is_oracledb_integrity_error(e: Exception) -> bool:
+    """Check if an exception is an Oracle integrity constraint error."""
+    try:
+        import oracledb  # type: ignore[import-not-found]
+    except ImportError:
+        return False
+    return isinstance(e, oracledb.IntegrityError)
+
+
 class Budget(str, Enum):
     """Budget levels for recall/reflect operations."""
 
@@ -1204,12 +1222,14 @@ class MemoryEngine(MemoryEngineInterface):
                     logger.error(f"Not retrying task {task_type} (non-retryable), marking as failed")
                     if operation_id:
                         await self._mark_operation_failed(operation_id, str(e), error_traceback)
-                elif isinstance(e, asyncpg.exceptions.IntegrityConstraintViolationError):
-                    # Non-retryable: deterministic Postgres integrity violations
+                elif isinstance(e, asyncpg.exceptions.IntegrityConstraintViolationError) or (
+                    _is_oracledb_integrity_error(e)
+                ):
+                    # Non-retryable: deterministic integrity violations (PG or Oracle)
                     # (UniqueViolationError, ForeignKeyViolationError, CheckViolationError,
-                    # NotNullViolationError, ExclusionViolationError) will never succeed on
-                    # retry — the offending row state is already committed. Retrying just
-                    # burns worker capacity. See vectorize-io/hindsight#980.
+                    # NotNullViolationError, ExclusionViolationError / ORA-00001, ORA-02291, etc.)
+                    # will never succeed on retry — the offending row state is already committed.
+                    # Retrying just burns worker capacity. See vectorize-io/hindsight#980.
                     logger.error(
                         f"Not retrying task {task_type} (integrity violation, deterministic): {type(e).__name__}"
                     )
@@ -2730,11 +2750,12 @@ class MemoryEngine(MemoryEngineInterface):
                         )
                         break  # Success - exit retry loop
                     except Exception as e:
-                        # Check if it's a connection error
+                        # Check if it's a connection error (PG or Oracle)
                         is_connection_error = (
                             isinstance(e, asyncpg.TooManyConnectionsError)
                             or isinstance(e, asyncpg.CannotConnectNowError)
                             or (isinstance(e, asyncpg.PostgresError) and "connection" in str(e).lower())
+                            or _is_oracledb_connection_error(e)
                         )
 
                         if is_connection_error and attempt < max_retries:

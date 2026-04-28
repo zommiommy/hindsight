@@ -423,7 +423,6 @@ class OracleOps(DataAccessOps):
                 JOIN {mu_table} mu ON ml.to_unit_id = mu.id
                 WHERE ml.from_unit_id = ANY($1::uuid[])
                   AND ml.link_type IN ('causes', 'caused_by', 'enables', 'prevents')
-                  AND ml.weight >= $4
                   AND mu.fact_type = $2
             ),
             causal_expanded AS (
@@ -443,7 +442,6 @@ class OracleOps(DataAccessOps):
         seed_ids: list,
         budget: int,
         per_entity_limit: int,
-        causal_weight_threshold: float,
     ) -> tuple[list[ResultRow], list[ResultRow], list[ResultRow]]:
         import logging
 
@@ -546,7 +544,7 @@ class OracleOps(DataAccessOps):
                 JOIN {mu_table} mu ON ml.to_unit_id = mu.id
                 WHERE ml.from_unit_id = ANY($1::uuid[])
                   AND ml.link_type IN ('causes', 'caused_by', 'enables', 'prevents')
-                  AND ml.weight >= $3 AND mu.fact_type = 'observation'
+                  AND mu.fact_type = 'observation'
             ),
             causal_expanded AS (
                 SELECT id, text, context, event_date, occurred_start, occurred_end, mentioned_at,
@@ -561,7 +559,6 @@ class OracleOps(DataAccessOps):
             """,
             seed_ids,
             budget,
-            causal_weight_threshold,
         )
 
         semantic_rows = [r for r in sem_causal_rows if r["source"] == "semantic"]
