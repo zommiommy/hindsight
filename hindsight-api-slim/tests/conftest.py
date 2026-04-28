@@ -169,16 +169,106 @@ def _cleanup_stale_test_data(db_url: str) -> None:
 
 
 @pytest.fixture(scope="session")
-def oracle_db_url():
+def _oracle_admin_dsn():
     """
-    Provide an Oracle 23ai connection URL for tests.
+    Parse ORACLE_TEST_DSN into admin connection parameters.
 
-    Reads from ORACLE_TEST_DSN env var. Skips the entire test if not set.
+    Accepts either URL format (oracle://user:pass@host:port/service) or
+    bare DSN (host:port/service) with separate ORACLE_TEST_USER/PASSWORD env vars.
+    Skips the entire test session if ORACLE_TEST_DSN is not set.
     """
+    from urllib.parse import urlparse
+
     dsn = os.getenv("ORACLE_TEST_DSN")
     if not dsn:
         pytest.skip("ORACLE_TEST_DSN not set — skipping Oracle tests")
-    return dsn
+
+    parsed = urlparse(dsn)
+    if parsed.scheme in ("oracle", "oracle+oracledb"):
+        host = parsed.hostname or "localhost"
+        port = parsed.port or 1521
+        service = parsed.path.lstrip("/") if parsed.path else "FREEPDB1"
+        return {
+            "user": parsed.username or "SYSTEM",
+            "password": parsed.password or "oracle",
+            "dsn": f"{host}:{port}/{service}",
+        }
+    else:
+        return {
+            "user": os.getenv("ORACLE_TEST_USER", "SYSTEM"),
+            "password": os.getenv("ORACLE_TEST_PASSWORD", "oracle"),
+            "dsn": dsn,
+        }
+
+
+@pytest.fixture(scope="session")
+def oracle_db_url(_oracle_admin_dsn):
+    """
+    Bootstrap a dedicated Oracle test user with an ASSM tablespace and return
+    a connection URL for that user.
+
+    Oracle 23ai requires VECTOR columns to be in an Automatic Segment Space
+    Management (ASSM) tablespace. The default SYSTEM tablespace is not ASSM,
+    so connecting as SYSTEM directly would cause ORA-43853 during migrations.
+
+    This fixture creates a ``HINDSIGHT_TEST`` user (idempotent) with the USERS
+    tablespace (which is ASSM on Oracle Free/XE) and returns a URL that the
+    ``oracle_memory`` fixture and ``run_oracle_migrations()`` can use directly.
+    """
+    try:
+        import oracledb
+    except ImportError:
+        pytest.skip("oracledb not installed — skipping Oracle tests")
+
+    oracledb.defaults.fetch_lobs = False
+
+    admin_user = _oracle_admin_dsn["user"]
+    admin_pass = _oracle_admin_dsn["password"]
+    bare_dsn = _oracle_admin_dsn["dsn"]
+
+    test_user = "HINDSIGHT_TEST"
+    test_pass = "hindsight_test"
+
+    conn = oracledb.connect(user=admin_user, password=admin_pass, dsn=bare_dsn)
+    cursor = conn.cursor()
+    try:
+        # Create test user (idempotent — skip if already exists)
+        try:
+            cursor.execute(
+                f'CREATE USER {test_user} IDENTIFIED BY "{test_pass}" '
+                f"DEFAULT TABLESPACE USERS QUOTA UNLIMITED ON USERS"
+            )
+        except oracledb.DatabaseError as e:
+            if hasattr(e.args[0], "code") and e.args[0].code == 1920:
+                # ORA-01920: user name conflicts with another user or role name
+                pass
+            else:
+                raise
+
+        # Grant required privileges (idempotent)
+        for grant in [
+            f"GRANT CONNECT, RESOURCE, UNLIMITED TABLESPACE TO {test_user}",
+            f"GRANT CREATE SESSION, CREATE TABLE, CREATE SEQUENCE, CREATE VIEW TO {test_user}",
+            f"GRANT CTXAPP TO {test_user}",
+        ]:
+            try:
+                cursor.execute(grant)
+            except oracledb.DatabaseError:
+                pass
+
+        # Grant UTL_MATCH for fuzzy entity matching (may not be available)
+        try:
+            cursor.execute(f"GRANT EXECUTE ON UTL_MATCH TO {test_user}")
+        except oracledb.DatabaseError:
+            pass
+
+        conn.commit()
+    finally:
+        cursor.close()
+        conn.close()
+
+    # Return URL-format DSN for the test user
+    return f"oracle://{test_user}:{test_pass}@{bare_dsn}"
 
 
 @pytest_asyncio.fixture(scope="function")

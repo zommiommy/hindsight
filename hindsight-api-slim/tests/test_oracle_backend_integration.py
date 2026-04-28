@@ -825,7 +825,10 @@ class TestOracleDialectSqlAccepted:
             async with backend.acquire() as conn:
                 val = await conn.fetchval(f"SELECT {dialect.generate_uuid()} FROM DUAL")
                 assert val is not None
-                assert len(val) == 16  # RAW(16) = 16 bytes
+                # The abstraction normalizes RAW(16) to Python uuid.UUID
+                import uuid as _uuid
+
+                assert isinstance(val, _uuid.UUID), f"Expected uuid.UUID, got {type(val).__name__}"
         finally:
             await backend.shutdown()
 
