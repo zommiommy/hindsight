@@ -78,38 +78,39 @@ Memory accumulates across calls. By the third or fourth conversation, recall sta
 
 ## Setting Up Pipecat Persistent Memory
 
-The setup process is minimal. You install Hindsight, add the integration, and insert one line into your pipeline.
+The setup process is minimal. Install the integration, choose your Hindsight deployment, and add one line to your pipeline.
 
-### Step 1: Install and Start Hindsight
-
-First, install the Hindsight server:
-
-```bash
-pip install hindsight-all
-```
-
-Start it locally:
-
-```bash
-export HINDSIGHT_API_LLM_API_KEY=YOUR_OPENAI_KEY
-hindsight-api
-```
-
-This runs locally at `http://localhost:8888` with embedded Postgres, local embeddings, and local reranking. No external services required beyond an LLM API key for entity extraction.
-
-> **Note:** You can also use [Hindsight Cloud](https://ui.hindsight.vectorize.io/signup) and skip self-hosting entirely. The cloud version provides the same API with managed infrastructure.
-
-### Step 2: Install the Pipecat Integration
-
-Next, install the integration package:
+### Step 1: Install the Pipecat Integration
 
 ```bash
 pip install hindsight-pipecat
 ```
 
+### Step 2: Choose Your Hindsight Deployment
+
+Pick either **Hindsight Cloud** (recommended, no self-hosting) or **Local** (run your own daemon).
+
+#### Option 2a: Hindsight Cloud (Recommended)
+
+[Sign up free](https://ui.hindsight.vectorize.io/signup) for Hindsight Cloud — managed infrastructure, no daemon to run, memory syncs across your devices.
+
+#### Option 2b: Local Hindsight
+
+Run Hindsight locally:
+
+```bash
+pip install hindsight-all
+export HINDSIGHT_API_LLM_API_KEY=YOUR_OPENAI_KEY
+hindsight-api
+```
+
+This runs at `http://localhost:8888` with embedded Postgres, local embeddings, and local reranking.
+
 ### Step 3: Add Memory to Your Pipeline
 
-Here's the minimal setup. Create a Hindsight memory service and add it to your pipeline:
+Create a Hindsight memory service and add it to your pipeline:
+
+**For Hindsight Cloud:**
 
 ```python
 from pipecat.pipeline.pipeline import Pipeline
@@ -117,7 +118,8 @@ from hindsight_pipecat import HindsightMemoryService
 
 memory = HindsightMemoryService(
     bank_id="user-123",
-    hindsight_api_url="http://localhost:8888",
+    hindsight_api_url="https://api.hindsight.vectorize.io",
+    api_key="hsk_your_token_here",
 )
 
 pipeline = Pipeline([
@@ -132,22 +134,19 @@ pipeline = Pipeline([
 ])
 ```
 
-That's it. The memory service now:
-- Recalls relevant past conversations before every LLM call
-- Automatically retains new exchanges after each turn
-- Runs asynchronously so your pipeline stays responsive
-
-### Step 4: Use Hindsight Cloud (Optional)
-
-If you prefer not to self-host, swap the local setup for cloud:
+**For Local Hindsight:**
 
 ```python
 memory = HindsightMemoryService(
     bank_id="user-123",
-    hindsight_api_url="https://api.hindsight.vectorize.io",
-    api_key="hsk_your_token_here",
+    hindsight_api_url="http://localhost:8888",
 )
 ```
+
+The memory service now:
+- Recalls relevant past conversations before every LLM call
+- Automatically retains new exchanges after each turn
+- Runs asynchronously so your pipeline stays responsive
 
 ---
 
@@ -360,16 +359,6 @@ memory = HindsightMemoryService(
     recall_budget="low",
     recall_max_tokens=2048,  # Limit tokens to reduce latency
 )
-```
-
-### Memory Bank Full
-
-Hindsight doesn't have a hard limit on memory size, but very large banks (millions of facts) will slow down recall. Periodically archive old conversations or use separate banks per time period:
-
-```python
-# Monthly archives
-month = datetime.now().strftime("%Y-%m")
-memory = HindsightMemoryService(bank_id=f"customer-{customer_id}-{month}")
 ```
 
 ### Privacy and Data Retention
