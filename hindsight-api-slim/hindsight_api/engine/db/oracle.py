@@ -356,16 +356,39 @@ def _rewrite_pg_to_oracle(query: str) -> RewriteResult:
     # Use negative lookbehind/lookahead to skip already-quoted occurrences.
     query = re.sub(r'(?<!")\btrigger\b(?!")', '"trigger"', query)
 
-    # date_trunc('interval', col) → TRUNC(col, 'fmt')
-    _DATE_TRUNC_MAP = {"day": "DD", "hour": "HH24", "month": "MM", "week": "IW", "year": "YYYY"}
+    # date_trunc('interval', expr) → TRUNC(expr, 'fmt')
+    # The second capture group is a balanced expression (not just a column name)
+    # to handle e.g. date_trunc('hour', created_at AT TIME ZONE 'UTC').
+    _DATE_TRUNC_MAP = {"day": "DD", "hour": "HH24", "month": "MM", "week": "IW", "year": "YYYY", "minute": "MI"}
 
     def _rewrite_date_trunc(m):
         interval = m.group(1).lower()
-        col = m.group(2)
+        expr = m.group(2).strip()
+        # Strip AT TIME ZONE — Oracle timestamps are already in the session timezone.
+        expr = re.sub(r"\s+AT\s+TIME\s+ZONE\s+'[^']*'", "", expr, flags=re.IGNORECASE)
         fmt = _DATE_TRUNC_MAP.get(interval, "DD")
-        return f"TRUNC(CAST({col} AS DATE), '{fmt}')"
+        return f"TRUNC(CAST({expr} AS DATE), '{fmt}')"
 
-    query = re.sub(r"date_trunc\(\s*'(\w+)'\s*,\s*(\w+)\s*\)", _rewrite_date_trunc, query, flags=re.IGNORECASE)
+    query = re.sub(r"date_trunc\(\s*'(\w+)'\s*,\s*(.+?)\s*\)", _rewrite_date_trunc, query, flags=re.IGNORECASE)
+
+    # interval 'N units' → NUMTODSINTERVAL(N, 'UNIT')
+    # Handles PG interval literals like interval '7 days', interval '1 hour', etc.
+    _INTERVAL_MAP = {
+        "second": "SECOND", "seconds": "SECOND",
+        "minute": "MINUTE", "minutes": "MINUTE",
+        "hour": "HOUR", "hours": "HOUR",
+        "day": "DAY", "days": "DAY",
+    }
+
+    def _rewrite_interval(m):
+        num = m.group(1)
+        unit = m.group(2).lower()
+        ora_unit = _INTERVAL_MAP.get(unit)
+        if ora_unit:
+            return f"NUMTODSINTERVAL({num}, '{ora_unit}')"
+        return m.group(0)  # leave as-is if unknown unit
+
+    query = re.sub(r"interval\s+'(\d+)\s+(\w+)'", _rewrite_interval, query, flags=re.IGNORECASE)
 
     # JSON operators
     query = _JSON_ARROW_TEXT_RE.sub(r"JSON_VALUE(\1, '$.\2')", query)
@@ -671,10 +694,22 @@ class OracleConnection(DatabaseConnection):
         for key, val in params.items():
             if isinstance(val, str) and val and val[0] in ("{", "[") and f":{key}" in query:
                 sizes[key] = oracledb.DB_TYPE_CLOB
-            # None params in COALESCE with SYSTIMESTAMP need explicit timestamp type
-            # to avoid ORA-00932 (VARCHAR2 NULL vs TIMESTAMP mismatch).
-            elif val is None and re.search(rf"COALESCE\s*\(:{key}\s*,\s*SYSTIMESTAMP\)", query, re.IGNORECASE):
-                sizes[key] = oracledb.DB_TYPE_TIMESTAMP_TZ
+            # None params in COALESCE/GREATEST/LEAST with timestamp columns need
+            # explicit timestamp type to avoid ORA-00932 (VARCHAR2 NULL vs
+            # TIMESTAMP WITH TIME ZONE mismatch). Match patterns like:
+            #   COALESCE(:N, SYSTIMESTAMP)
+            #   COALESCE(:N, occurred_end)  -- timestamp column
+            #   GREATEST(col, COALESCE(:N, col))
+            elif val is None:
+                coalesce_match = re.search(
+                    rf"COALESCE\s*\(:{key}\s*,\s*(\w+)\)", query, re.IGNORECASE
+                )
+                if coalesce_match:
+                    fallback = coalesce_match.group(1).lower()
+                    # Heuristic: column names ending in _at, or known timestamp cols
+                    _TS_NAMES = {"systimestamp", "occurred_start", "occurred_end", "mentioned_at", "last_seen", "event_date"}
+                    if fallback in _TS_NAMES or fallback.endswith("_at"):
+                        sizes[key] = oracledb.DB_TYPE_TIMESTAMP_TZ
         if sizes:
             cursor.setinputsizes(**sizes)
 
