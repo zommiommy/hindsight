@@ -2353,6 +2353,37 @@ ${memoriesFormatted}
     });
     debug("[Hindsight] Hooks registered");
     log.info("agent hooks registered");
+
+    // Register wiki tools (if registerTool is available on this OpenClaw version)
+    if (typeof api.registerTool === "function") {
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        const { createWikiToolFactory } = require("./wiki-tools");
+        const factory = createWikiToolFactory({
+          pluginConfig,
+          getApiUrl: () => {
+            const ext = detectExternalApi(pluginConfig);
+            return ext?.apiUrl || `http://localhost:${pluginConfig.apiPort || 9077}`;
+          },
+          getApiToken: () => pluginConfig.hindsightApiToken || undefined,
+        });
+        api.registerTool(factory, {
+          names: [
+            "hindsight_wiki_list",
+            "hindsight_wiki_get",
+            "hindsight_wiki_create",
+            "hindsight_wiki_update",
+            "hindsight_wiki_delete",
+            "hindsight_wiki_recall",
+            "hindsight_wiki_ingest",
+          ],
+          optional: true,
+        });
+        log.info("wiki tools registered");
+      } catch (err) {
+        log.warn(`wiki tools registration failed: ${err}`);
+      }
+    }
   } catch (error) {
     log.error("plugin loading error", error);
     if (error instanceof Error) {

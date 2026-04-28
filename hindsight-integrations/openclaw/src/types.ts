@@ -14,13 +14,24 @@ export interface MoltbotPluginAPI {
     event: string,
     handler: (event: any, ctx?: any) => void | Promise<void | PluginPromptHookResult>
   ): void;
+  // Register a tool or tool factory for agents
+  registerTool?(
+    factory: (ctx: PluginToolContext) => any | any[] | null | undefined,
+    opts?: { name?: string; names?: string[]; optional?: boolean },
+  ): void;
   // OpenClaw framework logger — handles coloring/formatting consistently across plugins
   logger: {
     info(msg: string): void;
     warn(msg: string): void;
     error(msg: string): void;
   };
-  // Add more as needed
+}
+
+export interface PluginToolContext {
+  config?: MoltbotConfig;
+  agentId?: string;
+  sessionKey?: string;
+  workspaceDir?: string;
 }
 
 export interface MoltbotConfig {
