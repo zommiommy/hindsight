@@ -7,49 +7,59 @@ description: Manage your long-term knowledge pages. Read existing pages before a
 
 Your knowledge is stored as pages that the system keeps updated automatically from your conversations. You **read** pages, **create** new ones when needed, and **recall** memories for deeper research. You never edit page content directly — the system handles that.
 
-Use the `hindsight_wiki_*` tools provided by your memory plugin.
+Use the Hindsight MCP tools (prefixed with `mcp__hindsight__`).
 
 ## Mandatory startup sequence
 
 At the start of every session, call:
 
 ```
-hindsight_wiki_list
+mcp__hindsight__list_mental_models()
 ```
 
 Read the pages relevant to the current task. If empty, create pages as you learn things.
 
 ## Reading pages
 
-- `hindsight_wiki_list` — list all pages with names, IDs, and content
-- `hindsight_wiki_get(page_id)` — read a specific page
+- `mcp__hindsight__list_mental_models()` — list all pages with names, IDs, and content
+- `mcp__hindsight__get_mental_model(mental_model_id="<page-id>")` — read a specific page
 
 ## Recalling memories
 
 Search across all retained knowledge — conversations, reference documents, observations.
 
-- `hindsight_wiki_recall(query)` — search memories
-- `hindsight_wiki_recall(query, max_results=5)` — limit results
+- `mcp__hindsight__recall(query="<your question>")` — search memories
 
 Use recall when you need specific facts not covered by your pages.
 
 ## Ingesting documents
 
-Upload content directly into your memory. **Never summarize before ingesting — pass raw content.** The system handles chunking and extraction.
+Upload content directly into your memory. **Never summarize before ingesting — pass raw content.**
 
-- `hindsight_wiki_ingest(title, content)` — upload a document
+- `mcp__hindsight__retain(content="<raw content>", document_id="<slug>")` — upload a document
 
-For large content, save to a temp file first, read it, then pass the full text to ingest.
+For large content, save to a temp file first, read it, then pass the full text.
 
 ## Creating pages
 
 When you discover a recurring topic — user preferences, procedures, performance data — create a page.
 
-- `hindsight_wiki_create(page_id, name, source_query)` — create a page
+```
+mcp__hindsight__create_mental_model(
+  name="Page Name",
+  source_query="The question the system re-asks to rebuild this page",
+  mental_model_id="page-id",
+  trigger_refresh_after_consolidation=true,
+  trigger_mode="delta",
+  trigger_exclude_mental_models=true,
+  trigger_fact_types=["observation"],
+  max_tokens=4096
+)
+```
 
-The `page_id` must be lowercase with hyphens (e.g., `user-preferences`).
+The `mental_model_id` must be lowercase with hyphens (e.g., `user-preferences`).
 
-**The source_query is the key field.** It's a question the system re-asks after every consolidation to rebuild the page from your accumulated observations.
+**The source_query is the key field.** It's a question the system re-asks after every consolidation to rebuild the page from accumulated observations.
 
 ### Source query patterns
 
@@ -80,15 +90,20 @@ What [topic] strategies have performed well or poorly? Include specific numbers.
 
 ## Updating pages
 
-- `hindsight_wiki_update(page_id, name=..., source_query=...)` — change name or query
+```
+mcp__hindsight__update_mental_model(mental_model_id="page-id", source_query="Updated question...")
+mcp__hindsight__update_mental_model(mental_model_id="page-id", name="Better Name")
+```
 
 ## Deleting pages
 
-- `hindsight_wiki_delete(page_id)` — remove a page
+```
+mcp__hindsight__delete_mental_model(mental_model_id="page-id")
+```
 
 ## How pages stay current
 
-1. Every conversation is automatically retained by the memory plugin
+1. Every conversation is automatically retained by the Hindsight plugin
 2. The system extracts observations from your conversations
 3. After consolidation, pages re-run their source query against new observations
 4. Next time you read a page, it reflects the latest feedback
