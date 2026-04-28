@@ -16,6 +16,7 @@ import * as log from "./logger.js";
 import { configureLogger, setApiLogger, stopLogger } from "./logger.js";
 import { mkdirSync, readFileSync } from "fs";
 import { homedir } from "os";
+import { createWikiToolFactory } from "./wiki-tools.js";
 
 function loadPackageVersion(): string {
   try {
@@ -2357,8 +2358,6 @@ ${memoriesFormatted}
     // Register wiki tools (if registerTool is available on this OpenClaw version)
     if (typeof api.registerTool === "function") {
       try {
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
-        const { createWikiToolFactory } = require("./wiki-tools");
         const factory = createWikiToolFactory({
           pluginConfig,
           getApiUrl: () => {
