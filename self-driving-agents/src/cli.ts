@@ -10,13 +10,13 @@
  *   ./local-dir                → local directory
  *   /absolute/path             → local directory
  *
- * Directory layout:
- *   bank-template.json   — optional: bank config + mental models + directives
- *   content/             — optional: reference docs to ingest (.md, .txt, etc.)
+ * Directory layout (recursive):
+ *   bank-template.json   — optional: bank config at this level
+ *   *.md, *.txt, ...     — content files (found recursively, excluding bank-template.json)
  */
 
-import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync, rmSync } from "fs";
-import { join, resolve, extname, basename } from "path";
+import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync, statSync, rmSync } from "fs";
+import { join, resolve, extname, basename, relative } from "path";
 import { homedir, tmpdir } from "os";
 import { execSync } from "child_process";
 import * as p from "@clack/prompts";
@@ -29,6 +29,28 @@ import {
 } from "@vectorize-io/hindsight-client";
 
 const DEFAULT_REPO = "vectorize-io/self-driving-agents";
+
+// ── Content discovery ──────────────────────────────────
+
+const CONTENT_EXTS = new Set([".md", ".txt", ".html", ".json", ".csv", ".xml"]);
+const IGNORED_FILES = new Set(["bank-template.json"]);
+
+/** Recursively find all content files under `dir`, returning paths relative to `dir`. */
+function findContentFiles(dir: string): string[] {
+  const results: string[] = [];
+  function walk(current: string) {
+    for (const entry of readdirSync(current)) {
+      const full = join(current, entry);
+      if (statSync(full).isDirectory()) {
+        walk(full);
+      } else if (CONTENT_EXTS.has(extname(entry).toLowerCase()) && !IGNORED_FILES.has(entry)) {
+        results.push(relative(dir, full));
+      }
+    }
+  }
+  walk(dir);
+  return results.sort();
+}
 
 // ── Agent resolution ───────────────────────────────────
 
@@ -349,22 +371,19 @@ async function main() {
       spin.stop("Bank template imported");
     }
 
-    // Step 5: Ingest content
-    const contentDir = join(dir, "content");
-    if (existsSync(contentDir)) {
-      const exts = new Set([".md", ".txt", ".html", ".json", ".csv", ".xml"]);
-      const files = readdirSync(contentDir).filter((f) => exts.has(extname(f).toLowerCase())).sort();
-      if (files.length > 0) {
-        spin.start(`Ingesting ${files.length} file(s)...`);
-        for (const file of files) {
-          const content = readFileSync(join(contentDir, file), "utf-8");
-          if (!content.trim()) continue;
-          const docId = file.replace(/\.[^.]+$/, "");
-          await client.retainBatch(bankId, [{ content, document_id: docId }], { async: true });
-          spin.message(`Ingesting ${file}...`);
-        }
-        spin.stop(`Ingested ${files.length} file(s)`);
+    // Step 5: Ingest content (recursive — all text files except bank-template.json)
+    const contentFiles = findContentFiles(dir);
+    if (contentFiles.length > 0) {
+      spin.start(`Ingesting ${contentFiles.length} file(s)...`);
+      for (const relPath of contentFiles) {
+        const content = readFileSync(join(dir, relPath), "utf-8");
+        if (!content.trim()) continue;
+        // Use relative path (without extension) as document ID, e.g. "seo/keyword-research"
+        const docId = relPath.replace(/\.[^.]+$/, "");
+        await client.retainBatch(bankId, [{ content, document_id: docId }], { async: true });
+        spin.message(`Ingesting ${relPath}...`);
       }
+      spin.stop(`Ingested ${contentFiles.length} file(s)`);
     }
 
     // Step 6: Create agent + install skill
