@@ -40,15 +40,14 @@ First, get a LlamaParse API key from [llamaindex.ai](https://llamaindex.ai). The
 export HINDSIGHT_API_FILE_PARSER_LLAMA_PARSE_API_KEY=your-api-key
 ```
 
-Or set it in your configuration:
+Or set it in your Python code:
 
 ```python
-from hindsight_api import HindsightClient
+from hindsight_client import Hindsight
 
-client = HindsightClient(
-    api_url="https://api.hindsight.vectorize.io",
-    api_key="your-hindsight-key",
-    file_parser_llama_parse_api_key="your-llamaparse-key"
+client = Hindsight(
+    base_url="https://api.hindsight.vectorize.io",
+    api_key="your-hindsight-key"
 )
 ```
 
@@ -112,15 +111,16 @@ LlamaParse is a hosted service, which means there are practical considerations:
 A legal AI agent needs to extract key terms, obligations, and liability clauses from contracts. Raw text extraction fails because contracts are dense with structure: numbered sections, nested clauses, bolded terms.
 
 ```python
-with open("employment-contract.pdf", "rb") as f:
-    response = client.retain(
-        bank_id="legal-contracts",
-        document=f.read(),
-        tags=["contract", "employment", "2026"]
-    )
+from pathlib import Path
+
+# For file-based parsing with LlamaParse integration
+response = client.retain_files(
+    bank_id="legal-contracts",
+    files=[Path("employment-contract.pdf")]
+)
 ```
 
-LlamaParse preserves the section hierarchy, so Hindsight extracts: "Section 4.2 (Confidentiality): Employee agrees not to disclose..." The structure lets your agent understand the legal semantics, not just the text.
+LlamaParse parses the contract into structured markdown, preserving section hierarchy. Hindsight then extracts facts like "Section 4.2 (Confidentiality): Employee agrees not to disclose..." The structure lets your agent understand the legal semantics, not just the text.
 
 ### Example 2: Technical Specification Ingestion
 
@@ -151,13 +151,20 @@ Your organization has printed handbooks that were scanned to PDF. Simple text ex
 ## Example: Retaining Facts from a Research Paper
 
 ```python
-with open("research-paper.pdf", "rb") as f:
-    response = client.retain(
-        bank_id="research-bank",
-        document=f.read(),
-        tags=["research", "2026"]
-    )
-    print(f"Extracted {response.fact_count} facts from the paper")
+from pathlib import Path
+
+# Parse and retain facts from a research paper
+response = client.retain_files(
+    bank_id="research-bank",
+    files=[Path("research-paper.pdf")]
+)
+
+# Query the extracted facts
+results = client.recall(
+    bank_id="research-bank",
+    query="What was the key finding?"
+)
+print(f"Found {len(results.facts)} relevant facts")
 ```
 
 Hindsight parses the PDF using LlamaParse, extracts structured facts, and stores them in your memory bank. Later, when you ask `client.recall("research-bank", "What was the key finding?")`, you get the facts Hindsight extracted—not raw text, not the full paper, just the signal.
