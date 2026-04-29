@@ -324,6 +324,50 @@ async function ensurePlugin(): Promise<void> {
   }
 }
 
+// ── NemoClaw plugin management ─────────────────────────
+
+async function ensureNemoClawPlugin(sandboxName: string, agentId: string): Promise<void> {
+  // Check nemoclaw is installed
+  try {
+    execSync("which nemoclaw", { stdio: "pipe" });
+  } catch {
+    p.cancel("nemoclaw not found. Install it: curl -fsSL https://www.nvidia.com/nemoclaw.sh | bash");
+    process.exit(1);
+  }
+
+  // Check sandbox exists
+  try {
+    execSync(`nemoclaw ${sandboxName} status`, { stdio: "pipe" });
+  } catch {
+    p.cancel(
+      `Sandbox '${sandboxName}' not found. Create one with: nemoclaw onboard`
+    );
+    process.exit(1);
+  }
+
+  // Check if hindsight plugin is already configured
+  if (!isPluginConfigured()) {
+    p.log.warn("Hindsight plugin needs configuration for NemoClaw.");
+    try {
+      execSync(
+        `npx --yes --package @vectorize-io/hindsight-nemoclaw hindsight-nemoclaw setup --sandbox ${sandboxName}`,
+        { stdio: "inherit" }
+      );
+    } catch {
+      p.cancel(
+        "Plugin setup failed. Run manually:\n  npx --yes --package @vectorize-io/hindsight-nemoclaw hindsight-nemoclaw setup --sandbox " +
+          sandboxName
+      );
+      process.exit(1);
+    }
+  } else {
+    const summary = getPluginSummary();
+    p.log.info(`Hindsight: ${color.cyan(summary)}`);
+  }
+
+  enableKnowledgeTools();
+}
+
 // ── Main ────────────────────────────────────────────────
 
 async function main() {
@@ -342,8 +386,9 @@ async function main() {
     ${color.cyan("./local-dir")}                 → local directory
 
   ${color.dim("Options:")}
-    ${color.cyan("--harness <h>")}      Required. openclaw | hermes | claude-code
+    ${color.cyan("--harness <h>")}      Required. openclaw | nemoclaw
     ${color.cyan("--agent <name>")}     Agent name (defaults to directory name)
+    ${color.cyan("--sandbox <name>")}   NemoClaw sandbox name (required for nemoclaw harness)
 `);
     process.exit(0);
   }
@@ -358,14 +403,21 @@ async function main() {
 
   let harness: string | undefined;
   let agentName: string | undefined;
+  let sandbox: string | undefined;
 
   for (let i = 0; i < restArgs.length; i++) {
     if (restArgs[i] === "--harness" && restArgs[i + 1]) harness = restArgs[++i];
     else if (restArgs[i] === "--agent" && restArgs[i + 1]) agentName = restArgs[++i];
+    else if (restArgs[i] === "--sandbox" && restArgs[i + 1]) sandbox = restArgs[++i];
   }
 
   if (!harness) {
-    p.cancel("--harness required (openclaw | hermes | claude-code)");
+    p.cancel("--harness required (openclaw | nemoclaw)");
+    process.exit(1);
+  }
+
+  if (harness === "nemoclaw" && !sandbox) {
+    p.cancel("--sandbox required for nemoclaw harness");
     process.exit(1);
   }
 
@@ -382,12 +434,14 @@ async function main() {
     if (harness === "openclaw") {
       await ensurePlugin();
       enableKnowledgeTools();
+    } else if (harness === "nemoclaw") {
+      await ensureNemoClawPlugin(sandbox!, agentId);
     }
 
     // Step 2: Resolve bank + API from plugin config
     const { apiUrl, bankId, apiToken } = resolveFromPlugin(agentId);
 
-    const workspaceDir = join(homedir(), ".self-driving-agents", "openclaw", agentId);
+    const workspaceDir = join(homedir(), ".self-driving-agents", harness, agentId);
 
     p.log.info(
       [
@@ -454,14 +508,31 @@ async function main() {
     }
 
     // Step 6: Create agent + install skill
-    mkdirSync(workspaceDir, { recursive: true });
+    if (harness === "nemoclaw") {
+      // NemoClaw: install skill into the sandbox via nemoclaw CLI
+      const tmpSkillDir = join(tmpdir(), `sda-skill-${Date.now()}`);
+      const tmpSkill = join(tmpSkillDir, "agent-knowledge");
+      mkdirSync(tmpSkill, { recursive: true });
+      writeFileSync(join(tmpSkill, "SKILL.md"), SKILL_MD);
+      try {
+        execSync(`nemoclaw ${sandbox} skill install ${tmpSkillDir}`, { stdio: "inherit" });
+        p.log.success("Knowledge skill installed in sandbox");
+      } catch (err: any) {
+        const stderr = err?.stderr?.toString?.()?.trim() || "";
+        const msg = stderr || err?.message || String(err);
+        p.log.warn(`Failed to install skill: ${msg}\n  Install manually:\n  nemoclaw ${sandbox} skill install <skill-dir>`);
+      } finally {
+        rmSync(tmpSkillDir, { recursive: true, force: true });
+      }
+    } else {
+      // OpenClaw: install skill locally + create agent
+      mkdirSync(workspaceDir, { recursive: true });
 
-    const skillDir = join(workspaceDir, "skills", "agent-knowledge");
-    mkdirSync(skillDir, { recursive: true });
-    writeFileSync(join(skillDir, "SKILL.md"), SKILL_MD);
-    p.log.success("Knowledge skill installed");
+      const skillDir = join(workspaceDir, "skills", "agent-knowledge");
+      mkdirSync(skillDir, { recursive: true });
+      writeFileSync(join(skillDir, "SKILL.md"), SKILL_MD);
+      p.log.success("Knowledge skill installed");
 
-    if (harness === "openclaw") {
       try {
         const listOut = execSync("openclaw agents list --json", {
           encoding: "utf-8",
@@ -469,10 +540,10 @@ async function main() {
         });
         const agents = parseAgentsJson(listOut);
         if (!agents.some((a: any) => a.name === agentId || a.id === agentId)) {
-          execSync(`openclaw agents add ${agentId} --workspace ${workspaceDir} --non-interactive`, {
-            encoding: "utf-8",
-            stdio: ["pipe", "pipe", "pipe"],
-          });
+          execSync(
+            `openclaw agents add ${agentId} --workspace ${workspaceDir} --non-interactive`,
+            { encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] }
+          );
           p.log.success(`Agent '${agentId}' created`);
         } else {
           p.log.info(`Agent '${agentId}' already exists`);
@@ -484,29 +555,35 @@ async function main() {
           `Failed to manage agent: ${msg}\n  Create manually:\n  openclaw agents add ${agentId} --workspace ${workspaceDir} --non-interactive`
         );
       }
-    }
 
-    // Step 7: Patch startup
-    const startupFile = join(workspaceDir, "AGENTS.md");
-    if (existsSync(startupFile)) {
-      let text = readFileSync(startupFile, "utf-8");
-      if (!text.includes("agent-knowledge")) {
-        text = text.replace(
-          "Don't ask permission. Just do it.",
-          "5. Read `skills/agent-knowledge/SKILL.md` and **execute its mandatory startup sequence**\n\nDon't ask permission. Just do it."
-        );
-        writeFileSync(startupFile, text);
-        p.log.success("Startup patched");
+      // Patch startup
+      const startupFile = join(workspaceDir, "AGENTS.md");
+      if (existsSync(startupFile)) {
+        let text = readFileSync(startupFile, "utf-8");
+        if (!text.includes("agent-knowledge")) {
+          text = text.replace(
+            "Don't ask permission. Just do it.",
+            "5. Read `skills/agent-knowledge/SKILL.md` and **execute its mandatory startup sequence**\n\nDon't ask permission. Just do it."
+          );
+          writeFileSync(startupFile, text);
+          p.log.success("Startup patched");
+        }
       }
     }
 
-    p.note(
-      [
-        `${color.dim("1.")} openclaw gateway restart`,
-        `${color.dim("2.")} openclaw tui --session agent:${agentId}:main:session1`,
-      ].join("\n"),
-      "Next steps"
-    );
+    // Next steps
+    const nextSteps =
+      harness === "nemoclaw"
+        ? [
+            `${color.dim("1.")} nemoclaw ${sandbox} connect`,
+            `${color.dim("2.")} openclaw tui --session agent:main:main:session1`,
+          ]
+        : [
+            `${color.dim("1.")} openclaw gateway restart`,
+            `${color.dim("2.")} openclaw tui --session agent:${agentId}:main:session1`,
+          ];
+
+    p.note(nextSteps.join("\n"), "Next steps");
 
     p.outro(color.green(`'${agentId}' is ready`));
   } finally {
