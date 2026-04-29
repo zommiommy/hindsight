@@ -57,9 +57,11 @@ class TestResultRow:
         row = ResultRow({"a": 1, "b": 2, "c": 3})
         assert len(row) == 3
 
-    def test_bool_always_true(self):
-        row = ResultRow({})
+    def test_bool_delegates_to_data(self):
+        row = ResultRow({"id": 1})
         assert bool(row)
+        empty_row = ResultRow({})
+        assert not bool(empty_row)
 
     def test_repr(self):
         row = ResultRow({"id": 1})
