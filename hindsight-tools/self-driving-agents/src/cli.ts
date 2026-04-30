@@ -383,8 +383,19 @@ async function ensureNemoClawPlugin(sandboxName: string, agentId: string): Promi
     process.exit(1);
   }
 
-  // Check if hindsight plugin is already configured
-  if (!isPluginConfigured()) {
+  // NemoClaw runs OpenClaw inside a sandbox with read-only config (Landlock).
+  // hindsight-nemoclaw setup handles everything:
+  //   1. Installs the openclaw plugin
+  //   2. Writes plugin config to host ~/.openclaw/openclaw.json
+  //   3. Adds the Hindsight network policy to the sandbox
+  //   4. Restarts the gateway
+  // We always run it — it's idempotent and ensures the sandbox has the
+  // network policy even if the host already has the plugin configured.
+  const config = readOpenClawConfig();
+  const pc = config?.plugins?.entries?.["hindsight-openclaw"]?.config || {};
+
+  if (!pc.hindsightApiUrl || !pc.hindsightApiToken) {
+    // No Hindsight config at all — run interactive setup
     p.log.warn("Hindsight plugin needs configuration for NemoClaw.");
     try {
       execSync(
@@ -399,11 +410,38 @@ async function ensureNemoClawPlugin(sandboxName: string, agentId: string): Promi
       process.exit(1);
     }
   } else {
-    const summary = getPluginSummary();
-    p.log.info(`Hindsight: ${color.cyan(summary)}`);
+    // Config exists — run non-interactive setup to ensure network policy + plugin are in place
+    const apiUrl = pc.hindsightApiUrl;
+    const apiToken = pc.hindsightApiToken;
+    const bankPrefix = pc.bankIdPrefix || "nemoclaw";
+    p.log.info(`Hindsight: ${color.cyan(`External: ${apiUrl}`)}`);
+    try {
+      execSync(
+        `npx --yes --package @vectorize-io/hindsight-nemoclaw hindsight-nemoclaw setup` +
+          ` --sandbox ${sandboxName}` +
+          ` --api-url ${apiUrl}` +
+          ` --api-token ${apiToken}` +
+          ` --bank-prefix ${bankPrefix}` +
+          ` --skip-plugin-install`,
+        { stdio: "inherit" }
+      );
+    } catch {
+      p.log.warn("Failed to apply sandbox network policy. Retain may not work.");
+    }
   }
 
   enableKnowledgeTools();
+
+  // Rebuild sandbox so it picks up the latest host config
+  p.log.info("Rebuilding sandbox to apply config...");
+  try {
+    execSync(`nemoclaw ${sandboxName} rebuild --yes`, { stdio: "inherit" });
+    p.log.success("Sandbox rebuilt");
+  } catch {
+    p.log.warn(
+      `Failed to rebuild sandbox. Run manually: nemoclaw ${sandboxName} rebuild`
+    );
+  }
 }
 
 // ── Main ────────────────────────────────────────────────
