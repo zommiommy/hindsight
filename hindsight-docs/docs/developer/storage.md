@@ -76,14 +76,8 @@ Any PostgreSQL instance that satisfies these requirements should work. If you en
 
 ### Tested Managed Services
 
-**PostgreSQL:**
 - AWS RDS (PostgreSQL 15+)
 - Google Cloud SQL
 - Azure Database for PostgreSQL
 - Supabase
 - Neon
-
-**Oracle Database:**
-- Oracle Cloud Infrastructure (OCI)
-- Oracle Autonomous Database
-- AWS RDS for Oracle
