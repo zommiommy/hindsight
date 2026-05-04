@@ -69,42 +69,32 @@ def _get_schema_prefix() -> str:
     return f'"{schema}".' if schema else ""
 
 
-# The two FK constraint names installed by the initial schema migration
-# (5a366d414dce_initial_schema). They reference memory_units(id) with
-# ON DELETE CASCADE — that semantics is preserved; only the deferral
-# attribute changes.
-_FK_NAMES = (
-    "fk_memory_links_from_unit_id_memory_units",
-    "fk_memory_links_to_unit_id_memory_units",
-)
+# The two FK constraints installed by the initial schema migration
+# (5a366d414dce_initial_schema), mapped to the column they constrain.
+# They reference memory_units(id) with ON DELETE CASCADE — that
+# semantics is preserved; only the deferral attribute changes.
+_FK_COLUMNS: dict[str, str] = {
+    "fk_memory_links_from_unit_id_memory_units": "from_unit_id",
+    "fk_memory_links_to_unit_id_memory_units": "to_unit_id",
+}
 
 
 def _pg_upgrade() -> None:
     schema = _get_schema_prefix()
     # PostgreSQL doesn't allow altering the deferrability of an existing
     # constraint with ALTER CONSTRAINT — the constraint must be dropped
-    # and recreated. Wrap each in a DO block so the migration is
-    # idempotent across schemas where the constraint was already
-    # recreated (e.g. by a partial earlier run) or never installed under
-    # this exact name.
-    for fk_name in _FK_NAMES:
-        # Derive the column from the constraint name. Both follow the
-        # SQLAlchemy convention `fk_<table>_<column>_<reftable>`.
-        column = "from_unit_id" if "from_unit_id" in fk_name else "to_unit_id"
+    # and recreated. DROP IF EXISTS makes the migration safe to re-run
+    # on schemas where the constraint was already recreated.
+    for fk_name, column in _FK_COLUMNS.items():
+        op.execute(f"ALTER TABLE {schema}memory_links DROP CONSTRAINT IF EXISTS {fk_name}")
         op.execute(
             f"""
-            DO $$ BEGIN
-                ALTER TABLE {schema}memory_links
-                    DROP CONSTRAINT IF EXISTS {fk_name};
-                ALTER TABLE {schema}memory_links
-                    ADD CONSTRAINT {fk_name}
-                    FOREIGN KEY ({column})
-                    REFERENCES {schema}memory_units (id)
-                    ON DELETE CASCADE
-                    DEFERRABLE INITIALLY DEFERRED;
-            EXCEPTION
-                WHEN duplicate_object THEN NULL;
-            END $$;
+            ALTER TABLE {schema}memory_links
+                ADD CONSTRAINT {fk_name}
+                FOREIGN KEY ({column})
+                REFERENCES {schema}memory_units (id)
+                ON DELETE CASCADE
+                DEFERRABLE INITIALLY DEFERRED
             """
         )
 
@@ -114,21 +104,15 @@ def _pg_downgrade() -> None:
     # Revert to the default (NOT DEFERRABLE) form so a downgrade actually
     # restores the prior schema state, even though that re-introduces the
     # deadlock window.
-    for fk_name in _FK_NAMES:
-        column = "from_unit_id" if "from_unit_id" in fk_name else "to_unit_id"
+    for fk_name, column in _FK_COLUMNS.items():
+        op.execute(f"ALTER TABLE {schema}memory_links DROP CONSTRAINT IF EXISTS {fk_name}")
         op.execute(
             f"""
-            DO $$ BEGIN
-                ALTER TABLE {schema}memory_links
-                    DROP CONSTRAINT IF EXISTS {fk_name};
-                ALTER TABLE {schema}memory_links
-                    ADD CONSTRAINT {fk_name}
-                    FOREIGN KEY ({column})
-                    REFERENCES {schema}memory_units (id)
-                    ON DELETE CASCADE;
-            EXCEPTION
-                WHEN duplicate_object THEN NULL;
-            END $$;
+            ALTER TABLE {schema}memory_links
+                ADD CONSTRAINT {fk_name}
+                FOREIGN KEY ({column})
+                REFERENCES {schema}memory_units (id)
+                ON DELETE CASCADE
             """
         )
 

@@ -1,6 +1,6 @@
 """Schema invariant: memory_links FKs to memory_units must be deferred.
 
-Locks in the fix from migration ``a2v3w4x5y6z7``. The two FK constraints
+Locks in the fix from migration ``9f8e7d6c5b4a``. The two FK constraints
 (``from_unit_id`` and ``to_unit_id``) reference ``memory_units(id)`` with
 ``ON DELETE CASCADE`` and must be ``DEFERRABLE INITIALLY DEFERRED`` so an
 INSERT into ``memory_links`` does not race with a cascading DELETE on the
@@ -57,7 +57,7 @@ async def test_memory_links_to_memory_units_fks_are_deferred(pg0_db_url):
     for fk_name in _TARGET_FKS:
         r = by_name[fk_name]
         assert r["condeferrable"] is True, (
-            f"FK {fk_name} must be DEFERRABLE — migration a2v3w4x5y6z7 "
+            f"FK {fk_name} must be DEFERRABLE — migration 9f8e7d6c5b4a "
             "set this to eliminate INSERT-vs-cascade-DELETE deadlocks. "
             "Was the constraint recreated without DEFERRABLE INITIALLY "
             "DEFERRED?"
