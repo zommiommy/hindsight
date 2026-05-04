@@ -210,7 +210,7 @@ The harnesses that figure this out — either by building it in, like Hermes, or
 
 ## How Hindsight Fits
 
-[Hindsight](https://hindsight.vectorize.io) is designed to be the memory layer any harness can drop in. It is API-first, MCP-compatible, and ships with [integrations](https://hindsight.vectorize.io/sdks/integrations) for the major frameworks and harnesses.
+[Hindsight](https://hindsight.vectorize.io) is designed to be the memory layer any harness can drop in. It is API-first, MCP-compatible, and ships with [integrations](https://hindsight.vectorize.io/integrations) for the major frameworks and harnesses.
 
 In practice, integrating it into a harness looks like this:
 
@@ -243,7 +243,7 @@ If your harness has every tool you need and you still feel like the agent is sta
 - [Hindsight Is Now a Native Memory Provider in Hermes Agent](https://hindsight.vectorize.io/blog/2026/04/06/hermes-native-memory-provider) — the integration story behind the memory-as-harness-feature pattern
 - [Your OpenClaw Agents Are Strangers to Each Other. Hindsight Changes That.](https://hindsight.vectorize.io/blog/2026/04/01/openclaw-shared-memory) — multi-surface gateway pattern in detail
 - [Adding Persistent Memory to OpenAI Codex with Hindsight](https://hindsight.vectorize.io/blog/2026/04/08/adding-memory-to-codex-with-hindsight) — what shared memory looks like in a coding-agent harness
-- [Hindsight integrations](https://hindsight.vectorize.io/sdks/integrations) — the current list of supported harnesses and frameworks
+- [Hindsight integrations](https://hindsight.vectorize.io/integrations) — the current list of supported harnesses and frameworks
 
 ---
 
@@ -251,5 +251,5 @@ If your harness has every tool you need and you still feel like the agent is sta
 
 - [Sign up for Hindsight Cloud](https://ui.hindsight.vectorize.io/signup) to add memory to your harness in minutes
 - Read the [quickstart](https://hindsight.vectorize.io/developer/api/quickstart) for self-hosted deployment
-- Browse the [integration guides](https://hindsight.vectorize.io/sdks/integrations) for your harness or framework
+- Browse the [integration guides](https://hindsight.vectorize.io/integrations) for your harness or framework
 - See the [memory banks reference](https://hindsight.vectorize.io/developer/api/memory-banks) for scoping patterns across users, projects, teams, and swarms
