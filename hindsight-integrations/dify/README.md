@@ -4,6 +4,10 @@ Persistent long-term memory for [Dify](https://dify.ai) workflows via [Hindsight
 
 Three tools — **Retain**, **Recall**, **Reflect** — drop into any Dify workflow alongside your other nodes.
 
+- **Author**: Vectorize, Inc.
+- **Repository**: <https://github.com/vectorize-io/hindsight/tree/main/hindsight-integrations/dify>
+- **Contact**: support@vectorize.io · [GitHub Issues](https://github.com/vectorize-io/hindsight/issues)
+
 ## Setup
 
 1. **Sign up** at [Hindsight Cloud](https://ui.hindsight.vectorize.io/signup) (free tier) or [self-host](https://hindsight.vectorize.io/developer/installation).
