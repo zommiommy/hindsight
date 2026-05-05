@@ -1073,6 +1073,10 @@ async function main() {
       const agentsDir = join(homedir(), ".claude", "agents");
       mkdirSync(agentsDir, { recursive: true });
       const agentFile = join(agentsDir, `${agentId}.md`);
+      if (existsSync(agentFile)) {
+        p.cancel(`Agent '${agentId}' already exists at ${agentFile}\n  Remove it first or choose a different name with --agent`);
+        process.exit(1);
+      }
       writeFileSync(
         agentFile,
         `---
