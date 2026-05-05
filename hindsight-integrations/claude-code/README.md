@@ -35,26 +35,17 @@ That's it! The plugin will automatically start capturing and recalling memories.
 - **Auto-recall** — on every user prompt, queries Hindsight for relevant memories and injects them as context (invisible to the chat transcript, visible to Claude)
 - **Auto-retain** — after every response (or every N turns), extracts and retains conversation content to Hindsight for long-term storage
 - **Knowledge tools** — MCP server exposing `agent_knowledge_*` tools for managing knowledge pages (list, get, create, update, delete), searching memories, and ingesting documents
-- **Self-driving agents** — create specialized subagents with long-term memory via the `/hindsight-memory:create-agent` skill
+- **Subagents with memory** — create specialized subagents with long-term memory via the `/hindsight-memory:create-agent` skill
 - **Daemon management** — can auto-start/stop `hindsight-embed` locally or connect to an external Hindsight server
 - **Dynamic bank IDs** — supports per-agent, per-project, or per-session memory isolation
 - **Channel-agnostic** — works with Claude Code Channels (Telegram, Discord, Slack) or interactive sessions
 - **Zero dependencies** — hooks are pure Python stdlib; MCP server requires the `mcp` pip package
 
-## Self-Driving Agents
+## Subagents with Memory
 
 Create specialized subagents that learn and build knowledge across sessions.
 
-### Using the CLI
-
-```bash
-# Install seed content for a pre-built agent
-npx @vectorize-io/self-driving-agents install marketing/seo --harness claude-code
-
-# Then follow the printed instructions to create the agent in Claude Code
-```
-
-### Using the skill (in-session)
+### Creating an agent
 
 Just tell Claude:
 
