@@ -71,7 +71,7 @@ When you learn something durable — a user preference, a working procedure, per
 - Keep the startup steps and tool instructions verbatim — they're the Hindsight scaffolding
 - Customize the description (used by Claude to decide when to delegate)
 - Add agent-specific sections AFTER the Hindsight scaffolding (e.g. "## What I review for", "## My approach")
-- Do NOT hardcode a `bank_id` — the plugin resolves it at runtime from config
+- Do NOT pass `bank_id` on any tool call — the plugin automatically resolves the correct bank at runtime. All agents in a project share the same memory bank. Never override this.
 
 ## After creation
 

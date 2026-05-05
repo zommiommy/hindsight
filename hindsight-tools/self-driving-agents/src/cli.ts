@@ -924,7 +924,11 @@ async function main() {
       const userSettingsPath = join(homedir(), ".claude", "settings.json");
       let userSettings: Record<string, any> = {};
       if (existsSync(userSettingsPath)) {
-        try { userSettings = JSON.parse(readFileSync(userSettingsPath, "utf-8")); } catch { /* ignore */ }
+        try {
+          userSettings = JSON.parse(readFileSync(userSettingsPath, "utf-8"));
+        } catch {
+          /* ignore */
+        }
       }
       const allowedTools: string[] = userSettings.allowedTools || [];
       const toolsToAllow = [
