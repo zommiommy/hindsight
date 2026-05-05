@@ -790,13 +790,9 @@ async function ensureClaudeCodePlugin(
 
   // If plugin config already exists, use it as-is — don't overwrite
   if (existingConfig && (existingConfig.hindsightApiUrl || existingConfig.llmProvider)) {
-    const apiUrl =
-      existingConfig.hindsightApiUrl || `http://localhost:${existingConfig.apiPort || 9077}`;
-    const apiToken = existingConfig.hindsightApiToken || undefined;
-    // Bank ID comes from plugin's derivation logic at runtime — use agentId as default for ingestion
-    const bankId = agentId;
-    p.log.info(`Using existing Hindsight config: ${color.dim(apiUrl)}`);
-    return { apiUrl, bankId, apiToken };
+    const resolved = resolveFromClaudeCode(agentId);
+    p.log.info(`Using existing Hindsight config: ${color.dim(resolved.apiUrl)}`);
+    return resolved;
   }
 
   // First time setup — prompt for connection
@@ -1124,7 +1120,11 @@ When you learn something durable — a user preference, a working procedure, per
       const userSettingsPath = join(homedir(), ".claude", "settings.json");
       let userSettings: Record<string, any> = {};
       if (existsSync(userSettingsPath)) {
-        try { userSettings = JSON.parse(readFileSync(userSettingsPath, "utf-8")); } catch { /* ignore */ }
+        try {
+          userSettings = JSON.parse(readFileSync(userSettingsPath, "utf-8"));
+        } catch {
+          /* ignore */
+        }
       }
       const allowedTools: string[] = userSettings.allowedTools || [];
       const mcpPattern = "mcp__hindsight__*";
