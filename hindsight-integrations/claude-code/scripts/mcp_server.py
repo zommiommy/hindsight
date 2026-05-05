@@ -68,6 +68,12 @@ PAGE_DEFAULTS = {
 
 
 @mcp.tool()
+def agent_knowledge_get_current_bank() -> str:
+    """Get the current memory bank ID. This is the bank where conversations are retained and pages are stored. Use this to tell the user which bank their agent will be bound to."""
+    return json.dumps({"bank_id": _default_bank_id})
+
+
+@mcp.tool()
 def agent_knowledge_list_pages() -> str:
     """List all your knowledge pages (IDs and names only). Use agent_knowledge_get_page to read the full content of a specific page."""
     resp = _client.request("GET", f"/v1/default/banks/{_encode_bank(_default_bank_id)}/mental-models", timeout=10)
