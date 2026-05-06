@@ -2,7 +2,7 @@
 title: "Your Claude Code Subagents Don't Share What They Learn"
 description: "Claude Code subagents (Plan, Explore, general-purpose, custom) each spawn fresh and discard everything they discover. Here's how to give them shared memory."
 authors: [benfrank241]
-date: 2026-05-05
+date: 2026-05-06
 tags: [memory, agents, hindsight, claude-code, subagents]
 image: /img/blog/claude-code-subagents-memory.png
 ---
