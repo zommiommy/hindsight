@@ -172,17 +172,17 @@ def test_read_database_url_empty_string_is_treated_as_unset(monkeypatch):
     assert config.read_database_url is None
 
 
-def test_log_config_masks_read_database_url(caplog):
+def test_log_config_masks_read_database_url(monkeypatch, caplog):
     """Read-replica URL credentials must be masked in startup logs, same as
     the primary URL.
     """
     from hindsight_api.config import HindsightConfig
 
-    os.environ["HINDSIGHT_API_DATABASE_URL"] = "postgresql://hindsight:pw@primary:5432/db"
-    os.environ["HINDSIGHT_API_READ_DATABASE_URL"] = "postgresql://reader:replica-secret@replica:5432/db"
-    os.environ["HINDSIGHT_API_RETAIN_MAX_COMPLETION_TOKENS"] = "64000"
-    os.environ["HINDSIGHT_API_RETAIN_CHUNK_SIZE"] = "3000"
-    os.environ["HINDSIGHT_API_LLM_PROVIDER"] = "mock"
+    monkeypatch.setenv("HINDSIGHT_API_DATABASE_URL", "postgresql://hindsight:pw@primary:5432/db")
+    monkeypatch.setenv("HINDSIGHT_API_READ_DATABASE_URL", "postgresql://reader:replica-secret@replica:5432/db")
+    monkeypatch.setenv("HINDSIGHT_API_RETAIN_MAX_COMPLETION_TOKENS", "64000")
+    monkeypatch.setenv("HINDSIGHT_API_RETAIN_CHUNK_SIZE", "3000")
+    monkeypatch.setenv("HINDSIGHT_API_LLM_PROVIDER", "mock")
 
     caplog.set_level(logging.INFO, logger="hindsight_api.config")
 
