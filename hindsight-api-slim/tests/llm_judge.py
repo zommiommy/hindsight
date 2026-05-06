@@ -25,17 +25,22 @@ logger = logging.getLogger(__name__)
 # Judge model configuration — defaults to the same provider/model used for tests.
 # Override with HINDSIGHT_TEST_JUDGE_PROVIDER / MODEL / API_KEY env vars to use
 # a dedicated judge (e.g., gemini/gemini-2.5-flash-lite).
-_JUDGE_PROVIDER = os.getenv(
+#
+# Note: vertexai requires service account credentials that create_llm_provider()
+# doesn't handle directly, so we normalize it to "gemini" (same models, API-key auth).
+_raw_provider = os.getenv(
     "HINDSIGHT_TEST_JUDGE_PROVIDER",
     os.getenv("HINDSIGHT_API_LLM_PROVIDER", "gemini"),
 )
+_JUDGE_PROVIDER = "gemini" if _raw_provider == "vertexai" else _raw_provider
 _JUDGE_MODEL = os.getenv(
     "HINDSIGHT_TEST_JUDGE_MODEL",
     os.getenv("HINDSIGHT_API_LLM_MODEL", "gemini-2.5-flash-lite"),
 )
+# For gemini provider, prefer GEMINI_API_KEY (always set in CI for vertexai jobs).
 _JUDGE_API_KEY = os.getenv(
     "HINDSIGHT_TEST_JUDGE_API_KEY",
-    os.getenv("HINDSIGHT_API_LLM_API_KEY", ""),
+    os.getenv("GEMINI_API_KEY", os.getenv("HINDSIGHT_API_LLM_API_KEY", "")),
 )
 _JUDGE_BASE_URL = os.getenv(
     "HINDSIGHT_TEST_JUDGE_BASE_URL",
