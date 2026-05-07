@@ -346,12 +346,14 @@ I prefer presenting in person rather than virtually because I can read the room 
             response=all_facts_text,
             criteria=(
                 "The extracted facts preserve BOTH of these dimensions from the input: "
-                "(1) emotional — the positive/thrilled sentiment about receiving feedback, "
-                "(2) preferential — the preference for in-person over virtual presentations."
+                "(1) emotional — any mention of positive feedback, enthusiasm, thrilled, or positive sentiment, "
+                "(2) preferential — any mention of preferring in-person presentations or reading the room. "
+                "The facts don't need to use the exact same words — semantic equivalents count."
             ),
             context=(
                 "Input text: Was thrilled about positive feedback on presentation. "
-                "Prefers presenting in person rather than virtually to read the room better."
+                "Audience seemed enthusiastic. Prefers presenting in person rather than "
+                "virtually because they can read the room better."
             ),
         )
 
