@@ -73,6 +73,12 @@ docker run --rm -it --pull always -p 8888:8888 -p 9999:9999 \
 
 You can modify the LLM provider by setting `HINDSIGHT_API_LLM_PROVIDER`. Valid options are `openai`, `anthropic`, `gemini`, `groq`, `ollama`, `lmstudio`, and `minimax`. The documentation provides more details on [supported models](https://hindsight.vectorize.io/developer/models).
 
+> **Bind-mount permissions.** The container runs as UID 1000, so the host directory must be writable by UID 1000 — otherwise the embedded PostgreSQL fails to start with `Permission denied (os error 13)`. On macOS Docker Desktop and most Linux setups where `$HOME` isn't owned by UID 1000, pre-create and chown the directory:
+> ```bash
+> mkdir -p $HOME/.hindsight-docker && sudo chown -R 1000:1000 $HOME/.hindsight-docker
+> ```
+> Or run the container as your host user instead by adding `--user $(id -u):$(id -g)` to the `docker run` command (and chown the host directory to your own UID). If you don't need the data on a host path, you can also use a named volume: `-v hindsight-data:/home/hindsight/.pg0`.
+
 
 
 ### Docker (external PostgreSQL)
