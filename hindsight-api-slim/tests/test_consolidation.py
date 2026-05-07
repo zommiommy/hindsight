@@ -630,11 +630,6 @@ class TestConsolidationTagRouting:
     - No match: create with fact's tags
     """
 
-    @pytest.fixture(autouse=True)
-    def _use_real_llm(self, memory_real_llm):
-        """All tests in this class need a real LLM for consolidation."""
-        self._memory = memory_real_llm
-
     @pytest.fixture
     def memory(self, memory_real_llm):
         """Override the memory fixture to use real LLM for this class."""
@@ -1496,7 +1491,6 @@ class TestHierarchicalRetrieval:
         # Cleanup
         await memory.delete_bank(bank_id, request_context=request_context)
 
-    @pytest.mark.asyncio
     @pytest.mark.asyncio
     async def test_fallback_to_observation_when_no_mental_model(self, memory: MemoryEngine, request_context):
         """Test that observations are used when no mental model matches.

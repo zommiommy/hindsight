@@ -1211,12 +1211,12 @@ class TestMentalModelStaleness:
 
 @pytest.mark.hs_llm_core
 class TestMentalModelRefreshTagSecurity:
+    """Test that mental model refresh respects tag-based security boundaries."""
 
     @pytest.fixture
     def memory(self, memory_real_llm):
         """Override to use real LLM for this class."""
         return memory_real_llm
-    """Test that mental model refresh respects tag-based security boundaries."""
 
     async def test_refresh_with_tags_only_accesses_same_tagged_models(self, memory: MemoryEngine, request_context):
         """Test that refreshing a mental model with tags can only access other models with the same tags.
