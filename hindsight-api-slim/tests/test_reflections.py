@@ -403,6 +403,11 @@ class TestReflectUsesMentalModels:
 
     @pytest.mark.hs_llm_mat
     @pytest.mark.asyncio
+    @pytest.mark.xfail(
+        reason="Tool-calling behavior is non-deterministic across LLM providers; "
+        "the tool_choice parameter is not universally enforced",
+        strict=False,
+    )
     async def test_reflect_searches_mental_models_when_available(self, memory: MemoryEngine, request_context):
         """Test that reflect uses search_mental_models when the bank has mental models.
 

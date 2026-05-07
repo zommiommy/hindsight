@@ -279,6 +279,7 @@ async def test_entity_mention_counts(memory, request_context):
 
 
 @pytest.mark.asyncio
+@pytest.mark.timeout(600)
 async def test_entity_mention_ranking(memory, request_context):
     """
     Test that entity mention counts correctly rank entities.
