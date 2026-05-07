@@ -83,6 +83,8 @@ docker run --rm -it --pull always -p 8888:8888 -p 9999:9999 \
 - **API Server**: http://localhost:8888
 - **Control Plane** (Web UI): http://localhost:9999
 
+All published images are [signed with Cosign](#verifying-image-signatures) — verification is optional.
+
 ### Docker Image Variants
 
 | Variant | Size (AMD64) | Size (ARM64) | When to use |
@@ -111,17 +113,13 @@ ghcr.io/vectorize-io/hindsight-control-plane:latest
 
 ### Verifying image signatures
 
-Hindsight images published to GHCR are signed with [Sigstore Cosign](https://docs.sigstore.dev/cosign/signing/overview/) using keyless OIDC from the release workflow. Verification is optional — pulling and running images works without it — but recommended for production deployments that want to confirm an image was built by Vectorize from the published source.
-
-Install [cosign](https://docs.sigstore.dev/cosign/system_config/installation/), then verify any tag:
+Images are signed with [Cosign](https://docs.sigstore.dev/cosign/signing/overview/) keyless OIDC. To verify any tag:
 
 ```bash
 cosign verify ghcr.io/vectorize-io/hindsight:<tag> \
   --certificate-identity-regexp '^https://github\.com/vectorize-io/hindsight/\.github/workflows/(sign-images|release)\.yml@.*' \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com
 ```
-
-A successful run prints the signature payload and exits 0. The same command works for `hindsight-api` and `hindsight-control-plane` images. Signatures are tied to the image content (digest), not the tag — verifying a moved tag re-checks the new digest's signature automatically.
 
 ---
 
