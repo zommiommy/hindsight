@@ -140,37 +140,66 @@ If you need to switch from one extension to another:
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `HINDSIGHT_API_TEXT_SEARCH_EXTENSION` | Text search backend: `native`, `vchord`, or `pg_textsearch` | `native` |
+| `HINDSIGHT_API_TEXT_SEARCH_EXTENSION` | Text search backend: `native`, `vchord`, `pg_textsearch`, or `pgroonga` | `native` |
+| `HINDSIGHT_API_BM25_LANGUAGE` | PostgreSQL text search dictionary used by the `native` backend (e.g. `english`, `french`, `simple`, `zhparser`) | `english` |
 
-Hindsight supports three text search backends for BM25 keyword retrieval:
-- **native**: PostgreSQL's built-in full-text search (`tsvector` + GIN indexes)
-- **vchord**: VectorChord BM25 (`bm25vector` + BM25 indexes) - requires `vchord_bm25` extension
-- **pg_textsearch**: Timescale BM25 (text columns + BM25 indexes) - requires `pg_textsearch` extension
+Hindsight supports four text search backends for BM25 keyword retrieval:
+- **native**: PostgreSQL's built-in full-text search (`tsvector` + GIN indexes). Language is configurable via `HINDSIGHT_API_BM25_LANGUAGE`.
+- **vchord**: VectorChord BM25 (`bm25vector` + BM25 indexes) — requires `vchord_bm25` extension.
+- **pg_textsearch**: Timescale BM25 (text columns + BM25 indexes) — requires `pg_textsearch` extension. English-only.
+- **pgroonga**: pgroonga full-text search (text columns + pgroonga indexes) — requires `pgroonga` extension. Multilingual / CJK out of the box.
 
 **When to use native:**
-- Standard PostgreSQL deployment (no extra extensions)
-- Simpler setup and wider compatibility
-- Works well for most use cases
+- Standard PostgreSQL deployment (no extra extensions).
+- European languages and other space-separated languages (English, French, German, Spanish, Italian, Portuguese, Russian, Dutch, Swedish, Norwegian, Danish, Finnish, Hungarian, Turkish, Arabic, plus `simple`).
+- For CJK on `native`, install a third-party PostgreSQL dictionary like `zhparser` and set `HINDSIGHT_API_BM25_LANGUAGE` to its config name.
 
 **When to use vchord:**
-- Already using vchord for vector search (good integration)
-- Want better BM25 ranking performance
-- Need advanced tokenization (uses `llmlingua2` tokenizer)
+- Already using vchord for vector search (good integration).
+- Want better BM25 ranking performance.
+- Need advanced tokenization (uses `llmlingua2` tokenizer).
 
 **When to use pg_textsearch:**
-- Want industry-standard BM25 ranking with better relevance than native PostgreSQL
-- Need efficient top-K queries with Block-Max WAND optimization
-- Prefer lower memory footprint compared to vchord
-- Already using Timescale or have `pg_textsearch` available
+- Want industry-standard BM25 ranking with better relevance than native PostgreSQL.
+- Need efficient top-K queries with Block-Max WAND optimization.
+- Prefer lower memory footprint compared to vchord.
+
+**When to use pgroonga:**
+- Need multilingual / CJK (Chinese, Japanese, Korean) full-text search out of the box.
+- Mixed-language banks where you don't want to manage per-document language detection.
+- Don't want vchord's licensing or want a permissive (LGPL) extension.
+
+The `pgroonga` recipe lives at `docker/docker-compose/pgroonga/`. It uses pgroonga's `TokenBigram` polyglot tokenizer with `NormalizerNFKC150` Unicode normalization — a single index handles English, French, Japanese, Chinese, etc. simultaneously. `HINDSIGHT_API_BM25_LANGUAGE` does **not** apply to pgroonga (the tokenizer is fixed at index creation).
 
 **Switching backends:**
 
 To switch between backends:
-1. Set `HINDSIGHT_API_TEXT_SEARCH_EXTENSION` to your desired backend (`native`, `vchord`, or `pg_textsearch`)
-2. If your database has existing data, you'll get an error with migration instructions
-3. For empty databases, the columns/indexes will be automatically recreated on startup
+1. Set `HINDSIGHT_API_TEXT_SEARCH_EXTENSION` to your desired backend.
+2. If your database has existing data, you'll get an error with migration instructions.
+3. For empty databases, the columns/indexes will be automatically recreated on startup.
 
-**Note:** VectorChord uses the `llmlingua2` tokenizer for multilingual support, while native and pg_textsearch use PostgreSQL's English tokenizer.
+**Changing `bm25_language` on an existing database:**
+
+`bm25_language` only affects newly-written rows — existing rows retain whatever lexemes were computed at insert time. To re-index existing data in a new language, run:
+
+```sql
+UPDATE memory_units
+SET search_vector = to_tsvector('<new_language>'::regconfig,
+    COALESCE(text, '') || ' ' || COALESCE(context, '') || ' ' || COALESCE(text_signals, ''));
+```
+
+**Note:** VectorChord uses the `llmlingua2` tokenizer for multilingual support, pgroonga uses `TokenBigram` (multilingual / CJK), `native` uses the configured PostgreSQL dictionary (`HINDSIGHT_API_BM25_LANGUAGE`), and `pg_textsearch` uses PostgreSQL's English tokenizer (hardcoded).
+
+### Retain Output Language
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `HINDSIGHT_API_RETAIN_OUTPUT_LANGUAGE` | When set, instructs the fact extraction LLM to emit fact text in this language regardless of source content's language. Free-form string (e.g. `Spanish`, `Japanese`). | unset |
+
+When set, the fact extractor receives a directive to translate source content into the target language during extraction. This is independent of `HINDSIGHT_API_BM25_LANGUAGE` so users can choose to:
+- **Keep both aligned** (e.g. `bm25_language=spanish` + `retain_output_language=Spanish`) — facts stored and indexed in Spanish, regardless of source language.
+- **Mix them** (e.g. `bm25_language=simple` + `retain_output_language=English`) — facts always extracted in English, indexed without stemming.
+- **Leave `retain_output_language` unset** to preserve source-language facts.
 
 ### LLM Provider
 

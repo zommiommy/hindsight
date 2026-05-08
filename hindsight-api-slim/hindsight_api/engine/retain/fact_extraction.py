@@ -950,6 +950,19 @@ def _build_extraction_prompt_and_schema(config) -> tuple[str, type]:
     if labels_section:
         prompt = prompt + labels_section
 
+    # Force the LLM to emit fact text in the configured language, regardless of
+    # the source content's language. This is independent of bm25_language by
+    # design — users may want extraction in one language while indexing in
+    # another (e.g. preserve original-language facts but index with a 'simple'
+    # tokenizer). When unset, the extractor preserves the source language.
+    retain_output_language = getattr(config, "retain_output_language", None)
+    if retain_output_language:
+        prompt = (
+            prompt + f"\n\nIMPORTANT: Respond exclusively in {retain_output_language}. "
+            f"Translate any source content into {retain_output_language} when extracting facts. "
+            f"All fact text, context, and entity names must be in {retain_output_language}."
+        )
+
     response_schema = base_response_class
 
     if labels_cfg and labels_cfg.attributes:
