@@ -3,7 +3,7 @@ title: "Onboarding a New Engineer Onto Five Months of OpenCode Memory"
 description: "A new engineer joins a codebase the team has been working in for five months. With OpenCode + Hindsight, day one looks very different from the README."
 authors: [benfrank241]
 date: 2026-05-14T12:00
-tags: [memory, agents, hindsight, opencode, onboarding, teams, use-case]
+tags: [memory, agents, hindsight, opencode, onboarding, teams, use-case, tutorial]
 image: /img/blog/opencode-onboarding-memory.png
 hide_table_of_contents: true
 ---
