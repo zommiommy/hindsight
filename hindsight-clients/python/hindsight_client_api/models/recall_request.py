@@ -17,8 +17,8 @@ import pprint
 import re  # noqa: F401
 import json
 
-from pydantic import BaseModel, ConfigDict, Field, StrictBool, StrictInt, StrictStr, field_validator
-from typing import Any, ClassVar, Dict, List, Optional
+from pydantic import BaseModel, ConfigDict, Field, StrictBool, StrictFloat, StrictInt, StrictStr, field_validator
+from typing import Any, ClassVar, Dict, List, Optional, Union
 from hindsight_client_api.models.budget import Budget
 from hindsight_client_api.models.include_options import IncludeOptions
 from hindsight_client_api.models.mental_model_trigger_input_tag_groups_inner import MentalModelTriggerInputTagGroupsInner
@@ -39,7 +39,8 @@ class RecallRequest(BaseModel):
     tags: Optional[List[StrictStr]] = None
     tags_match: Optional[StrictStr] = Field(default='any', description="How to match tags: 'any' (OR, includes untagged), 'all' (AND, includes untagged), 'any_strict' (OR, excludes untagged), 'all_strict' (AND, excludes untagged).")
     tag_groups: Optional[List[MentalModelTriggerInputTagGroupsInner]] = None
-    __properties: ClassVar[List[str]] = ["query", "types", "budget", "max_tokens", "trace", "query_timestamp", "include", "tags", "tags_match", "tag_groups"]
+    retrieval_weights: Optional[Dict[str, Union[StrictFloat, StrictInt]]] = Field(default=None, description="Per-strategy weights for Reciprocal Rank Fusion. Keys: 'semantic', 'bm25', 'graph', 'temporal'. Values are multipliers (1.0 = default, 2.0 = double influence, 0.0 = disabled). Omitted keys default to the bank/server configuration.")
+    __properties: ClassVar[List[str]] = ["query", "types", "budget", "max_tokens", "trace", "query_timestamp", "include", "tags", "tags_match", "tag_groups", "retrieval_weights"]
 
     @field_validator('tags_match')
     def tags_match_validate_enum(cls, value):
@@ -120,6 +121,11 @@ class RecallRequest(BaseModel):
         if self.tag_groups is None and "tag_groups" in self.model_fields_set:
             _dict['tag_groups'] = None
 
+        # set to None if retrieval_weights (nullable) is None
+        # and model_fields_set contains the field
+        if self.retrieval_weights is None and "retrieval_weights" in self.model_fields_set:
+            _dict['retrieval_weights'] = None
+
         return _dict
 
     @classmethod
@@ -141,7 +147,8 @@ class RecallRequest(BaseModel):
             "include": IncludeOptions.from_dict(obj["include"]) if obj.get("include") is not None else None,
             "tags": obj.get("tags"),
             "tags_match": obj.get("tags_match") if obj.get("tags_match") is not None else 'any',
-            "tag_groups": [MentalModelTriggerInputTagGroupsInner.from_dict(_item) for _item in obj["tag_groups"]] if obj.get("tag_groups") is not None else None
+            "tag_groups": [MentalModelTriggerInputTagGroupsInner.from_dict(_item) for _item in obj["tag_groups"]] if obj.get("tag_groups") is not None else None,
+            "retrieval_weights": obj.get("retrieval_weights")
         })
         return _obj
 

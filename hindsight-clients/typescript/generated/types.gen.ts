@@ -2340,6 +2340,14 @@ export type RecallRequest = {
    * Compound tag filter using boolean groups. Groups in the list are AND-ed. Each group is a leaf {tags, match} or compound {and: [...]}, {or: [...]}, {not: ...}.
    */
   tag_groups?: Array<TagGroupLeaf | TagGroupAndInput | TagGroupOrInput | TagGroupNotInput> | null;
+  /**
+   * Retrieval Weights
+   *
+   * Per-strategy weights for Reciprocal Rank Fusion. Keys: 'semantic', 'bm25', 'graph', 'temporal'. Values are multipliers (1.0 = default, 2.0 = double influence, 0.0 = disabled). Omitted keys default to the bank/server configuration.
+   */
+  retrieval_weights?: {
+    [key: string]: number;
+  } | null;
 };
 
 /**

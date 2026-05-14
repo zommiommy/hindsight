@@ -33,6 +33,8 @@ type RecallRequest struct {
 	// How to match tags: 'any' (OR, includes untagged), 'all' (AND, includes untagged), 'any_strict' (OR, excludes untagged), 'all_strict' (AND, excludes untagged).
 	TagsMatch *string `json:"tags_match,omitempty"`
 	TagGroups []MentalModelTriggerInputTagGroupsInner `json:"tag_groups,omitempty"`
+	// Per-strategy weights for Reciprocal Rank Fusion. Keys: 'semantic', 'bm25', 'graph', 'temporal'. Values are multipliers (1.0 = default, 2.0 = double influence, 0.0 = disabled). Omitted keys default to the bank/server configuration.
+	RetrievalWeights map[string]float32 `json:"retrieval_weights,omitempty"`
 }
 
 type _RecallRequest RecallRequest
@@ -392,6 +394,39 @@ func (o *RecallRequest) SetTagGroups(v []MentalModelTriggerInputTagGroupsInner) 
 	o.TagGroups = v
 }
 
+// GetRetrievalWeights returns the RetrievalWeights field value if set, zero value otherwise (both if not set or set to explicit null).
+func (o *RecallRequest) GetRetrievalWeights() map[string]float32 {
+	if o == nil {
+		var ret map[string]float32
+		return ret
+	}
+	return o.RetrievalWeights
+}
+
+// GetRetrievalWeightsOk returns a tuple with the RetrievalWeights field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
+func (o *RecallRequest) GetRetrievalWeightsOk() (*map[string]float32, bool) {
+	if o == nil || IsNil(o.RetrievalWeights) {
+		return nil, false
+	}
+	return &o.RetrievalWeights, true
+}
+
+// HasRetrievalWeights returns a boolean if a field has been set.
+func (o *RecallRequest) HasRetrievalWeights() bool {
+	if o != nil && !IsNil(o.RetrievalWeights) {
+		return true
+	}
+
+	return false
+}
+
+// SetRetrievalWeights gets a reference to the given map[string]float32 and assigns it to the RetrievalWeights field.
+func (o *RecallRequest) SetRetrievalWeights(v map[string]float32) {
+	o.RetrievalWeights = v
+}
+
 func (o RecallRequest) MarshalJSON() ([]byte, error) {
 	toSerialize,err := o.ToMap()
 	if err != nil {
@@ -429,6 +464,9 @@ func (o RecallRequest) ToMap() (map[string]interface{}, error) {
 	}
 	if o.TagGroups != nil {
 		toSerialize["tag_groups"] = o.TagGroups
+	}
+	if o.RetrievalWeights != nil {
+		toSerialize["retrieval_weights"] = o.RetrievalWeights
 	}
 	return toSerialize, nil
 }

@@ -5880,6 +5880,16 @@ components:
             $ref: '#/components/schemas/MentalModelTrigger_Input_tag_groups_inner'
           nullable: true
           type: array
+        retrieval_weights:
+          additionalProperties:
+            type: number
+          description: "Per-strategy weights for Reciprocal Rank Fusion. Keys: 'semantic',\
+            \ 'bm25', 'graph', 'temporal'. Values are multipliers (1.0 = default, 2.0\
+            \ = double influence, 0.0 = disabled). Omitted keys default to the bank/server\
+            \ configuration."
+          nullable: true
+          title: Retrieval Weights
+          type: object
       required:
       - query
       title: RecallRequest
