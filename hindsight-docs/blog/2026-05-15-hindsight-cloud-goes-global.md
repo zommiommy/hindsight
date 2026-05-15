@@ -10,14 +10,13 @@ hide_table_of_contents: true
 
 <!-- TODO: replace placeholder hero image before merge -->
 
-Most of what we've shipped to Hindsight Cloud since the last update is about the same thing from different angles: making the product feel native no matter where you're using it from. A new region in London, the UI in eight languages, payments that route through whatever rails your country actually uses, and support chat that can read what you wrote even if it isn't English.
+Most of what we've shipped to Hindsight Cloud since the last update is about the same thing from different angles: making the product feel native no matter where you're using it from. A new region in London, the UI in eight languages, and payments that route through whatever rails your country actually uses.
 
 <!-- truncate -->
 
 - [**A new home in London**](#a-new-home-in-london) — EU/UK users get a dedicated `europe-west2` deployment.
 - [**The UI in 8 languages**](#the-ui-in-8-languages) — full localization via a language picker in the nav.
 - [**Pay how you actually pay**](#pay-how-you-actually-pay) — Alipay and WeChat Pay alongside card.
-- [**Support that speaks your language**](#support-that-speaks-your-language) — translation in the support chat.
 
 ## A new home in London
 
@@ -46,10 +45,6 @@ Checkout now surfaces **Alipay and WeChat Pay alongside card** for customers who
 One caveat worth being explicit about: **auto-recharge is still card-only**, because Alipay and WeChat are single-use methods Stripe can't save off-session. If you want auto-recharge enabled, you'll need a card on file via the "Add payment method" flow on the billing page; one-off Alipay/WeChat purchases work fine but won't enroll you in auto-recharge by themselves.
 
 Our user docs are also now available in Simplified Chinese — particularly relevant for customers paying via Alipay/WeChat who'd prefer not to context-switch into English to figure out how memory banks work.
-
-## Support that speaks your language
-
-The in-app support chat now has translation built in. If a customer writes in Japanese or German or Korean, the support side can read it natively without dropping into a separate tool. It's quiet by design — no banner, no language detection prompt, just better triage for the team handling tickets.
 
 ## What else shipped
 
