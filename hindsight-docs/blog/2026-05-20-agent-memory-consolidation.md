@@ -85,7 +85,7 @@ Three decay shapes are common:
 - **Exponential decay.** Confidence halves on a timescale. Matches the Ebbinghaus curve and most cognitive-science models. A reasonable default.
 - **Step-function decay.** Confidence stays flat until an external event invalidates it — a user contradiction, a system event, or a new conflicting fact.
 
-Zep's Graphiti is the production system that takes decay most seriously, and it's worth being direct about it. Every edge in Zep's knowledge graph carries explicit temporal metadata: a `valid_from` timestamp, a `valid_to` timestamp when the fact has been superseded, and an `invalid_at` marker when it has been explicitly contradicted. This lets Zep answer questions most memory systems fumble: "What was the customer's address before they moved last October?" Hindsight supports temporal filtering as one of its four retrieval strategies, so it can handle "show me interactions from March," but Zep's fact-validity windows go deeper. If your agent's primary job is tracking how state evolves over time, that depth is hard to match.
+Zep's Graphiti is the production system that takes decay most seriously, and it's worth being direct about it. Every edge in Zep's knowledge graph carries explicit temporal metadata: a `valid_at` timestamp, an `expired_at` timestamp when the fact has been superseded, and an `invalid_at` marker when it has been explicitly contradicted. This lets Zep answer questions most memory systems fumble: "What was the customer's address before they moved last October?" Hindsight supports temporal filtering as one of its four retrieval strategies, so it can handle "show me interactions from March," but Zep's fact-validity windows go deeper. If your agent's primary job is tracking how state evolves over time, that depth is hard to match.
 
 The trade-off with decay is straightforward: it buys recency at the cost of stable long-term facts. Decay tuned too aggressively will forget a user's name; tuned too laxly will keep stale state forever. There is no universal right answer — it depends on the domain.
 
@@ -113,9 +113,9 @@ No agent memory system covers all four levers well. Here is the honest map:
 | **Zep / Graphiti** | Fact extraction | Entity-aware | Strong — temporal validity intervals | Explicit invalidation |
 | **Letta** | Agent-decided | Agent-decided | None native | Tier transitions (core / archival) |
 | **LangChain Memory** | Window or summary | None | None | Window eviction or summarize-and-drop |
-| **Hindsight** | Fact extraction filter | Entity resolution at write | Temporal retrieval strategy + recency-wins | Explicit invalidation |
+| **Hindsight** | Fact extraction filter | LLM-powered consolidation | Recency boost at retrieval | None native |
 
-Zep is the strongest decay system. Letta has the cleanest tier story. Mem0 has the most polished write-time operations API. LangChain's memory primitives are deprecated for a reason — they are compaction, not consolidation. Hindsight's bet is that fact extraction, entity resolution, and cross-encoder reranking together approximate all four levers with a single set of defaults that hold up across workloads.
+Zep is the strongest decay system. Letta has the cleanest tier story. Mem0 has the most polished write-time operations API. LangChain's memory primitives are deprecated for a reason — they are compaction, not consolidation. Hindsight covers importance and merge well; it approximates decay through retrieval scoring rather than explicit confidence degradation. It does not do individual memory eviction — the design assumption is that LLM-powered consolidation and recency-weighted retrieval make stale facts effectively unretrievable, which holds for most workloads but not for compliance-driven deletion requirements.
 
 ## Evaluating a Consolidation Policy
 
@@ -138,7 +138,7 @@ If you are designing or evaluating an agent memory system, this is the order to 
 3. **Add decay only when you have temporal claims worth decaying.** If your agent does not track state changes, exponential decay just throws away stable facts.
 4. **Eviction last.** Almost everything else is reversible. Hard eviction is not.
 
-These defaults are roughly what Hindsight ships with out of the box. They are also a useful checklist for evaluating any other agent memory system. When a vendor cannot answer how their system handles one of the four levers, you have found the failure mode you will hit in production.
+The first three of these defaults are roughly what Hindsight ships with out of the box; Hindsight does not implement hard eviction, trading that lever for simplicity. The checklist still applies to any agent memory system: when a vendor cannot answer how their system handles one of the four levers, you have found the failure mode you will hit in production.
 
 ## The Four Levers as a Checklist
 
@@ -151,7 +151,7 @@ The next time you evaluate an agent memory system, ask four questions about its 
 
 If the answer to any of these is "the LLM decides at write time" or "we don't model that," you have found where your production agent will quietly drift. Retrieval scores are the easy part. The hard part is the policy layer that decides what should have survived to be retrieved in the first place.
 
-Hindsight is one reference implementation of the four-lever framework. The architecture — fact extraction, entity resolution, multi-strategy retrieval, cross-encoder reranking — is documented at [hindsight.vectorize.io](https://hindsight.vectorize.io), and the source is MIT-licensed on GitHub. Whether you build your own agent memory consolidation policy or pick something off the shelf, the four levers are the right shape of the problem.
+Hindsight is a strong implementation of the first three levers — importance, merge, and retrieval-based decay — without hard eviction. The architecture — fact extraction, LLM-powered consolidation, multi-strategy retrieval, cross-encoder reranking — is documented at [hindsight.vectorize.io](https://hindsight.vectorize.io), and the source is MIT-licensed on GitHub. Whether you build your own agent memory consolidation policy or pick something off the shelf, the four levers are the right shape of the problem.
 
 **Further reading:**
 
