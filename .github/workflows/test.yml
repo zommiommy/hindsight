@@ -1343,7 +1343,7 @@ jobs:
         cursor = conn.cursor()
         cursor.execute(\"\"\"
             CREATE TABLESPACE hindsight_ts
-            DATAFILE 'hindsight_ts.dbf' SIZE 200M AUTOEXTEND ON NEXT 50M
+            DATAFILE 'hindsight_ts.dbf' SIZE 1G AUTOEXTEND ON NEXT 200M MAXSIZE UNLIMITED
             EXTENT MANAGEMENT LOCAL
             SEGMENT SPACE MANAGEMENT AUTO
         \"\"\")
@@ -1697,7 +1697,7 @@ jobs:
         cursor = conn.cursor()
         cursor.execute(\"\"\"
             CREATE TABLESPACE hindsight_ts
-            DATAFILE 'hindsight_ts.dbf' SIZE 200M AUTOEXTEND ON NEXT 50M
+            DATAFILE 'hindsight_ts.dbf' SIZE 1G AUTOEXTEND ON NEXT 200M MAXSIZE UNLIMITED
             EXTENT MANAGEMENT LOCAL
             SEGMENT SPACE MANAGEMENT AUTO
         \"\"\")
@@ -1856,7 +1856,7 @@ jobs:
         cursor = conn.cursor()
         cursor.execute(\"\"\"
             CREATE TABLESPACE hindsight_ts
-            DATAFILE 'hindsight_ts.dbf' SIZE 200M AUTOEXTEND ON NEXT 50M
+            DATAFILE 'hindsight_ts.dbf' SIZE 1G AUTOEXTEND ON NEXT 200M MAXSIZE UNLIMITED
             EXTENT MANAGEMENT LOCAL
             SEGMENT SPACE MANAGEMENT AUTO
         \"\"\")
