@@ -481,7 +481,11 @@ class TestConsolidationIntegration:
             # The key is that the contradiction is tracked, not ignored.
             assert len(observations) >= 1, "Should have at least one observation after contradiction"
 
-            all_texts = " | ".join(obs["text"] for obs in observations)
+            # Format as numbered list rather than pipe-separated — weaker judge
+            # models read pipe-joins as a single conflated statement.
+            obs_listing = "\n".join(
+                f"Observation {i + 1}: {obs['text']}" for i, obs in enumerate(observations)
+            )
             all_source_ids = []
             for obs in observations:
                 all_source_ids.extend(obs["source_memory_ids"] or [])
@@ -494,7 +498,7 @@ class TestConsolidationIntegration:
             from tests.llm_judge import assert_meets_criteria
 
             await assert_meets_criteria(
-                response=all_texts,
+                response=obs_listing,
                 criteria=(
                     "The observation(s) reflect that Alex's feelings about pizza changed — either by "
                     "mentioning both states (loved/hated), using temporal language (used to, now, "
