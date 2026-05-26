@@ -423,6 +423,8 @@ class MockLLM(LLMInterface):
         return self._mock_calls
 
     def clear_mock_calls(self) -> None:
-        """Clear the recorded mock calls and any set exception."""
+        """Clear all recorded calls and any configured response/exception state."""
         self._mock_calls = []
         self._mock_exception = None
+        self._mock_response = None
+        self._response_callback = None
