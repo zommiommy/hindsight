@@ -184,9 +184,9 @@ describe("extractUserFromIssue", () => {
 
   it("handles multi-segment originId", async () => {
     const { extractUserFromIssue } = await import("../src/bank.js");
-    expect(
-      extractUserFromIssue({ originId: "zendesk::org-42::ticket-7::user@corp.io" })
-    ).toBe("user@corp.io");
+    expect(extractUserFromIssue({ originId: "zendesk::org-42::ticket-7::user@corp.io" })).toBe(
+      "user@corp.io"
+    );
   });
 });
 

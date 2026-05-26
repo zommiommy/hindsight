@@ -108,10 +108,7 @@ const plugin = definePlugin({
 
       // Cache userId so tool calls within this run can derive the same bank ID
       if (userId) {
-        await ctx.state.set(
-          { scopeKind: "run", scopeId: runId, stateKey: "user-id" },
-          userId
-        );
+        await ctx.state.set({ scopeKind: "run", scopeId: runId, stateKey: "user-id" }, userId);
       }
 
       try {

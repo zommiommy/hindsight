@@ -62,10 +62,7 @@ describe("feature interaction: static bankId vs user granularity", () => {
 describe("static bankId edge cases", () => {
   it("bankId with special characters is returned verbatim (no encoding)", () => {
     expect(
-      deriveBankId(
-        { companyId: "co-1", agentId: "ag-1" },
-        { bankId: "team::project::shared" }
-      )
+      deriveBankId({ companyId: "co-1", agentId: "ag-1" }, { bankId: "team::project::shared" })
     ).toBe("team::project::shared");
   });
 
@@ -74,10 +71,7 @@ describe("static bankId edge cases", () => {
       { companyId: "co-1", agentId: "ag-1" },
       { bankId: "my-bank", dynamicBankId: false }
     );
-    const withOmit = deriveBankId(
-      { companyId: "co-1", agentId: "ag-1" },
-      { bankId: "my-bank" }
-    );
+    const withOmit = deriveBankId({ companyId: "co-1", agentId: "ag-1" }, { bankId: "my-bank" });
     expect(withFalse).toBe(withOmit);
     expect(withFalse).toBe("my-bank");
   });
@@ -86,12 +80,9 @@ describe("static bankId edge cases", () => {
     // Critical backwards-compat check: if someone sets only bankId,
     // they expect it to be used. dynamicBankId defaults to undefined,
     // which is !== true, so static path should activate.
-    expect(
-      deriveBankId(
-        { companyId: "co-1", agentId: "ag-1" },
-        { bankId: "spool-farm" }
-      )
-    ).toBe("spool-farm");
+    expect(deriveBankId({ companyId: "co-1", agentId: "ag-1" }, { bankId: "spool-farm" })).toBe(
+      "spool-farm"
+    );
   });
 
   it("empty string bankId falls through to dynamic", () => {
@@ -149,9 +140,7 @@ describe("dynamic derivation edge cases", () => {
   });
 
   it("no config at all uses default granularity", () => {
-    expect(deriveBankId({ companyId: "co-1", agentId: "ag-1" }, {})).toBe(
-      "paperclip::co-1::ag-1"
-    );
+    expect(deriveBankId({ companyId: "co-1", agentId: "ag-1" }, {})).toBe("paperclip::co-1::ag-1");
   });
 });
 
@@ -165,16 +154,16 @@ describe("extractUserFromIssue edge cases", () => {
   });
 
   it("null creatorEmail falls through to originId", () => {
-    expect(
-      extractUserFromIssue({ creatorEmail: null, originId: "slack::alice@acme.com" })
-    ).toBe("alice@acme.com");
+    expect(extractUserFromIssue({ creatorEmail: null, originId: "slack::alice@acme.com" })).toBe(
+      "alice@acme.com"
+    );
   });
 
   it("empty string creatorEmail falls through to originId", () => {
     // creatorEmail is truthy check, empty string is falsy
-    expect(
-      extractUserFromIssue({ creatorEmail: "", originId: "slack::bob@co.io" })
-    ).toBe("bob@co.io");
+    expect(extractUserFromIssue({ creatorEmail: "", originId: "slack::bob@co.io" })).toBe(
+      "bob@co.io"
+    );
   });
 
   it("originId with no separators but containing @ is returned", () => {
@@ -183,9 +172,9 @@ describe("extractUserFromIssue edge cases", () => {
 
   it("originId with multiple emails picks the last one", () => {
     // Scans backwards — last segment with @ wins
-    expect(
-      extractUserFromIssue({ originId: "admin@corp.io::slack::alice@acme.com" })
-    ).toBe("alice@acme.com");
+    expect(extractUserFromIssue({ originId: "admin@corp.io::slack::alice@acme.com" })).toBe(
+      "alice@acme.com"
+    );
   });
 
   it("both null returns undefined", () => {
