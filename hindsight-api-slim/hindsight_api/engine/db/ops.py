@@ -391,37 +391,38 @@ class DataAccessOps(ABC):
         """Insert a webhook delivery task into async_operations."""
         ...
 
-    # -- Link recompute queue --------------------------------------------
+    # -- Graph maintenance queue -----------------------------------------
 
     @abstractmethod
-    async def enqueue_link_recompute_victims(
+    async def enqueue_graph_maintenance(
         self,
         conn: DatabaseConnection,
         table: str,
         bank_id: str,
-        victim_unit_ids: list,
+        kind: str,
+        target_ids: list,
     ) -> None:
-        """Insert victim unit IDs into link_recompute_queue, deduplicating on
-        the (bank_id, victim_unit_id) primary key.
+        """Insert (kind, target_id) rows into graph_maintenance_queue,
+        deduplicating on the (bank_id, kind, target_id) primary key.
 
-        Called inside the existing delete transaction so enqueue is atomic with
-        the delete. Order is unspecified.
+        Called inside the triggering transaction so enqueue is atomic with
+        the mutation that caused it. Order is unspecified.
         """
         ...
 
     @abstractmethod
-    async def claim_link_recompute_batch(
+    async def claim_graph_maintenance_batch(
         self,
         conn: DatabaseConnection,
         table: str,
         bank_id: str,
         limit: int,
-    ) -> list:
-        """Atomically claim a batch of victims from link_recompute_queue and
+    ) -> list[tuple[str, str]]:
+        """Atomically claim a batch of rows from graph_maintenance_queue and
         remove them from the table.
 
-        Returns the list of victim_unit_id values as strings. Empty list when
-        the queue for ``bank_id`` is drained.
+        Returns a list of ``(kind, target_id)`` string tuples. Empty list
+        when the queue for ``bank_id`` is drained.
         """
         ...
 

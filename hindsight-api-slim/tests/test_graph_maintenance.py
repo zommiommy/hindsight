@@ -1,11 +1,11 @@
-"""Tests for async link recompute on delete.
+"""Tests for async graph maintenance after delete.
 
 These tests bypass the LLM-backed retain pipeline by inserting memory_units
 and memory_links directly. That gives precise control over the link
 topology so we can assert exact counts after a delete + drain.
 
 The fixture's task backend is ``SyncTaskBackend`` (see conftest), so
-``submit_async_link_recompute`` runs the worker inline — no polling needed.
+``submit_async_graph_maintenance`` runs the worker inline — no polling needed.
 """
 
 from __future__ import annotations
@@ -16,11 +16,12 @@ from datetime import UTC, datetime, timedelta
 import pytest
 
 from hindsight_api import RequestContext
-from hindsight_api.engine.link_recompute import (
+from hindsight_api.engine.graph_maintenance import (
+    KIND_RELINK_UNIT,
     MAX_SEMANTIC_LINKS_PER_UNIT,
     MAX_TEMPORAL_LINKS_PER_UNIT,
-    enqueue_link_recompute_victims,
-    run_link_recompute_job,
+    enqueue_relink_victims,
+    run_graph_maintenance_job,
 )
 from hindsight_api.engine.memory_engine import MemoryEngine
 
@@ -90,25 +91,29 @@ async def _attach_unit_to_doc(conn, unit_id: uuid.UUID, doc_id: str) -> None:
     await conn.execute("UPDATE memory_units SET document_id = $1 WHERE id = $2", doc_id, unit_id)
 
 
-async def _queue_rows(conn, bank_id: str) -> list[str]:
+async def _queue_rows(conn, bank_id: str) -> list[tuple[str, str]]:
     rows = await conn.fetch(
-        "SELECT victim_unit_id FROM link_recompute_queue WHERE bank_id = $1 ORDER BY victim_unit_id",
+        """
+        SELECT kind, target_id FROM graph_maintenance_queue
+        WHERE bank_id = $1
+        ORDER BY kind, target_id
+        """,
         bank_id,
     )
-    return [str(r["victim_unit_id"]) for r in rows]
+    return [(r["kind"], str(r["target_id"])) for r in rows]
 
 
 # ---------------------------------------------------------------------------
-# enqueue_link_recompute_victims
+# enqueue_relink_victims
 # ---------------------------------------------------------------------------
 
 
-class TestEnqueueVictims:
+class TestEnqueueRelinkVictims:
     @pytest.mark.asyncio
     async def test_enqueues_units_with_outgoing_link_to_deleted(
         self, memory: MemoryEngine, request_context: RequestContext
     ):
-        bank_id = f"test-lr-enq-{uuid.uuid4().hex[:8]}"
+        bank_id = f"test-gm-enq-{uuid.uuid4().hex[:8]}"
         await _ensure_bank(memory, bank_id, request_context)
 
         pool = await memory._get_pool()
@@ -120,18 +125,18 @@ class TestEnqueueVictims:
 
             backend = await memory._get_backend()
             async with conn.transaction():
-                count = await enqueue_link_recompute_victims(conn, bank_id, [str(doomed)], ops=backend.ops)
+                count = await enqueue_relink_victims(conn, bank_id, [str(doomed)], ops=backend.ops)
 
             assert count == 1
             queued = await _queue_rows(conn, bank_id)
-            assert queued == [str(survivor)]
+            assert queued == [(KIND_RELINK_UNIT, str(survivor))]
 
     @pytest.mark.asyncio
     async def test_excludes_deleted_units_themselves(
         self, memory: MemoryEngine, request_context: RequestContext
     ):
         """A unit being deleted that linked TO another deleted unit must not enqueue itself."""
-        bank_id = f"test-lr-self-{uuid.uuid4().hex[:8]}"
+        bank_id = f"test-gm-self-{uuid.uuid4().hex[:8]}"
         await _ensure_bank(memory, bank_id, request_context)
 
         pool = await memory._get_pool()
@@ -144,7 +149,7 @@ class TestEnqueueVictims:
             backend = await memory._get_backend()
             async with conn.transaction():
                 # Both a and b are being deleted — neither should be enqueued.
-                count = await enqueue_link_recompute_victims(conn, bank_id, [str(a), str(b)], ops=backend.ops)
+                count = await enqueue_relink_victims(conn, bank_id, [str(a), str(b)], ops=backend.ops)
 
             assert count == 0
             queued = await _queue_rows(conn, bank_id)
@@ -153,7 +158,7 @@ class TestEnqueueVictims:
     @pytest.mark.asyncio
     async def test_skips_entity_links(self, memory: MemoryEngine, request_context: RequestContext):
         """Entity links are being removed from the product — we don't enqueue for them."""
-        bank_id = f"test-lr-ent-{uuid.uuid4().hex[:8]}"
+        bank_id = f"test-gm-ent-{uuid.uuid4().hex[:8]}"
         await _ensure_bank(memory, bank_id, request_context)
 
         pool = await memory._get_pool()
@@ -165,13 +170,13 @@ class TestEnqueueVictims:
 
             backend = await memory._get_backend()
             async with conn.transaction():
-                count = await enqueue_link_recompute_victims(conn, bank_id, [str(doomed)], ops=backend.ops)
+                count = await enqueue_relink_victims(conn, bank_id, [str(doomed)], ops=backend.ops)
 
             assert count == 0
 
     @pytest.mark.asyncio
     async def test_dedupes_via_on_conflict(self, memory: MemoryEngine, request_context: RequestContext):
-        bank_id = f"test-lr-dup-{uuid.uuid4().hex[:8]}"
+        bank_id = f"test-gm-dup-{uuid.uuid4().hex[:8]}"
         await _ensure_bank(memory, bank_id, request_context)
 
         pool = await memory._get_pool()
@@ -186,11 +191,11 @@ class TestEnqueueVictims:
 
             backend = await memory._get_backend()
             async with conn.transaction():
-                await enqueue_link_recompute_victims(conn, bank_id, [str(doomed1)], ops=backend.ops)
-                await enqueue_link_recompute_victims(conn, bank_id, [str(doomed2)], ops=backend.ops)
+                await enqueue_relink_victims(conn, bank_id, [str(doomed1)], ops=backend.ops)
+                await enqueue_relink_victims(conn, bank_id, [str(doomed2)], ops=backend.ops)
 
             queued = await _queue_rows(conn, bank_id)
-            assert queued == [str(survivor)]
+            assert queued == [(KIND_RELINK_UNIT, str(survivor))]
 
 
 # ---------------------------------------------------------------------------
@@ -203,7 +208,7 @@ class TestDeleteDocumentEnqueue:
     async def test_delete_document_enqueues_cross_doc_victims(
         self, memory: MemoryEngine, request_context: RequestContext
     ):
-        bank_id = f"test-lr-doc-{uuid.uuid4().hex[:8]}"
+        bank_id = f"test-gm-doc-{uuid.uuid4().hex[:8]}"
         await _ensure_bank(memory, bank_id, request_context)
 
         pool = await memory._get_pool()
@@ -227,7 +232,7 @@ class TestDeleteDocumentEnqueue:
 
 
 # ---------------------------------------------------------------------------
-# run_link_recompute_job
+# run_graph_maintenance_job
 # ---------------------------------------------------------------------------
 
 
@@ -236,32 +241,59 @@ class TestWorker:
     async def test_drains_empty_queue_cleanly(
         self, memory: MemoryEngine, request_context: RequestContext
     ):
-        bank_id = f"test-lr-empty-{uuid.uuid4().hex[:8]}"
+        bank_id = f"test-gm-empty-{uuid.uuid4().hex[:8]}"
         await _ensure_bank(memory, bank_id, request_context)
 
-        result = await run_link_recompute_job(memory, bank_id, request_context)
-        assert result == {"victims_processed": 0, "links_added": 0}
+        result = await run_graph_maintenance_job(memory, bank_id, request_context)
+        assert result == {"targets_processed": 0, "relink_links_added": 0}
 
     @pytest.mark.asyncio
-    async def test_skips_missing_victim_silently(
+    async def test_skips_missing_target_silently(
         self, memory: MemoryEngine, request_context: RequestContext
     ):
-        """Victim deleted between enqueue and drain: worker dequeues and no-ops."""
-        bank_id = f"test-lr-miss-{uuid.uuid4().hex[:8]}"
+        """Target deleted between enqueue and drain: worker dequeues and no-ops."""
+        bank_id = f"test-gm-miss-{uuid.uuid4().hex[:8]}"
         await _ensure_bank(memory, bank_id, request_context)
 
         pool = await memory._get_pool()
         async with pool.acquire() as conn:
-            # Enqueue a victim_unit_id that doesn't exist in memory_units.
+            # Enqueue a relink_unit target that doesn't exist in memory_units.
             await conn.execute(
-                "INSERT INTO link_recompute_queue (bank_id, victim_unit_id) VALUES ($1, $2)",
+                "INSERT INTO graph_maintenance_queue (bank_id, kind, target_id) VALUES ($1, $2, $3)",
                 bank_id,
+                KIND_RELINK_UNIT,
                 uuid.uuid4(),
             )
 
-        result = await run_link_recompute_job(memory, bank_id, request_context)
-        assert result["victims_processed"] == 1
-        assert result["links_added"] == 0
+        result = await run_graph_maintenance_job(memory, bank_id, request_context)
+        assert result["targets_processed"] == 1
+        assert result["relink_links_added"] == 0
+
+        async with pool.acquire() as conn:
+            assert await _queue_rows(conn, bank_id) == []
+
+    @pytest.mark.asyncio
+    async def test_skips_unknown_kind_without_failing(
+        self, memory: MemoryEngine, request_context: RequestContext
+    ):
+        """Unknown kind values land in the queue without crashing the worker —
+        they get dequeued and logged. Guards against forward-compat issues if a
+        future migration enqueues a kind this build doesn't know about."""
+        bank_id = f"test-gm-unkk-{uuid.uuid4().hex[:8]}"
+        await _ensure_bank(memory, bank_id, request_context)
+
+        pool = await memory._get_pool()
+        async with pool.acquire() as conn:
+            await conn.execute(
+                "INSERT INTO graph_maintenance_queue (bank_id, kind, target_id) VALUES ($1, $2, $3)",
+                bank_id,
+                "made_up_future_kind",
+                uuid.uuid4(),
+            )
+
+        result = await run_graph_maintenance_job(memory, bank_id, request_context)
+        assert result["targets_processed"] == 1
+        assert result["relink_links_added"] == 0
 
         async with pool.acquire() as conn:
             assert await _queue_rows(conn, bank_id) == []
@@ -272,7 +304,7 @@ class TestWorker:
     ):
         """The headline behaviour: a victim under the temporal cap gets new
         outgoing links to neighbours that were never linked at retain time."""
-        bank_id = f"test-lr-topup-{uuid.uuid4().hex[:8]}"
+        bank_id = f"test-gm-topup-{uuid.uuid4().hex[:8]}"
         await _ensure_bank(memory, bank_id, request_context)
 
         # Build: one victim at t=0, 2 already-linked neighbours, and 5 unlinked
@@ -296,19 +328,20 @@ class TestWorker:
                 await _insert_link(conn, bank_id, victim, nbr, "temporal")
 
             await conn.execute(
-                "INSERT INTO link_recompute_queue (bank_id, victim_unit_id) VALUES ($1, $2)",
+                "INSERT INTO graph_maintenance_queue (bank_id, kind, target_id) VALUES ($1, $2, $3)",
                 bank_id,
+                KIND_RELINK_UNIT,
                 victim,
             )
 
-        result = await run_link_recompute_job(memory, bank_id, request_context)
-        assert result["victims_processed"] == 1
+        result = await run_graph_maintenance_job(memory, bank_id, request_context)
+        assert result["targets_processed"] == 1
         # We probed for up to MAX_TEMPORAL_LINKS_PER_UNIT neighbours; bulk insert
         # is ON CONFLICT DO NOTHING, so the already-linked 2 are silently
-        # skipped at insert time. The probe still returned them, so links_added
-        # counts what we attempted to insert (probe rows), not what actually
-        # landed. Verify the end-state via the DB instead.
-        assert result["links_added"] >= 5
+        # skipped at insert time. The probe still returned them, so
+        # relink_links_added counts what we attempted to insert (probe rows),
+        # not what actually landed. Verify the end-state via the DB instead.
+        assert result["relink_links_added"] >= 5
 
         async with pool.acquire() as conn:
             outgoing = await conn.fetchval(
@@ -330,7 +363,7 @@ class TestWorker:
         self, memory: MemoryEngine, request_context: RequestContext
     ):
         """If the victim already has cap links, probing is skipped."""
-        bank_id = f"test-lr-atcap-{uuid.uuid4().hex[:8]}"
+        bank_id = f"test-gm-atcap-{uuid.uuid4().hex[:8]}"
         await _ensure_bank(memory, bank_id, request_context)
 
         pool = await memory._get_pool()
@@ -349,13 +382,14 @@ class TestWorker:
                 await _insert_unit(conn, bank_id, f"x-{i}", event_date=base + timedelta(minutes=i + 100))
 
             await conn.execute(
-                "INSERT INTO link_recompute_queue (bank_id, victim_unit_id) VALUES ($1, $2)",
+                "INSERT INTO graph_maintenance_queue (bank_id, kind, target_id) VALUES ($1, $2, $3)",
                 bank_id,
+                KIND_RELINK_UNIT,
                 victim,
             )
 
-        result = await run_link_recompute_job(memory, bank_id, request_context)
-        assert result["victims_processed"] == 1
+        result = await run_graph_maintenance_job(memory, bank_id, request_context)
+        assert result["targets_processed"] == 1
 
         async with pool.acquire() as conn:
             outgoing = await conn.fetchval(
@@ -374,7 +408,7 @@ class TestWorker:
 
 
 def test_caps_match_retain_defaults():
-    """If retain bumps its caps but link_recompute stays put, top-up will
+    """If retain bumps its caps but graph_maintenance stays put, top-up will
     silently never reach the retain ceiling — the asserts here exist so a
     future cap change forces a paired update."""
     from hindsight_api.engine.retain.link_utils import MAX_TEMPORAL_LINKS_PER_UNIT as RETAIN_TEMPORAL

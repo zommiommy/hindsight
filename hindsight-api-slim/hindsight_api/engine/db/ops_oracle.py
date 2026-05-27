@@ -215,40 +215,41 @@ class OracleOps(DataAccessOps):
             list(zip(unit_ids, entity_ids)),
         )
 
-    async def enqueue_link_recompute_victims(
+    async def enqueue_graph_maintenance(
         self,
         conn: DatabaseConnection,
         table: str,
         bank_id: str,
-        victim_unit_ids: list,
+        kind: str,
+        target_ids: list,
     ) -> None:
-        if not victim_unit_ids:
+        if not target_ids:
             return
         # Oracle doesn't support ON CONFLICT; rely on the PK and the
         # IGNORE_ROW_ON_DUPKEY_INDEX hint to skip duplicates server-side.
         # The hint name must match the PK constraint exactly.
         await conn.executemany(
             f"""
-            INSERT /*+ IGNORE_ROW_ON_DUPKEY_INDEX({table}, pk_link_recompute_queue) */
-            INTO {table} (bank_id, victim_unit_id)
-            VALUES ($1, $2)
+            INSERT /*+ IGNORE_ROW_ON_DUPKEY_INDEX({table}, pk_graph_maintenance_queue) */
+            INTO {table} (bank_id, kind, target_id)
+            VALUES ($1, $2, $3)
             """,
-            [(bank_id, vid) for vid in victim_unit_ids],
+            [(bank_id, kind, tid) for tid in target_ids],
         )
 
-    async def claim_link_recompute_batch(
+    async def claim_graph_maintenance_batch(
         self,
         conn: DatabaseConnection,
         table: str,
         bank_id: str,
         limit: int,
-    ) -> list:
+    ) -> list[tuple[str, str]]:
         # Two-step claim: select the batch, then delete by exact keys. Oracle's
         # DELETE ... RETURNING doesn't accept a multi-row subquery, so we can't
         # do it in one statement like the PG version.
         rows = await conn.fetch(
             f"""
-            SELECT victim_unit_id FROM {table}
+            SELECT kind, target_id FROM {table}
             WHERE bank_id = $1
             ORDER BY enqueued_at
             FETCH FIRST $2 ROWS ONLY
@@ -256,13 +257,13 @@ class OracleOps(DataAccessOps):
             bank_id,
             limit,
         )
-        victim_ids = [str(row["victim_unit_id"]) for row in rows]
-        if victim_ids:
+        claimed = [(row["kind"], str(row["target_id"])) for row in rows]
+        if claimed:
             await conn.executemany(
-                f"DELETE FROM {table} WHERE bank_id = $1 AND victim_unit_id = $2",
-                [(bank_id, vid) for vid in victim_ids],
+                f"DELETE FROM {table} WHERE bank_id = $1 AND kind = $2 AND target_id = $3",
+                [(bank_id, kind, tid) for (kind, tid) in claimed],
             )
-        return victim_ids
+        return claimed
 
     async def fetch_unit_dates(
         self,

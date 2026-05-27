@@ -327,9 +327,9 @@ async def handle_document_tracking(
             # those links. ``ops`` may be None for older callers that haven't
             # been wired up — skip enqueue in that case rather than crash.
             if ops is not None:
-                from ..link_recompute import enqueue_link_recompute_victims
+                from ..graph_maintenance import enqueue_relink_victims
 
-                await enqueue_link_recompute_victims(conn, bank_id, [str(uid) for uid in existing_unit_ids], ops=ops)
+                await enqueue_relink_victims(conn, bank_id, [str(uid) for uid in existing_unit_ids], ops=ops)
         # Explicitly delete memory_units by document_id BEFORE deleting the
         # document row. The CASCADE from documents→chunks→memory_units only
         # catches units that have a non-NULL chunk_id FK. Units with chunk_id=NULL

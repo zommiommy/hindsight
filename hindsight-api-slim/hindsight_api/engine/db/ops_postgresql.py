@@ -290,47 +290,49 @@ class PostgreSQLOps(DataAccessOps):
             entity_ids,
         )
 
-    async def enqueue_link_recompute_victims(
+    async def enqueue_graph_maintenance(
         self,
         conn: DatabaseConnection,
         table: str,
         bank_id: str,
-        victim_unit_ids: list,
+        kind: str,
+        target_ids: list,
     ) -> None:
-        if not victim_unit_ids:
+        if not target_ids:
             return
         await conn.execute(
             f"""
-            INSERT INTO {table} (bank_id, victim_unit_id)
-            SELECT $1, v FROM unnest($2::uuid[]) AS t(v)
-            ON CONFLICT (bank_id, victim_unit_id) DO NOTHING
+            INSERT INTO {table} (bank_id, kind, target_id)
+            SELECT $1, $2, v FROM unnest($3::uuid[]) AS t(v)
+            ON CONFLICT (bank_id, kind, target_id) DO NOTHING
             """,
             bank_id,
-            victim_unit_ids,
+            kind,
+            target_ids,
         )
 
-    async def claim_link_recompute_batch(
+    async def claim_graph_maintenance_batch(
         self,
         conn: DatabaseConnection,
         table: str,
         bank_id: str,
         limit: int,
-    ) -> list:
+    ) -> list[tuple[str, str]]:
         rows = await conn.fetch(
             f"""
             DELETE FROM {table}
-            WHERE (bank_id, victim_unit_id) IN (
-                SELECT bank_id, victim_unit_id FROM {table}
+            WHERE (bank_id, kind, target_id) IN (
+                SELECT bank_id, kind, target_id FROM {table}
                 WHERE bank_id = $1
                 ORDER BY enqueued_at
                 LIMIT $2
             )
-            RETURNING victim_unit_id
+            RETURNING kind, target_id
             """,
             bank_id,
             limit,
         )
-        return [str(row["victim_unit_id"]) for row in rows]
+        return [(row["kind"], str(row["target_id"])) for row in rows]
 
     async def fetch_unit_dates(
         self,

@@ -1176,15 +1176,15 @@ class MemoryEngine(MemoryEngineInterface):
         logger.info(f"[CONSOLIDATION] bank={bank_id} completed: {result.get('memories_processed', 0)} processed")
         return result
 
-    async def _handle_link_recompute(self, task_dict: dict[str, Any]):
-        """Handler for link_recompute tasks. Drains link_recompute_queue for the bank."""
+    async def _handle_graph_maintenance(self, task_dict: dict[str, Any]):
+        """Handler for graph_maintenance tasks. Drains graph_maintenance_queue for the bank."""
         bank_id = task_dict.get("bank_id")
         if not bank_id:
-            raise ValueError("bank_id is required for link_recompute task")
+            raise ValueError("bank_id is required for graph_maintenance task")
 
         from hindsight_api.models import RequestContext
 
-        from .link_recompute import run_link_recompute_job
+        from .graph_maintenance import run_graph_maintenance_job
 
         internal_context = RequestContext(
             internal=True,
@@ -1192,7 +1192,7 @@ class MemoryEngine(MemoryEngineInterface):
             api_key_id=task_dict.get("_api_key_id"),
             retry_count=task_dict.get("_retry_count", 0),
         )
-        return await run_link_recompute_job(
+        return await run_graph_maintenance_job(
             memory_engine=self,
             bank_id=bank_id,
             request_context=internal_context,
@@ -1339,8 +1339,8 @@ class MemoryEngine(MemoryEngineInterface):
                     await self._handle_file_convert_retain(task_dict)
                 elif task_type == "consolidation":
                     consolidation_result = await self._handle_consolidation(task_dict)
-                elif task_type == "link_recompute":
-                    await self._handle_link_recompute(task_dict)
+                elif task_type == "graph_maintenance":
+                    await self._handle_graph_maintenance(task_dict)
                 elif task_type == "refresh_mental_model":
                     await self._handle_refresh_mental_model(task_dict)
                 elif task_type == "webhook_delivery":
@@ -2710,14 +2710,14 @@ class MemoryEngine(MemoryEngineInterface):
                 # Log but don't fail the retain - consolidation is non-critical
                 logger.warning(f"Failed to submit consolidation task for bank {bank_id}: {e}")
 
-        # Trigger link recompute if a document upsert in this retain enqueued
-        # any victims. submit_async_link_recompute short-circuits when the
-        # queue is empty, so a regular non-upsert retain pays a single cheap
-        # indexed SELECT here.
+        # Trigger graph maintenance if a document upsert in this retain
+        # enqueued any cleanup work. submit_async_graph_maintenance
+        # short-circuits when the queue is empty, so a regular non-upsert
+        # retain pays a single cheap indexed SELECT here.
         try:
-            await self.submit_async_link_recompute(bank_id=bank_id, request_context=request_context)
+            await self.submit_async_graph_maintenance(bank_id=bank_id, request_context=request_context)
         except Exception as e:
-            logger.warning(f"Failed to submit link recompute task for bank {bank_id}: {e}")
+            logger.warning(f"Failed to submit graph maintenance task for bank {bank_id}: {e}")
 
         if return_usage:
             return result, total_usage
@@ -4200,12 +4200,12 @@ class MemoryEngine(MemoryEngineInterface):
                     f"SELECT COUNT(*) FROM {fq_table('memory_units')} WHERE document_id = $1", document_id
                 )
 
-                # Capture link-recompute victims BEFORE the cascade — once the
-                # source rows are gone, the join finding them returns nothing.
+                # Capture relink victims BEFORE the cascade — once the source
+                # rows are gone, the join finding them returns nothing.
                 if unit_ids:
-                    from .link_recompute import enqueue_link_recompute_victims
+                    from .graph_maintenance import enqueue_relink_victims
 
-                    victims_enqueued = await enqueue_link_recompute_victims(conn, bank_id, unit_ids, ops=backend.ops)
+                    victims_enqueued = await enqueue_relink_victims(conn, bank_id, unit_ids, ops=backend.ops)
 
                 # Delete document first (cascades to memory_units and all their links).
                 # Running the stale-observation sweep AFTER the delete ensures we also
@@ -4237,9 +4237,9 @@ class MemoryEngine(MemoryEngineInterface):
 
         if victims_enqueued > 0:
             try:
-                await self.submit_async_link_recompute(bank_id=bank_id, request_context=request_context)
+                await self.submit_async_graph_maintenance(bank_id=bank_id, request_context=request_context)
             except Exception as e:
-                logger.warning(f"Failed to submit link recompute after document deletion for bank {bank_id}: {e}")
+                logger.warning(f"Failed to submit graph maintenance after document deletion for bank {bank_id}: {e}")
 
         return result
 
@@ -4435,7 +4435,7 @@ class MemoryEngine(MemoryEngineInterface):
         backend = await self._get_backend()
         invalidated_obs = 0
         bank_id_for_consolidation: str | None = None
-        bank_id_for_link_recompute: str | None = None
+        bank_id_for_graph_maintenance: str | None = None
         async with acquire_with_retry(backend) as conn:
             async with conn.transaction():
                 # Get bank_id and fact_type before deletion
@@ -4446,14 +4446,14 @@ class MemoryEngine(MemoryEngineInterface):
                 bank_id = row["bank_id"] if row else None
                 fact_type = row["fact_type"] if row else None
 
-                # Capture link-recompute victims BEFORE the cascade — once the
-                # row is gone, the join finding them returns nothing.
+                # Capture relink victims BEFORE the cascade — once the row is
+                # gone, the join finding them returns nothing.
                 if bank_id and fact_type in ("experience", "world"):
-                    from .link_recompute import enqueue_link_recompute_victims
+                    from .graph_maintenance import enqueue_relink_victims
 
-                    victims_enqueued = await enqueue_link_recompute_victims(conn, bank_id, [unit_id], ops=backend.ops)
+                    victims_enqueued = await enqueue_relink_victims(conn, bank_id, [unit_id], ops=backend.ops)
                     if victims_enqueued > 0:
-                        bank_id_for_link_recompute = bank_id
+                        bank_id_for_graph_maintenance = bank_id
 
                 # Delete the memory unit first (cascades to links and associations).
                 # The stale-observation sweep runs AFTER the delete so it also catches
@@ -4491,14 +4491,15 @@ class MemoryEngine(MemoryEngineInterface):
                         f" for bank {bank_id_for_consolidation}: {e}"
                     )
 
-        if bank_id_for_link_recompute:
+        if bank_id_for_graph_maintenance:
             try:
-                await self.submit_async_link_recompute(
-                    bank_id=bank_id_for_link_recompute, request_context=request_context
+                await self.submit_async_graph_maintenance(
+                    bank_id=bank_id_for_graph_maintenance, request_context=request_context
                 )
             except Exception as e:
                 logger.warning(
-                    f"Failed to submit link recompute after memory deletion for bank {bank_id_for_link_recompute}: {e}"
+                    f"Failed to submit graph maintenance after memory deletion "
+                    f"for bank {bank_id_for_graph_maintenance}: {e}"
                 )
 
         return result
@@ -9953,13 +9954,13 @@ class MemoryEngine(MemoryEngineInterface):
             dedupe_by_bank=dedupe,
         )
 
-    async def submit_async_link_recompute(
+    async def submit_async_graph_maintenance(
         self,
         bank_id: str,
         *,
         request_context: "RequestContext",
     ) -> dict[str, Any]:
-        """Submit a link-recompute job to drain ``link_recompute_queue`` for a bank.
+        """Submit a graph-maintenance job to drain ``graph_maintenance_queue`` for a bank.
 
         Idempotent: short-circuits with ``no_work=True`` when the queue is empty
         for this bank, so unconditional callers (e.g. every retain that may or
@@ -9979,7 +9980,7 @@ class MemoryEngine(MemoryEngineInterface):
         backend = await self._get_backend()
         async with acquire_with_retry(backend) as conn:
             has_work = await conn.fetchval(
-                f"SELECT 1 FROM {fq_table('link_recompute_queue')} WHERE bank_id = $1 LIMIT 1",
+                f"SELECT 1 FROM {fq_table('graph_maintenance_queue')} WHERE bank_id = $1 LIMIT 1",
                 bank_id,
             )
         if not has_work:
@@ -9989,7 +9990,7 @@ class MemoryEngine(MemoryEngineInterface):
             from hindsight_api.extensions import BankWriteContext
 
             ctx = BankWriteContext(
-                bank_id=bank_id, operation="submit_async_link_recompute", request_context=request_context
+                bank_id=bank_id, operation="submit_async_graph_maintenance", request_context=request_context
             )
             await self._validate_operation(self._operation_validator.validate_bank_write(ctx))
 
@@ -10001,8 +10002,8 @@ class MemoryEngine(MemoryEngineInterface):
 
         return await self._submit_async_operation(
             bank_id=bank_id,
-            operation_type="link_recompute",
-            task_type="link_recompute",
+            operation_type="graph_maintenance",
+            task_type="graph_maintenance",
             task_payload=task_payload,
             dedupe_by_bank=True,
         )

@@ -44,7 +44,7 @@ Every operation has an `operation_type` in the database and a `task_type` in the
 | [`file_convert_retain`](#file_convert_retain) | `POST /documents/upload` for binary file uploads | No | Converts a binary file (PDF, DOCX, etc.) to text, then runs `retain` on the output. |
 | [`consolidation`](#consolidation) | After every retain that produced new memories (when enabled); after deletes that invalidated observations | Yes | Synthesizes new world/experience memories into observations and mental models. |
 | [`refresh_mental_model`](#refresh_mental_model) | Manual via `POST /mental-models/{id}/refresh` | No | Re-runs the source query for a single mental model and updates its content. |
-| [`link_recompute`](#link_recompute) | After any delete that removes memory_units (single unit, document, or document upsert) | Yes | Tops up outgoing temporal/semantic links for units that lost neighbours to the delete. |
+| [`graph_maintenance`](#graph_maintenance) | After any mutation that leaves the graph with stale derived state — today, deletes that remove memory_units | Yes | Generic post-mutation cleanup queue. Currently runs one kind of work — `relink_unit`, topping up outgoing temporal/semantic links for units that lost neighbours to a delete. |
 | [`webhook_delivery`](#webhook_delivery) | Configured webhooks fire after qualifying operations complete | No | Delivers the webhook payload, retrying on transient HTTP failures. |
 
 ### `retain`
@@ -75,11 +75,21 @@ A mental model has a `source_query` that defines which memories it summarizes. C
 
 Requires an LLM provider; blocked at submit time when `HINDSIGHT_API_LLM_PROVIDER=none`.
 
-### `link_recompute`
+### `graph_maintenance`
 
-Reactively maintains temporal/semantic link counts after a memory unit is deleted.
+Generic worker for post-mutation graph cleanup. The queue table (`graph_maintenance_queue`) is keyed by `(bank_id, kind, target_id)` so future cleanup work can ride on the same surface without a new task type.
 
-**Why it exists.** When a memory_unit is deleted, the foreign-key cascade removes any `memory_links` row referencing it — including the entries that pointed *at* it from surviving units. Those surviving units now have fewer outgoing temporal/semantic links than the cap (20 temporal, 50 semantic), and the original retain pipeline only generates links for *newly inserted* units. Without a back-fill, surviving units stay permanently under-capped, which degrades graph-expansion recall over time.
+**Why it exists.** Some mutations leave behind derived state that's still readable but no longer accurate. Today the only example is link counts after a delete (see the `relink_unit` kind below). The framework is here so we don't grow a forest of near-identical task types as we add more reconciliation jobs (orphan entity pruning, stale cooccurrence cleanup, etc.).
+
+**Bank-deduped.** While one `graph_maintenance` job is pending for a bank, repeat submits return the existing `operation_id` instead of stacking. Once the job starts processing, the next submit becomes the next pending slot — so work enqueued during processing gets picked up by the follow-up run.
+
+**Worker loop.** Drains the queue in batches of 50 rows, groups each batch by `kind`, and dispatches each group to the matching handler. Batch + queue delete commit together, so a crash mid-job loses at most one batch (already-committed work persists). Rows of unknown `kind` (e.g. forward-compat — a future migration enqueues something the current build doesn't recognize) are dequeued and logged without crashing.
+
+#### Kind: `relink_unit`
+
+Reactively maintains a unit's outgoing temporal/semantic link counts after one of its neighbours is deleted.
+
+**Why it's needed.** When a memory_unit is deleted, the foreign-key cascade removes any `memory_links` row referencing it — including entries that pointed *at* it from surviving units. Those surviving units now have fewer outgoing temporal/semantic links than the cap (20 temporal, 50 semantic), and the original retain pipeline only generates links for *newly inserted* units. Without a back-fill, surviving units stay permanently under-capped, which degrades graph-expansion recall over time.
 
 **Trigger sites:**
 
@@ -87,14 +97,13 @@ Reactively maintains temporal/semantic link counts after a memory unit is delete
 - `DELETE /memories/{id}` (`delete_memory_unit`)
 - `POST /memories` with an existing `document_id` (the upsert path inside `handle_document_tracking`)
 
-A full bank wipe (`delete_bank`) does *not* trigger link_recompute — there are no surviving units to top up.
+A full bank wipe (`delete_bank`) does *not* enqueue — there are no surviving units to top up.
 
 **How it runs:**
 
-1. Inside the existing delete transaction, before the cascade fires, Hindsight runs one indexed query to find the surviving units that had an outgoing temporal/semantic link to a doomed unit. Those IDs are written into the `link_recompute_queue` table (`ON CONFLICT DO NOTHING`, so repeat deletes coalesce per victim).
-2. After the delete commits, `submit_async_link_recompute(bank_id)` schedules the worker. Bank-deduped — concurrent deletes against the same bank produce at most one pending job.
-3. The worker drains the queue in batches of 50 victims. For each victim it counts current outgoing links per type, and if below the cap, calls the same probes used at retain time (`fetch_temporal_neighbours`, the HNSW ANN scan in `compute_semantic_links_ann`) to find replacement neighbours. `bulk_insert_links` has `ON CONFLICT DO NOTHING` on the uniqueness key, so already-linked neighbours are skipped at insert time.
-4. The batch + queue delete commit together; a crash mid-job loses at most one batch.
+1. Inside the existing delete transaction, before the cascade fires, Hindsight runs one indexed query to find the surviving units that had an outgoing temporal/semantic link to a doomed unit. Those IDs are written into the queue with `kind='relink_unit'` (`ON CONFLICT DO NOTHING`, so repeat deletes coalesce per target).
+2. After the delete commits, `submit_async_graph_maintenance(bank_id)` schedules the worker.
+3. For each claimed `relink_unit` target, the worker counts current outgoing links per type. If below the cap, it calls the same probes used at retain time (`fetch_temporal_neighbours`, the HNSW ANN scan in `compute_semantic_links_ann`) to find replacement neighbours. `bulk_insert_links` has `ON CONFLICT DO NOTHING` on the uniqueness key, so already-linked neighbours are skipped at insert time.
 
 **Caveat (Oracle).** The semantic top-up uses the PG-specific HNSW probe; on Oracle it's caught and logged, and only the temporal top-up runs. Same asymmetry as the retain-time semantic link creation today.
 
@@ -117,13 +126,13 @@ Query parameters:
 | Param | Description |
 |-------|-------------|
 | `status` | Filter by `pending`, `processing`, `completed`, `failed`, `cancelled`. |
-| `type` | Filter by `retain`, `file_convert_retain`, `consolidation`, `refresh_mental_model`, `link_recompute`, `webhook_delivery`. |
+| `type` | Filter by `retain`, `file_convert_retain`, `consolidation`, `refresh_mental_model`, `graph_maintenance`, `webhook_delivery`. |
 | `limit` | 1–100, default 20. |
 | `offset` | Pagination offset. |
 | `exclude_parents` | Exclude parent batch operations from results (large `retain_batch` calls create one parent + N children). |
 
 ```bash
-curl "http://localhost:8000/v1/default/banks/my-bank/operations?type=link_recompute&status=pending"
+curl "http://localhost:8000/v1/default/banks/my-bank/operations?type=graph_maintenance&status=pending"
 ```
 
 Response:
@@ -137,7 +146,7 @@ Response:
   "operations": [
     {
       "id": "550e8400-e29b-41d4-a716-446655440000",
-      "task_type": "link_recompute",
+      "task_type": "graph_maintenance",
       "items_count": 0,
       "document_id": null,
       "created_at": "2026-05-27T10:30:00Z",
@@ -220,7 +229,7 @@ curl "http://localhost:8000/v1/default/banks/my-bank/operations/550e8400-e29b-41
 
 Each worker has a single concurrency budget (`HINDSIGHT_API_WORKER_MAX_SLOTS`, default 10) shared across all operation types. Per-type slot reservations (`HINDSIGHT_API_WORKER_<TYPE>_MAX_SLOTS`) carve out guaranteed capacity within that budget; remaining slots form a shared pool any type can use. See [Configuration → Worker Configuration](../configuration#worker-configuration) for the full table.
 
-For most deployments the defaults are fine. Reserve slots for an operation type if you've seen it starved by a flood of another type (e.g., a long file_convert_retain blocking link_recompute on a deletion-heavy workload).
+For most deployments the defaults are fine. Reserve slots for an operation type if you've seen it starved by a flood of another type (e.g., a long file_convert_retain blocking graph_maintenance on a deletion-heavy workload).
 
 ## Next Steps
 
