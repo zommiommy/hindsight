@@ -1483,6 +1483,10 @@ class TestMentalModelTriggerTagsConfig:
         """Override to use real LLM for this class."""
         return memory_real_llm
 
+    # Reflect on Gemini 2.5 Flash Lite occasionally bails out with a curt
+    # "I don't have information." instead of using the retrieved memories.
+    # Retry to ride out the flake; the assertion still catches persistent breakage.
+    @pytest.mark.flaky(reruns=2, reruns_delay=2)
     async def test_trigger_tags_match_any_includes_untagged_content(
         self, memory: MemoryEngine, request_context
     ):
