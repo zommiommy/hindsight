@@ -67,7 +67,8 @@ function TextDiff({ before, after }: { before: string; after: string }) {
   const t = useTranslations("observationHistory");
   const parts = diffWords(before, after);
   const hasChanges = parts.some((p) => p.type !== "same");
-  if (!hasChanges) return <span className="text-sm text-muted-foreground italic">{t("unchanged")}</span>;
+  if (!hasChanges)
+    return <span className="text-sm text-muted-foreground italic">{t("unchanged")}</span>;
   return (
     <span className="text-sm leading-relaxed">
       {parts.map((part, idx) =>
@@ -255,17 +256,23 @@ export function ObservationHistoryView({
       {/* Change card */}
       <div className="border border-border rounded-lg p-3 space-y-3">
         <div>
-          <div className="text-xs font-bold text-muted-foreground uppercase mb-1">{t("sectionText")}</div>
+          <div className="text-xs font-bold text-muted-foreground uppercase mb-1">
+            {t("sectionText")}
+          </div>
           <TextDiff before={entry.previous_text} after={afterText} />
         </div>
 
         <div>
-          <div className="text-xs font-bold text-muted-foreground uppercase mb-1">{t("sectionTags")}</div>
+          <div className="text-xs font-bold text-muted-foreground uppercase mb-1">
+            {t("sectionTags")}
+          </div>
           <TagsDiff before={entry.previous_tags} after={afterTags} />
         </div>
 
         <div className="space-y-1">
-          <div className="text-xs font-bold text-muted-foreground uppercase mb-1">{t("sectionDates")}</div>
+          <div className="text-xs font-bold text-muted-foreground uppercase mb-1">
+            {t("sectionDates")}
+          </div>
           <DateDiff
             label={t("occurredStart")}
             before={entry.previous_occurred_start}

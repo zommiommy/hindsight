@@ -327,7 +327,11 @@ export function SearchDebugView() {
                         : "text-muted-foreground hover:text-foreground"
                     }`}
                   >
-                    {mode === "results" ? t("viewResults") : mode === "trace" ? t("viewTrace") : t("viewJson")}
+                    {mode === "results"
+                      ? t("viewResults")
+                      : mode === "trace"
+                        ? t("viewTrace")
+                        : t("viewJson")}
                   </button>
                 ))}
               </div>
@@ -669,7 +673,9 @@ export function SearchDebugView() {
                                                       >
                                                         {showAll
                                                           ? t("showLess")
-                                                          : t("viewAllResults", { count: methodResults.length })}
+                                                          : t("viewAllResults", {
+                                                              count: methodResults.length,
+                                                            })}
                                                       </button>
                                                     )}
                                                   </div>
@@ -733,7 +739,9 @@ export function SearchDebugView() {
                             </div>
                             <div className="flex-1">
                               <div className="flex items-center gap-2">
-                                <span className="font-semibold text-foreground">{t("rrfFusion")}</span>
+                                <span className="font-semibold text-foreground">
+                                  {t("rrfFusion")}
+                                </span>
                                 <span className="text-xs px-2 py-0.5 rounded bg-muted text-muted-foreground">
                                   {t("rrfMerge")}
                                 </span>

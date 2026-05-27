@@ -331,7 +331,8 @@ function SideBySideDiff({ before, after }: { before: string; after: string }) {
   const t = useTranslations("mentalModelDetailModal");
   const { left, right } = diffLines(before, after);
   const hasChanges = left.some((l) => l.type !== "same") || right.some((r) => r.type !== "same");
-  if (!hasChanges) return <span className="text-sm text-muted-foreground italic">{t("unchanged")}</span>;
+  if (!hasChanges)
+    return <span className="text-sm text-muted-foreground italic">{t("unchanged")}</span>;
 
   return (
     <div className="grid grid-cols-2 divide-x divide-border border border-border rounded-md overflow-hidden text-xs font-mono">
@@ -478,7 +479,9 @@ function BasedOnDiff({
                 </span>
               )}
               {group.kept.length > 0 && (
-                <span className="text-xs text-muted-foreground">{t("keptCount", { count: group.kept.length })}</span>
+                <span className="text-xs text-muted-foreground">
+                  {t("keptCount", { count: group.kept.length })}
+                </span>
               )}
             </div>
             <ul className="divide-y divide-border/40">
@@ -571,9 +574,7 @@ function MentalModelHistoryView({
             onViewDirective={onViewDirective}
           />
         ) : (
-          <p className="text-sm text-muted-foreground italic">
-            {t("basedOnNotCaptured")}
-          </p>
+          <p className="text-sm text-muted-foreground italic">{t("basedOnNotCaptured")}</p>
         )}
       </div>
     </div>
@@ -859,7 +860,9 @@ export function MentalModelDetailModal({
                           className="flex items-center gap-1"
                         >
                           <RefreshCw className="w-3 h-3" />
-                          {t("lastRefreshed", { time: formatRelativeTime(mentalModel.last_refreshed_at) })}
+                          {t("lastRefreshed", {
+                            time: formatRelativeTime(mentalModel.last_refreshed_at),
+                          })}
                         </span>
                       </div>
                     </div>
@@ -867,7 +870,9 @@ export function MentalModelDetailModal({
                   </div>
                   <div>
                     <SectionLabel>
-                      {basedOnCount > 0 ? t("basedOnWithCount", { count: basedOnCount }) : t("basedOn")}
+                      {basedOnCount > 0
+                        ? t("basedOnWithCount", { count: basedOnCount })
+                        : t("basedOn")}
                     </SectionLabel>
                     {mentalModel.reflect_response ? (
                       <BasedOnList
@@ -876,9 +881,7 @@ export function MentalModelDetailModal({
                         onViewDirective={(id) => setViewDirectiveId(id)}
                       />
                     ) : (
-                      <p className="text-sm text-muted-foreground">
-                        {t("noSourceData")}
-                      </p>
+                      <p className="text-sm text-muted-foreground">{t("noSourceData")}</p>
                     )}
                   </div>
                 </TabsContent>
@@ -1023,7 +1026,10 @@ function ConfigurationTab({ mentalModel }: { mentalModel: MentalModel }) {
           label={t("labelRefreshMode")}
           value={
             trigger.mode === "delta" ? (
-              <Pill label={t("pillDelta")} color="bg-purple-500/10 text-purple-600 dark:text-purple-400" />
+              <Pill
+                label={t("pillDelta")}
+                color="bg-purple-500/10 text-purple-600 dark:text-purple-400"
+              />
             ) : (
               <Pill label={t("pillFull")} />
             )
@@ -1033,7 +1039,10 @@ function ConfigurationTab({ mentalModel }: { mentalModel: MentalModel }) {
           label={t("labelAutoRefreshAfterConsolidation")}
           value={
             trigger.refresh_after_consolidation ? (
-              <Pill label={t("pillEnabled")} color="bg-green-500/10 text-green-600 dark:text-green-400" />
+              <Pill
+                label={t("pillEnabled")}
+                color="bg-green-500/10 text-green-600 dark:text-green-400"
+              />
             ) : (
               <Pill label={t("pillDisabled")} />
             )
@@ -1054,7 +1063,10 @@ function ConfigurationTab({ mentalModel }: { mentalModel: MentalModel }) {
             )
           }
         />
-        <Metadata label={t("labelExcludeMentalModels")} value={trigger.exclude_mental_models ? t("valueYes") : t("valueNo")} />
+        <Metadata
+          label={t("labelExcludeMentalModels")}
+          value={trigger.exclude_mental_models ? t("valueYes") : t("valueNo")}
+        />
         {excludeIds.length > 0 && (
           <Metadata
             label={t("labelExcludedIds")}
@@ -1077,11 +1089,21 @@ function ConfigurationTab({ mentalModel }: { mentalModel: MentalModel }) {
       <InfoCard title={t("recallParamsTitle")} icon={<Settings className="w-3.5 h-3.5" />}>
         <Metadata
           label={t("labelIncludeChunks")}
-          value={trigger.include_chunks == null ? t("includeChunksDefault") : trigger.include_chunks ? t("valueYes") : t("valueNo")}
+          value={
+            trigger.include_chunks == null
+              ? t("includeChunksDefault")
+              : trigger.include_chunks
+                ? t("valueYes")
+                : t("valueNo")
+          }
         />
         <Metadata
           label={t("labelRecallMaxTokens")}
-          value={trigger.recall_max_tokens != null ? trigger.recall_max_tokens.toLocaleString() : t("recallMaxTokensDefault")}
+          value={
+            trigger.recall_max_tokens != null
+              ? trigger.recall_max_tokens.toLocaleString()
+              : t("recallMaxTokensDefault")
+          }
         />
         <Metadata
           label={t("labelRecallChunksMaxTokens")}

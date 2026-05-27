@@ -361,9 +361,7 @@ export function DataView({
           <h3 className="text-base font-medium text-foreground mb-1">{t("noMemoriesYet")}</h3>
           {!documentId && !chunkId && (
             <>
-              <p className="text-sm text-muted-foreground mb-6">
-                {t("noMemoriesDescription")}
-              </p>
+              <p className="text-sm text-muted-foreground mb-6">{t("noMemoriesDescription")}</p>
               <Button
                 variant="default"
                 size="sm"
@@ -492,7 +490,9 @@ export function DataView({
                       consolidationStatus.pending_consolidation === 0
                         ? consolidationStatus.last_consolidated_at
                           ? t("allConsolidatedWithDate", {
-                              date: new Date(consolidationStatus.last_consolidated_at).toLocaleString(),
+                              date: new Date(
+                                consolidationStatus.last_consolidated_at
+                              ).toLocaleString(),
                             })
                           : t("allConsolidated")
                         : t("pendingConsolidation", {
@@ -623,7 +623,9 @@ export function DataView({
                     <div className="p-4 space-y-5">
                       {/* Legend & Stats */}
                       <div>
-                        <h3 className="text-sm font-semibold mb-3 text-foreground">{t("graphTitle")}</h3>
+                        <h3 className="text-sm font-semibold mb-3 text-foreground">
+                          {t("graphTitle")}
+                        </h3>
                         <div className="space-y-2">
                           {/* Nodes */}
                           <div className="flex items-center justify-between text-sm">
@@ -730,7 +732,9 @@ export function DataView({
 
                       {/* Controls Section */}
                       <div>
-                        <h3 className="text-sm font-semibold mb-3 text-foreground">{t("displayTitle")}</h3>
+                        <h3 className="text-sm font-semibold mb-3 text-foreground">
+                          {t("displayTitle")}
+                        </h3>
                         <div className="space-y-4">
                           <div className="flex items-center justify-between">
                             <Label htmlFor="show-labels" className="text-sm text-foreground">
@@ -749,7 +753,9 @@ export function DataView({
 
                       {/* Limits Section */}
                       <div>
-                        <h3 className="text-sm font-semibold mb-3 text-foreground">{t("performanceTitle")}</h3>
+                        <h3 className="text-sm font-semibold mb-3 text-foreground">
+                          {t("performanceTitle")}
+                        </h3>
                         <div className="space-y-4">
                           <div>
                             <div className="flex items-center justify-between mb-2">
@@ -869,7 +875,9 @@ export function DataView({
                             {t("constellationViewDescription")}
                           </p>
                           <div className="space-y-2 pt-2">
-                            <h4 className="text-xs font-medium text-muted-foreground">{t("colorBy")}</h4>
+                            <h4 className="text-xs font-medium text-muted-foreground">
+                              {t("colorBy")}
+                            </h4>
                             <Select
                               value={recencyBasis}
                               onValueChange={(v) => setRecencyBasis(v as RecencyBasis)}

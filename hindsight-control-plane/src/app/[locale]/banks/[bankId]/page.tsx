@@ -177,9 +177,7 @@ export default function BankPage() {
                     <h1 className="text-3xl font-bold mb-2 text-foreground">
                       {t("bankConfiguration")}
                     </h1>
-                    <p className="text-muted-foreground">
-                      {t("bankConfigurationDescription")}
-                    </p>
+                    <p className="text-muted-foreground">{t("bankConfigurationDescription")}</p>
                   </div>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -382,9 +380,7 @@ export default function BankPage() {
             {view === "recall" && (
               <div>
                 <h1 className="text-3xl font-bold mb-2 text-foreground">{t("recallAnalyzer")}</h1>
-                <p className="text-muted-foreground mb-6">
-                  {t("recallAnalyzerDescription")}
-                </p>
+                <p className="text-muted-foreground mb-6">{t("recallAnalyzerDescription")}</p>
                 <SearchDebugView />
               </div>
             )}
@@ -393,9 +389,7 @@ export default function BankPage() {
             {view === "reflect" && (
               <div>
                 <h1 className="text-3xl font-bold mb-2 text-foreground">{t("reflect")}</h1>
-                <p className="text-muted-foreground mb-6">
-                  {t("reflectDescription")}
-                </p>
+                <p className="text-muted-foreground mb-6">{t("reflectDescription")}</p>
                 <ThinkView />
               </div>
             )}
@@ -404,9 +398,7 @@ export default function BankPage() {
             {view === "data" && (
               <div>
                 <h1 className="text-3xl font-bold mb-2 text-foreground">{t("memories")}</h1>
-                <p className="text-muted-foreground mb-6">
-                  {t("memoriesDescription")}
-                </p>
+                <p className="text-muted-foreground mb-6">{t("memoriesDescription")}</p>
 
                 <div className="mb-6 border-b border-border">
                   <div className="flex gap-1">
@@ -544,9 +536,7 @@ export default function BankPage() {
             {view === "documents" && (
               <div>
                 <h1 className="text-3xl font-bold mb-2 text-foreground">{t("documents")}</h1>
-                <p className="text-muted-foreground mb-6">
-                  {t("documentsDescription")}
-                </p>
+                <p className="text-muted-foreground mb-6">{t("documentsDescription")}</p>
                 <DocumentsView />
               </div>
             )}
@@ -555,9 +545,7 @@ export default function BankPage() {
             {view === "entities" && (
               <div>
                 <h1 className="text-3xl font-bold mb-2 text-foreground">{t("entities")}</h1>
-                <p className="text-muted-foreground mb-6">
-                  {t("entitiesDescription")}
-                </p>
+                <p className="text-muted-foreground mb-6">{t("entitiesDescription")}</p>
                 <EntitiesView />
               </div>
             )}
@@ -574,9 +562,7 @@ export default function BankPage() {
               <div className="space-y-2 text-sm text-muted-foreground">
                 <p>
                   {t.rich("deleteBankPrompt", {
-                    bankName: () => (
-                      <span className="font-semibold text-foreground">{bankId}</span>
-                    ),
+                    bankName: () => <span className="font-semibold text-foreground">{bankId}</span>,
                   })}
                 </p>
                 <p className="text-red-600 dark:text-red-400 font-medium">
@@ -617,9 +603,7 @@ export default function BankPage() {
               <div className="space-y-2 text-sm text-muted-foreground">
                 <p>
                   {t.rich("resetConfigPrompt", {
-                    bankName: () => (
-                      <span className="font-semibold text-foreground">{bankId}</span>
-                    ),
+                    bankName: () => <span className="font-semibold text-foreground">{bankId}</span>,
                   })}
                 </p>
                 <p className="text-amber-600 dark:text-amber-400 font-medium">
@@ -656,9 +640,7 @@ export default function BankPage() {
               <div className="space-y-2 text-sm text-muted-foreground">
                 <p>
                   {t.rich("clearObservationsPrompt", {
-                    bankName: () => (
-                      <span className="font-semibold text-foreground">{bankId}</span>
-                    ),
+                    bankName: () => <span className="font-semibold text-foreground">{bankId}</span>,
                   })}
                 </p>
                 <p className="text-amber-600 dark:text-amber-400 font-medium">
@@ -668,7 +650,9 @@ export default function BankPage() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isClearingObservations}>{tCommon("cancel")}</AlertDialogCancel>
+            <AlertDialogCancel disabled={isClearingObservations}>
+              {tCommon("cancel")}
+            </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleClearObservations}
               disabled={isClearingObservations}

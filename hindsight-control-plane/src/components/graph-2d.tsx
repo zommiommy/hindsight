@@ -658,7 +658,8 @@ export function Graph2D({
             )}
             {hoveredLink.weight !== undefined && (
               <div className="text-xs opacity-80">
-                {t("linkTooltipWeight")} <span className="font-medium">{hoveredLink.weight.toFixed(3)}</span>
+                {t("linkTooltipWeight")}{" "}
+                <span className="font-medium">{hoveredLink.weight.toFixed(3)}</span>
               </div>
             )}
           </div>

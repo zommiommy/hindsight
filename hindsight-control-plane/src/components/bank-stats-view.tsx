@@ -230,8 +230,13 @@ function SectionHeading({ children }: { children: React.ReactNode }) {
 }
 
 type RelativeTimeTranslator = (
-  key: "relativeTimeNever" | "relativeTimeJustNow" | "relativeTimeMinutes" | "relativeTimeHours" | "relativeTimeDays",
-  values?: Record<string, number>,
+  key:
+    | "relativeTimeNever"
+    | "relativeTimeJustNow"
+    | "relativeTimeMinutes"
+    | "relativeTimeHours"
+    | "relativeTimeDays",
+  values?: Record<string, number>
 ) => string;
 
 function formatRelativeTime(ts: string | null, t?: RelativeTimeTranslator): string {
@@ -659,9 +664,7 @@ function FailedConsolidationsDialog({
       if (res.retried_count > 0) {
         await client.triggerConsolidation(currentBank);
       }
-      toast.success(
-        tFailed("recoverSuccess", { count: res.retried_count })
-      );
+      toast.success(tFailed("recoverSuccess", { count: res.retried_count }));
       setRefreshTick((t) => t + 1);
     } catch {
       // toast shown by interceptor
@@ -678,9 +681,7 @@ function FailedConsolidationsDialog({
             <XCircle className="w-4 h-4 text-red-600 dark:text-red-400" />
             {tFailed("title")}
           </DialogTitle>
-          <DialogDescription>
-            {tFailed("description")}
-          </DialogDescription>
+          <DialogDescription>{tFailed("description")}</DialogDescription>
         </DialogHeader>
         <div className="flex items-center justify-between gap-2 py-2">
           <span className="text-sm text-muted-foreground">

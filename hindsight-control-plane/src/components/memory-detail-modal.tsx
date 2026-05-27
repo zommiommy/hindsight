@@ -388,9 +388,7 @@ export function MemoryDetailModal({ memoryId, onClose, initialTab }: MemoryDetai
                         }}
                       />
                     ) : (
-                      <p className="text-sm text-muted-foreground italic">
-                        {t("noHistoryYet")}
-                      </p>
+                      <p className="text-sm text-muted-foreground italic">{t("noHistoryYet")}</p>
                     )}
                   </TabsContent>
                 </div>

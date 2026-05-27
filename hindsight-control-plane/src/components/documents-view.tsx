@@ -611,9 +611,7 @@ export function DocumentsView() {
         </div>
       ) : documents.length > 0 ? (
         <>
-          <div className="mb-4 text-sm text-muted-foreground">
-            {t("totalDocuments", { total })}
-          </div>
+          <div className="mb-4 text-sm text-muted-foreground">{t("totalDocuments", { total })}</div>
           {/* Documents Table */}
           <div className="w-full">
             <div className="px-5 mb-4">
@@ -886,9 +884,7 @@ export function DocumentsView() {
                           className="w-full min-h-[400px] max-h-[600px] p-4 bg-muted/50 rounded-lg border border-border text-sm font-mono leading-relaxed text-card-foreground resize-y"
                           autoFocus
                         />
-                        <p className="text-xs text-muted-foreground">
-                          {t("saveHint")}
-                        </p>
+                        <p className="text-xs text-muted-foreground">{t("saveHint")}</p>
                       </div>
                     ) : (
                       <div className="rounded-lg border border-border bg-muted/30 overflow-hidden">
@@ -1094,9 +1090,7 @@ export function DocumentsView() {
                     <div className="flex items-center justify-center py-20">
                       <div className="text-center">
                         <div className="text-4xl mb-2">📄</div>
-                        <div className="text-sm text-muted-foreground">
-                          {t("noChunksFound")}
-                        </div>
+                        <div className="text-sm text-muted-foreground">{t("noChunksFound")}</div>
                       </div>
                     </div>
                   ) : (
@@ -1164,7 +1158,9 @@ export function DocumentsView() {
             <AlertDialogDescription>{deleteResult?.message}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogAction onClick={() => setDeleteResult(null)}>{t("okButton")}</AlertDialogAction>
+            <AlertDialogAction onClick={() => setDeleteResult(null)}>
+              {t("okButton")}
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -1182,7 +1178,9 @@ export function DocumentsView() {
             <AlertDialogDescription>{reprocessResult?.message}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogAction onClick={() => setReprocessResult(null)}>{t("okButton")}</AlertDialogAction>
+            <AlertDialogAction onClick={() => setReprocessResult(null)}>
+              {t("okButton")}
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

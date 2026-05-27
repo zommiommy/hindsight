@@ -539,7 +539,9 @@ export function BankOperationsView() {
                     )}
                     {selectedOperation.result_metadata?.items_count !== undefined && (
                       <div>
-                        <div className="text-sm font-medium text-muted-foreground">{t("totalItems")}</div>
+                        <div className="text-sm font-medium text-muted-foreground">
+                          {t("totalItems")}
+                        </div>
                         <div className="mt-1 text-sm">
                           {selectedOperation.result_metadata.items_count}
                         </div>
@@ -722,9 +724,7 @@ export function BankOperationsView() {
                               : "No raw payload stored for this operation."}
                           </p>
                         ) : (
-                          <p className="text-xs text-muted-foreground">
-                            {t("rawPayloadHelp")}
-                          </p>
+                          <p className="text-xs text-muted-foreground">{t("rawPayloadHelp")}</p>
                         )}
                       </div>
                     );

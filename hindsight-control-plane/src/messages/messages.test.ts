@@ -69,10 +69,10 @@ describe("locale catalog parity", () => {
       const keys = collectKeys(catalog).sort();
       const missing = baselineKeys.filter((k) => !keys.includes(k));
       const extra = keys.filter((k) => !baselineKeys.includes(k));
-      expect(
-        { missing, extra },
-        `locale "${locale}" diverges from "${defaultLocale}"`
-      ).toEqual({ missing: [], extra: [] });
+      expect({ missing, extra }, `locale "${locale}" diverges from "${defaultLocale}"`).toEqual({
+        missing: [],
+        extra: [],
+      });
     }
   );
 

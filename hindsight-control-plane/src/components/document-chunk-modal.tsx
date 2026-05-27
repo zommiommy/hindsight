@@ -124,7 +124,9 @@ export function DocumentChunkModal({ type, id, onClose }: DocumentChunkModalProp
 
                   {data.original_text && (
                     <div>
-                      <div className="text-sm font-bold text-foreground mb-2">{t("sectionOriginalText")}</div>
+                      <div className="text-sm font-bold text-foreground mb-2">
+                        {t("sectionOriginalText")}
+                      </div>
                       <div className="p-4 bg-muted rounded-lg border border-border max-h-[300px] overflow-y-auto">
                         <pre className="text-sm whitespace-pre-wrap font-mono text-foreground">
                           {data.original_text}
@@ -184,7 +186,9 @@ export function DocumentChunkModal({ type, id, onClose }: DocumentChunkModalProp
 
                   {data.chunk_text && (
                     <div>
-                      <div className="text-sm font-bold text-foreground mb-2">{t("sectionChunkText")}</div>
+                      <div className="text-sm font-bold text-foreground mb-2">
+                        {t("sectionChunkText")}
+                      </div>
                       <div className="p-4 bg-muted rounded-lg border border-border max-h-[300px] overflow-y-auto">
                         <pre className="text-sm whitespace-pre-wrap font-mono text-foreground">
                           {data.chunk_text}

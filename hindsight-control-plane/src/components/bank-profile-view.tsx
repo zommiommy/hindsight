@@ -383,9 +383,7 @@ export function BankProfileView({ hideReflectFields = false }: { hideReflectFiel
       <Card>
         <CardContent className="p-10 text-center">
           <h3 className="text-xl font-semibold mb-2 text-card-foreground">{t("noBankSelected")}</h3>
-          <p className="text-muted-foreground">
-            {t("noBankSelectedDescription")}
-          </p>
+          <p className="text-muted-foreground">{t("noBankSelectedDescription")}</p>
         </CardContent>
       </Card>
     );
@@ -470,9 +468,7 @@ export function BankProfileView({ hideReflectFields = false }: { hideReflectFiel
                     <Target className="w-5 h-5 text-primary" />
                     {t("missionTitle")}
                   </CardTitle>
-                  <CardDescription>
-                    {t("editMissionDescription")}
-                  </CardDescription>
+                  <CardDescription>{t("editMissionDescription")}</CardDescription>
                 </div>
                 <Button onClick={() => setShowMissionDialog(true)} variant="ghost" size="sm">
                   <Pencil className="h-4 w-4" />
@@ -496,9 +492,7 @@ export function BankProfileView({ hideReflectFields = false }: { hideReflectFiel
               <AlertTriangle className="w-5 h-5 text-rose-500" />
               {t("directivesTitle")}
             </h3>
-            <p className="text-sm text-muted-foreground">
-              {t("directivesDescription")}
-            </p>
+            <p className="text-sm text-muted-foreground">{t("directivesDescription")}</p>
           </div>
           <Button
             onClick={() => setShowCreateDirective(true)}
@@ -550,9 +544,7 @@ export function BankProfileView({ hideReflectFields = false }: { hideReflectFiel
         ) : (
           <div className="p-6 border border-dashed border-rose-500/30 rounded-lg text-center">
             <AlertTriangle className="w-6 h-6 mx-auto mb-2 text-rose-500/50" />
-            <p className="text-sm text-muted-foreground">
-              {t("noDirectivesMessage")}
-            </p>
+            <p className="text-sm text-muted-foreground">{t("noDirectivesMessage")}</p>
           </div>
         )}
       </div>
@@ -635,7 +627,9 @@ export function BankProfileView({ hideReflectFields = false }: { hideReflectFiel
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isClearingObservations}>{tCommon("cancel")}</AlertDialogCancel>
+            <AlertDialogCancel disabled={isClearingObservations}>
+              {tCommon("cancel")}
+            </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleClearObservations}
               disabled={isClearingObservations}
@@ -873,9 +867,7 @@ function MissionEditDialog({
       <DialogContent className="max-w-xl">
         <DialogHeader>
           <DialogTitle>{t("editMissionTitle")}</DialogTitle>
-          <DialogDescription>
-            {t("editMissionDescription")}
-          </DialogDescription>
+          <DialogDescription>{t("editMissionDescription")}</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-2 py-4">
@@ -992,9 +984,7 @@ function DirectiveFormDialog({
             <AlertTriangle className="w-5 h-5 text-rose-500" />
             {mode === "create" ? t("directiveFormCreateTitle") : t("directiveFormEditTitle")}
           </DialogTitle>
-          <DialogDescription>
-            {t("directiveFormDescription")}
-          </DialogDescription>
+          <DialogDescription>{t("directiveFormDescription")}</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-4">
@@ -1017,7 +1007,10 @@ function DirectiveFormDialog({
           </div>
           <div className="space-y-2">
             <label className="text-sm font-medium text-foreground">
-              {t("directiveTagsLabel")} <span className="text-muted-foreground font-normal">{t("directiveTagsOptional")}</span>
+              {t("directiveTagsLabel")}{" "}
+              <span className="text-muted-foreground font-normal">
+                {t("directiveTagsOptional")}
+              </span>
             </label>
             <Input
               value={form.tags}

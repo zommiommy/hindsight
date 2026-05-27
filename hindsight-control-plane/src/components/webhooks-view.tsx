@@ -214,7 +214,9 @@ function DeliveryTableRow({
             <span className="w-4 h-4 inline-block" />
           )}
         </TableCell>
-        <TableCell><StatusBadge status={delivery.status} /></TableCell>
+        <TableCell>
+          <StatusBadge status={delivery.status} />
+        </TableCell>
         <TableCell>
           {delivery.last_response_status != null ? (
             <span
@@ -596,9 +598,7 @@ export function WebhooksView() {
           </Table>
         </div>
       ) : (
-        <p className="text-muted-foreground text-center py-8 text-sm">
-          {t("emptyStateCanManage")}
-        </p>
+        <p className="text-muted-foreground text-center py-8 text-sm">{t("emptyStateCanManage")}</p>
       )}
 
       {/* Create Webhook Dialog */}
@@ -615,9 +615,7 @@ export function WebhooksView() {
         <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{t("createDialogTitle")}</DialogTitle>
-            <DialogDescription>
-              {t("createDialogDescription")}
-            </DialogDescription>
+            <DialogDescription>{t("createDialogDescription")}</DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-2">
@@ -689,7 +687,8 @@ export function WebhooksView() {
             {/* Secret */}
             <div className="space-y-1.5">
               <Label htmlFor="webhook-secret">
-                {t("formSecretLabel")} <span className="text-muted-foreground text-xs">{t("formSecretOptional")}</span>
+                {t("formSecretLabel")}{" "}
+                <span className="text-muted-foreground text-xs">{t("formSecretOptional")}</span>
               </Label>
               <div className="relative">
                 <Input
@@ -1011,9 +1010,7 @@ export function WebhooksView() {
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>{t("deleteDialogTitle")}</DialogTitle>
-            <DialogDescription>
-              {t("deleteDialogDescription")}
-            </DialogDescription>
+            <DialogDescription>{t("deleteDialogDescription")}</DialogDescription>
           </DialogHeader>
           {deleteConfirmWebhook && (
             <div className="py-2">
@@ -1078,7 +1075,9 @@ export function WebhooksView() {
                       <TableHead className="w-8 pl-3 pr-0" />
                       <TableHead>{t("deliveriesTableHeaderStatus")}</TableHead>
                       <TableHead>{t("deliveriesTableHeaderHttp")}</TableHead>
-                      <TableHead className="text-center">{t("deliveriesTableHeaderAttempts")}</TableHead>
+                      <TableHead className="text-center">
+                        {t("deliveriesTableHeaderAttempts")}
+                      </TableHead>
                       <TableHead>{t("deliveriesTableHeaderEvent")}</TableHead>
                       <TableHead>{t("deliveriesTableHeaderCreatedAt")}</TableHead>
                     </TableRow>
@@ -1109,9 +1108,7 @@ export function WebhooksView() {
               )}
             </>
           ) : (
-            <p className="text-muted-foreground text-center py-8 text-sm">
-              {t("noDeliveries")}
-            </p>
+            <p className="text-muted-foreground text-center py-8 text-sm">{t("noDeliveries")}</p>
           )}
         </DialogContent>
       </Dialog>

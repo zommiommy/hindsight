@@ -7,10 +7,7 @@ export type FactType = "world" | "experience" | "observation";
 
 export const ALL_FACT_TYPES: FactType[] = ["world", "experience", "observation"];
 
-const FACT_TYPE_CONFIG: Record<
-  FactType,
-  { active: string; inactive: string; dot: string }
-> = {
+const FACT_TYPE_CONFIG: Record<FactType, { active: string; inactive: string; dot: string }> = {
   // Aligned with the stats-chart palette (bank-stats-view.tsx CHART_COLORS).
   world: {
     active:

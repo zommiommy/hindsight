@@ -103,9 +103,7 @@ const GEMINI_HARM_CATEGORY_VALUES = [
   "HARM_CATEGORY_DANGEROUS_CONTENT",
 ] as const;
 
-function getGeminiHarmCategories(
-  t: (key: string) => string
-): { value: string; label: string }[] {
+function getGeminiHarmCategories(t: (key: string) => string): { value: string; label: string }[] {
   return [
     { value: "HARM_CATEGORY_HARASSMENT", label: t("geminiCategoryHarassment") },
     { value: "HARM_CATEGORY_HATE_SPEECH", label: t("geminiCategoryHateSpeech") },
@@ -114,9 +112,7 @@ function getGeminiHarmCategories(
   ];
 }
 
-function getGeminiThresholds(
-  t: (key: string) => string
-): { value: string; label: string }[] {
+function getGeminiThresholds(t: (key: string) => string): { value: string; label: string }[] {
   return [
     { value: "HARM_BLOCK_THRESHOLD_UNSPECIFIED", label: t("geminiThresholdUnspecified") },
     { value: "OFF", label: t("geminiThresholdOff") },
@@ -140,7 +136,11 @@ type McpToolGroup = { key: string; label: string; tools: string[] };
 
 function getMcpToolGroups(t: (key: string) => string): McpToolGroup[] {
   return [
-    { key: "core", label: t("mcpGroupCore"), tools: ["retain", "sync_retain", "recall", "reflect"] },
+    {
+      key: "core",
+      label: t("mcpGroupCore"),
+      tools: ["retain", "sync_retain", "recall", "reflect"],
+    },
     {
       key: "bankManagement",
       label: t("mcpGroupBankManagement"),
@@ -493,10 +493,7 @@ export function BankConfigView() {
           saving={retainSaving}
           onSave={saveRetain}
         >
-          <FieldRow
-            label={t("defaultStrategyLabel")}
-            description={t("defaultStrategyDescription")}
-          >
+          <FieldRow label={t("defaultStrategyLabel")} description={t("defaultStrategyDescription")}>
             <Select
               value={strategiesEdits.retain_default_strategy ?? "__none__"}
               onValueChange={(v) =>
@@ -563,10 +560,7 @@ export function BankConfigView() {
             placeholder={t("observationsMissionPlaceholder")}
             rows={3}
           />
-          <FieldRow
-            label={t("llmBatchSizeLabel")}
-            description={t("llmBatchSizeDescription")}
-          >
+          <FieldRow label={t("llmBatchSizeLabel")} description={t("llmBatchSizeDescription")}>
             <Input
               type="number"
               min={1}
@@ -692,10 +686,7 @@ export function BankConfigView() {
           saving={mcpSaving}
           onSave={saveMCP}
         >
-          <FieldRow
-            label={t("restrictToolsLabel")}
-            description={t("restrictToolsDescription")}
-          >
+          <FieldRow label={t("restrictToolsLabel")} description={t("restrictToolsDescription")}>
             <div className="flex items-center gap-2 justify-end">
               <Switch
                 checked={mcpEdits.mcp_enabled_tools !== null}
@@ -806,10 +797,7 @@ function RetainStrategyForm({
 
   return (
     <div className="divide-y divide-border/40">
-      <FieldRow
-        label={t("extractionModeLabel")}
-        description={t("extractionModeDescription")}
-      >
+      <FieldRow label={t("extractionModeLabel")} description={t("extractionModeDescription")}>
         <Select
           value={modeValue}
           onValueChange={(val) =>
@@ -850,11 +838,7 @@ function RetainStrategyForm({
         description={t("retainMissionDescription")}
         value={values.retain_mission ?? ""}
         onChange={(v) => onChange({ retain_mission: v || null })}
-        placeholder={
-          isOverride
-            ? t("inherited")
-            : t("retainMissionPlaceholder")
-        }
+        placeholder={isOverride ? t("inherited") : t("retainMissionPlaceholder")}
         rows={3}
       />
       {showCustomField && (
@@ -866,10 +850,7 @@ function RetainStrategyForm({
           rows={5}
         />
       )}
-      <FieldRow
-        label={t("freeFormEntitiesLabel")}
-        description={t("freeFormEntitiesDescription")}
-      >
+      <FieldRow label={t("freeFormEntitiesLabel")} description={t("freeFormEntitiesDescription")}>
         <div className="flex justify-end items-center gap-2">
           <Label className="text-sm text-muted-foreground cursor-pointer select-none">
             {(values.entities_allow_free_form ?? true) ? t("enabled") : t("disabled")}
@@ -1090,9 +1071,7 @@ function RetainStrategiesPanel({
             <AlertDialogTitle>
               {t("deleteStrategyTitle", { name: pendingDelete?.name || t("unnamed") })}
             </AlertDialogTitle>
-            <AlertDialogDescription>
-              {t("deleteStrategyDescription")}
-            </AlertDialogDescription>
+            <AlertDialogDescription>{t("deleteStrategyDescription")}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>{tCommon("cancel")}</AlertDialogCancel>
@@ -1203,11 +1182,7 @@ function ToolSelector({
           );
         })}
       </div>
-      {noneSelected && (
-        <p className="text-xs text-destructive">
-          {t("noToolsWarning")}
-        </p>
-      )}
+      {noneSelected && <p className="text-xs text-destructive">{t("noToolsWarning")}</p>}
     </div>
   );
 }
@@ -1653,9 +1628,7 @@ function EntityLabelsEditor({
       <div className="flex items-center justify-between">
         <div>
           <p className="text-sm font-medium">{t("entityLabelsTitle")}</p>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            {t("entityLabelsDescription")}
-          </p>
+          <p className="text-xs text-muted-foreground mt-0.5">{t("entityLabelsDescription")}</p>
         </div>
         {value.length > 0 && (
           <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full shrink-0">

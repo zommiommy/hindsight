@@ -386,7 +386,11 @@ export function ThinkView() {
                       : "text-muted-foreground hover:text-foreground"
                   }`}
                 >
-                  {mode === "answer" ? t("viewAnswer") : mode === "trace" ? t("viewTrace") : t("viewJson")}
+                  {mode === "answer"
+                    ? t("viewAnswer")
+                    : mode === "trace"
+                      ? t("viewTrace")
+                      : t("viewJson")}
                 </button>
               ))}
             </div>
@@ -620,7 +624,9 @@ export function ThinkView() {
                                   <div className="flex-1 min-w-0 space-y-2">
                                     <div className="text-xs text-muted-foreground">
                                       {(item.tools?.length ?? 0) !== 1
-                                        ? t("executingToolsPlural", { count: item.tools?.length ?? 0 })
+                                        ? t("executingToolsPlural", {
+                                            count: item.tools?.length ?? 0,
+                                          })
                                         : t("executingTools", { count: item.tools?.length ?? 0 })}
                                     </div>
                                     {item.tools?.map((tc: any, tcIdx: number) => (
@@ -708,7 +714,9 @@ export function ThinkView() {
                       <div className="flex items-start gap-3 p-3 bg-muted border border-border rounded-lg">
                         <Info className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0" />
                         <div>
-                          <p className="font-medium text-sm text-foreground">{t("notIncludedBasedOn")}</p>
+                          <p className="font-medium text-sm text-foreground">
+                            {t("notIncludedBasedOn")}
+                          </p>
                           <p className="text-xs text-muted-foreground mt-0.5">
                             {t("enableIncludeSource")}
                           </p>
@@ -741,9 +749,17 @@ export function ThinkView() {
                             label: t("tabMentalModels"),
                             count: mentalModelFacts.length,
                           },
-                          { id: "observations", label: t("tabObservations"), count: observations.length },
+                          {
+                            id: "observations",
+                            label: t("tabObservations"),
+                            count: observations.length,
+                          },
                           { id: "world", label: t("tabWorld"), count: worldFacts.length },
-                          { id: "experience", label: t("tabExperience"), count: experienceFacts.length },
+                          {
+                            id: "experience",
+                            label: t("tabExperience"),
+                            count: experienceFacts.length,
+                          },
                         ];
 
                         const currentTab = activeBasedOnTab;
@@ -1009,7 +1025,9 @@ export function ThinkView() {
             ) : (
               <div className="space-y-4">
                 <div>
-                  <h3 className="text-sm font-medium text-muted-foreground">{t("observationTextField")}</h3>
+                  <h3 className="text-sm font-medium text-muted-foreground">
+                    {t("observationTextField")}
+                  </h3>
                   <div className="mt-1 prose prose-sm max-w-none dark:prose-invert">
                     <ReactMarkdown remarkPlugins={[remarkGfm]}>
                       {fullObservation?.text || selectedObservation.text}
@@ -1018,7 +1036,9 @@ export function ThinkView() {
                 </div>
                 {fullObservation?.tags && fullObservation.tags.length > 0 && (
                   <div>
-                    <h3 className="text-sm font-medium text-muted-foreground mb-1">{t("observationTagsField")}</h3>
+                    <h3 className="text-sm font-medium text-muted-foreground mb-1">
+                      {t("observationTagsField")}
+                    </h3>
                     <div className="flex flex-wrap gap-1">
                       {fullObservation.tags.map((tag: string) => (
                         <span
@@ -1035,7 +1055,9 @@ export function ThinkView() {
                 {fullObservation?.source_memories && fullObservation.source_memories.length > 0 && (
                   <div>
                     <h3 className="text-sm font-medium text-muted-foreground mb-2">
-                      {t("observationSourceMemoriesField", { count: fullObservation.source_memories.length })}
+                      {t("observationSourceMemoriesField", {
+                        count: fullObservation.source_memories.length,
+                      })}
                     </h3>
                     <div className="space-y-2">
                       {fullObservation.source_memories.map((mem: any, i: number) => (
@@ -1049,7 +1071,9 @@ export function ThinkView() {
                   </div>
                 )}
                 <div className="pt-2 border-t">
-                  <h3 className="text-sm font-medium text-muted-foreground">{t("observationIdField")}</h3>
+                  <h3 className="text-sm font-medium text-muted-foreground">
+                    {t("observationIdField")}
+                  </h3>
                   <p className="mt-1 font-mono text-xs text-muted-foreground">
                     {selectedObservation.id}
                   </p>

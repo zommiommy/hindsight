@@ -131,7 +131,9 @@ export function MemoryDetailPanel({
             <div className="space-y-5">
               {/* Text */}
               <div>
-                <div className="text-xs font-bold text-muted-foreground uppercase mb-2">{t("sectionFullText")}</div>
+                <div className="text-xs font-bold text-muted-foreground uppercase mb-2">
+                  {t("sectionFullText")}
+                </div>
                 <div className="text-sm whitespace-pre-wrap leading-relaxed text-foreground">
                   {displayMemory.text}
                 </div>
@@ -254,7 +256,9 @@ export function MemoryDetailPanel({
                         )}
                         <div className="grid grid-cols-2 gap-2 text-xs">
                           <div className="p-2 bg-background/50 rounded">
-                            <div className="text-muted-foreground mb-0.5">{t("sourceOccurred")}</div>
+                            <div className="text-muted-foreground mb-0.5">
+                              {t("sourceOccurred")}
+                            </div>
                             <div className="font-medium">
                               {source.occurred_start
                                 ? new Date(source.occurred_start).toLocaleString()
@@ -262,7 +266,9 @@ export function MemoryDetailPanel({
                             </div>
                           </div>
                           <div className="p-2 bg-background/50 rounded">
-                            <div className="text-muted-foreground mb-0.5">{t("sourceMentioned")}</div>
+                            <div className="text-muted-foreground mb-0.5">
+                              {t("sourceMentioned")}
+                            </div>
                             <div className="font-medium">
                               {source.mentioned_at
                                 ? new Date(source.mentioned_at).toLocaleString()

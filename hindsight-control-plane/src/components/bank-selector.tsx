@@ -209,7 +209,9 @@ function BankSelectorInner() {
           await client.importBankTemplate(newBankId.trim(), manifest);
         } catch (importError) {
           setTemplateError(
-            importError instanceof Error ? importError.message : tAddDocument("failedToImportTemplate")
+            importError instanceof Error
+              ? importError.message
+              : tAddDocument("failedToImportTemplate")
           );
           setIsCreating(false);
           return;
@@ -677,7 +679,9 @@ function BankSelectorInner() {
                       }
                     }}
                   />
-                  <label className="text-sm font-medium">{tAddDocument("importFromTemplateLabel")}</label>
+                  <label className="text-sm font-medium">
+                    {tAddDocument("importFromTemplateLabel")}
+                  </label>
                 </div>
                 {useTemplate && (
                   <a
@@ -782,7 +786,9 @@ function BankSelectorInner() {
                     <div className="flex flex-col items-center justify-center py-8 text-center space-y-3">
                       <Lock className="h-12 w-12 text-muted-foreground/50" />
                       <div>
-                        <p className="font-semibold text-foreground">{tAddDocument("fileUploadDisabled")}</p>
+                        <p className="font-semibold text-foreground">
+                          {tAddDocument("fileUploadDisabled")}
+                        </p>
                         <p className="text-sm text-muted-foreground mt-1">
                           {tAddDocument("fileUploadDisabledMessage")}
                         </p>
@@ -1104,7 +1110,9 @@ function BankSelectorInner() {
                               </SelectTrigger>
                               <SelectContent>
                                 <SelectItem value="__none__">
-                                  <span className="text-muted-foreground italic">{tAddDocument("strategyDefault")}</span>
+                                  <span className="text-muted-foreground italic">
+                                    {tAddDocument("strategyDefault")}
+                                  </span>
                                 </SelectItem>
                                 {bankStrategies.map((name) => (
                                   <SelectItem key={name} value={name}>
@@ -1171,9 +1179,13 @@ function BankSelectorInner() {
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="per_tag">{tAddDocument("observationScopePerTag")}</SelectItem>
+                              <SelectItem value="per_tag">
+                                {tAddDocument("observationScopePerTag")}
+                              </SelectItem>
                               <SelectItem value="combined">Combined</SelectItem>
-                              <SelectItem value="all_combinations">{tAddDocument("observationScopeAllCombinations")}</SelectItem>
+                              <SelectItem value="all_combinations">
+                                {tAddDocument("observationScopeAllCombinations")}
+                              </SelectItem>
                               <SelectItem value="custom">Custom</SelectItem>
                             </SelectContent>
                           </Select>

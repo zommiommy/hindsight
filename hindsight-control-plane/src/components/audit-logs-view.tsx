@@ -473,7 +473,9 @@ export function AuditLogsView() {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{t("detailDialogTitle", { action: selectedLog?.action ?? "" })}</DialogTitle>
+            <DialogTitle>
+              {t("detailDialogTitle", { action: selectedLog?.action ?? "" })}
+            </DialogTitle>
           </DialogHeader>
           {selectedLog && (
             <div className="space-y-4">

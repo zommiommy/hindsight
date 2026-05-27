@@ -806,9 +806,7 @@ function CreateMentalModelDialog({
       <DialogContent className="sm:max-w-2xl max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>{t("createDialogTitle")}</DialogTitle>
-          <DialogDescription>
-            {t("createDialogDescription")}
-          </DialogDescription>
+          <DialogDescription>{t("createDialogDescription")}</DialogDescription>
         </DialogHeader>
 
         <Tabs defaultValue="general" className="py-2 flex-1 flex flex-col min-h-0 overflow-hidden">
@@ -840,7 +838,9 @@ function CreateMentalModelDialog({
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">{t("fieldSourceQuery")}</label>
+                <label className="text-sm font-medium text-foreground">
+                  {t("fieldSourceQuery")}
+                </label>
                 <Input
                   value={form.sourceQuery}
                   onChange={(e) => setForm({ ...form, sourceQuery: e.target.value })}
@@ -862,7 +862,9 @@ function CreateMentalModelDialog({
 
             <TabsContent value="options" className="space-y-6 pt-4">
               <section className="space-y-4">
-                <h3 className="text-sm font-semibold text-foreground border-b pb-1">{t("optionsSectionRefresh")}</h3>
+                <h3 className="text-sm font-semibold text-foreground border-b pb-1">
+                  {t("optionsSectionRefresh")}
+                </h3>
                 <div className="flex items-center space-x-2">
                   <Checkbox
                     id="auto-refresh"
@@ -879,7 +881,9 @@ function CreateMentalModelDialog({
                   </label>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-foreground">{t("optionsRefreshModeLabel")}</label>
+                  <label className="text-sm font-medium text-foreground">
+                    {t("optionsRefreshModeLabel")}
+                  </label>
                   <Select
                     value={form.mode}
                     onValueChange={(value) => setForm({ ...form, mode: value as "full" | "delta" })}
@@ -888,12 +892,8 @@ function CreateMentalModelDialog({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="full">
-                        {t("optionsRefreshModeFull")}
-                      </SelectItem>
-                      <SelectItem value="delta">
-                        {t("optionsRefreshModeDelta")}
-                      </SelectItem>
+                      <SelectItem value="full">{t("optionsRefreshModeFull")}</SelectItem>
+                      <SelectItem value="delta">{t("optionsRefreshModeDelta")}</SelectItem>
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-muted-foreground">
@@ -934,20 +934,24 @@ function CreateMentalModelDialog({
               </section>
 
               <section className="space-y-4">
-                <h3 className="text-sm font-semibold text-foreground border-b pb-1">{t("optionsSectionTags")}</h3>
+                <h3 className="text-sm font-semibold text-foreground border-b pb-1">
+                  {t("optionsSectionTags")}
+                </h3>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-foreground">{t("optionsTagsLabel")}</label>
+                  <label className="text-sm font-medium text-foreground">
+                    {t("optionsTagsLabel")}
+                  </label>
                   <Input
                     value={form.tags}
                     onChange={(e) => setForm({ ...form, tags: e.target.value })}
                     placeholder={t("optionsTagsPlaceholder")}
                   />
-                  <p className="text-xs text-muted-foreground">
-                    {t("optionsTagsDescription")}
-                  </p>
+                  <p className="text-xs text-muted-foreground">{t("optionsTagsDescription")}</p>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-foreground">{t("optionsTagsMatchLabel")}</label>
+                  <label className="text-sm font-medium text-foreground">
+                    {t("optionsTagsMatchLabel")}
+                  </label>
                   <Select
                     value={form.tagsMatch}
                     onValueChange={(v) => setForm({ ...form, tagsMatch: v === "default" ? "" : v })}
@@ -959,12 +963,8 @@ function CreateMentalModelDialog({
                       <SelectItem value="default">{t("optionsTagsMatchDefault")}</SelectItem>
                       <SelectItem value="any">{t("optionsTagsMatchAny")}</SelectItem>
                       <SelectItem value="all">{t("optionsTagsMatchAll")}</SelectItem>
-                      <SelectItem value="any_strict">
-                        {t("optionsTagsMatchAnyStrict")}
-                      </SelectItem>
-                      <SelectItem value="all_strict">
-                        {t("optionsTagsMatchAllStrict")}
-                      </SelectItem>
+                      <SelectItem value="any_strict">{t("optionsTagsMatchAnyStrict")}</SelectItem>
+                      <SelectItem value="all_strict">{t("optionsTagsMatchAllStrict")}</SelectItem>
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-muted-foreground">
@@ -972,7 +972,9 @@ function CreateMentalModelDialog({
                   </p>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-foreground">{t("optionsTagGroupsLabel")}</label>
+                  <label className="text-sm font-medium text-foreground">
+                    {t("optionsTagGroupsLabel")}
+                  </label>
                   <Textarea
                     value={form.tagGroups}
                     onChange={(e) => setForm({ ...form, tagGroups: e.target.value })}
@@ -987,12 +989,14 @@ function CreateMentalModelDialog({
               </section>
 
               <section className="space-y-4">
-                <h3 className="text-sm font-semibold text-foreground border-b pb-1">{t("optionsSectionRecall")}</h3>
-                <p className="text-xs text-muted-foreground">
-                  {t("optionsRecallDescription")}
-                </p>
+                <h3 className="text-sm font-semibold text-foreground border-b pb-1">
+                  {t("optionsSectionRecall")}
+                </h3>
+                <p className="text-xs text-muted-foreground">{t("optionsRecallDescription")}</p>
                 <div className="space-y-3">
-                  <label className="text-sm font-medium text-foreground">{t("optionsFactTypesLabel")}</label>
+                  <label className="text-sm font-medium text-foreground">
+                    {t("optionsFactTypesLabel")}
+                  </label>
                   <FactTypeCheckboxGroup
                     value={form.factTypes}
                     onChange={(v) => setForm({ ...form, factTypes: v as FactType[] })}
@@ -1000,7 +1004,9 @@ function CreateMentalModelDialog({
                   <p className="text-xs text-muted-foreground">{t("optionsFactTypesEmpty")}</p>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-foreground">{t("optionsIncludeChunksLabel")}</label>
+                  <label className="text-sm font-medium text-foreground">
+                    {t("optionsIncludeChunksLabel")}
+                  </label>
                   <Select
                     value={form.includeChunks || "default"}
                     onValueChange={(v) =>
@@ -1021,7 +1027,9 @@ function CreateMentalModelDialog({
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-foreground">{t("optionsRecallMaxTokensLabel")}</label>
+                  <label className="text-sm font-medium text-foreground">
+                    {t("optionsRecallMaxTokensLabel")}
+                  </label>
                   <Input
                     type="number"
                     value={form.recallMaxTokens}
@@ -1199,9 +1207,7 @@ function UpdateMentalModelDialog({
       <DialogContent className="sm:max-w-2xl max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>{t("updateDialogTitle")}</DialogTitle>
-          <DialogDescription>
-            {t("updateDialogDescription")}
-          </DialogDescription>
+          <DialogDescription>{t("updateDialogDescription")}</DialogDescription>
         </DialogHeader>
 
         <Tabs defaultValue="general" className="py-2 flex-1 flex flex-col min-h-0 overflow-hidden">
@@ -1229,7 +1235,9 @@ function UpdateMentalModelDialog({
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">{t("fieldSourceQuery")}</label>
+                <label className="text-sm font-medium text-foreground">
+                  {t("fieldSourceQuery")}
+                </label>
                 <Input
                   value={form.sourceQuery}
                   onChange={(e) => setForm({ ...form, sourceQuery: e.target.value })}
@@ -1251,7 +1259,9 @@ function UpdateMentalModelDialog({
 
             <TabsContent value="options" className="space-y-6 pt-4">
               <section className="space-y-4">
-                <h3 className="text-sm font-semibold text-foreground border-b pb-1">{t("optionsSectionRefresh")}</h3>
+                <h3 className="text-sm font-semibold text-foreground border-b pb-1">
+                  {t("optionsSectionRefresh")}
+                </h3>
                 <div className="flex items-center space-x-2">
                   <Checkbox
                     id="update-auto-refresh"
@@ -1268,7 +1278,9 @@ function UpdateMentalModelDialog({
                   </label>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-foreground">{t("optionsRefreshModeLabel")}</label>
+                  <label className="text-sm font-medium text-foreground">
+                    {t("optionsRefreshModeLabel")}
+                  </label>
                   <Select
                     value={form.mode}
                     onValueChange={(value) => setForm({ ...form, mode: value as "full" | "delta" })}
@@ -1277,12 +1289,8 @@ function UpdateMentalModelDialog({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="full">
-                        {t("optionsRefreshModeFull")}
-                      </SelectItem>
-                      <SelectItem value="delta">
-                        {t("optionsRefreshModeDelta")}
-                      </SelectItem>
+                      <SelectItem value="full">{t("optionsRefreshModeFull")}</SelectItem>
+                      <SelectItem value="delta">{t("optionsRefreshModeDelta")}</SelectItem>
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-muted-foreground">
@@ -1323,20 +1331,24 @@ function UpdateMentalModelDialog({
               </section>
 
               <section className="space-y-4">
-                <h3 className="text-sm font-semibold text-foreground border-b pb-1">{t("optionsSectionTags")}</h3>
+                <h3 className="text-sm font-semibold text-foreground border-b pb-1">
+                  {t("optionsSectionTags")}
+                </h3>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-foreground">{t("optionsTagsLabel")}</label>
+                  <label className="text-sm font-medium text-foreground">
+                    {t("optionsTagsLabel")}
+                  </label>
                   <Input
                     value={form.tags}
                     onChange={(e) => setForm({ ...form, tags: e.target.value })}
                     placeholder={t("optionsTagsPlaceholder")}
                   />
-                  <p className="text-xs text-muted-foreground">
-                    {t("optionsTagsDescription")}
-                  </p>
+                  <p className="text-xs text-muted-foreground">{t("optionsTagsDescription")}</p>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-foreground">{t("optionsTagsMatchLabel")}</label>
+                  <label className="text-sm font-medium text-foreground">
+                    {t("optionsTagsMatchLabel")}
+                  </label>
                   <Select
                     value={form.tagsMatch || "default"}
                     onValueChange={(v) => setForm({ ...form, tagsMatch: v === "default" ? "" : v })}
@@ -1348,12 +1360,8 @@ function UpdateMentalModelDialog({
                       <SelectItem value="default">{t("optionsTagsMatchDefault")}</SelectItem>
                       <SelectItem value="any">{t("optionsTagsMatchAny")}</SelectItem>
                       <SelectItem value="all">{t("optionsTagsMatchAll")}</SelectItem>
-                      <SelectItem value="any_strict">
-                        {t("optionsTagsMatchAnyStrict")}
-                      </SelectItem>
-                      <SelectItem value="all_strict">
-                        {t("optionsTagsMatchAllStrict")}
-                      </SelectItem>
+                      <SelectItem value="any_strict">{t("optionsTagsMatchAnyStrict")}</SelectItem>
+                      <SelectItem value="all_strict">{t("optionsTagsMatchAllStrict")}</SelectItem>
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-muted-foreground">
@@ -1361,7 +1369,9 @@ function UpdateMentalModelDialog({
                   </p>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-foreground">{t("optionsTagGroupsLabel")}</label>
+                  <label className="text-sm font-medium text-foreground">
+                    {t("optionsTagGroupsLabel")}
+                  </label>
                   <Textarea
                     value={form.tagGroups}
                     onChange={(e) => setForm({ ...form, tagGroups: e.target.value })}
@@ -1376,12 +1386,14 @@ function UpdateMentalModelDialog({
               </section>
 
               <section className="space-y-4">
-                <h3 className="text-sm font-semibold text-foreground border-b pb-1">{t("optionsSectionRecall")}</h3>
-                <p className="text-xs text-muted-foreground">
-                  {t("optionsRecallDescription")}
-                </p>
+                <h3 className="text-sm font-semibold text-foreground border-b pb-1">
+                  {t("optionsSectionRecall")}
+                </h3>
+                <p className="text-xs text-muted-foreground">{t("optionsRecallDescription")}</p>
                 <div className="space-y-3">
-                  <label className="text-sm font-medium text-foreground">{t("optionsFactTypesLabel")}</label>
+                  <label className="text-sm font-medium text-foreground">
+                    {t("optionsFactTypesLabel")}
+                  </label>
                   <FactTypeCheckboxGroup
                     value={form.factTypes}
                     onChange={(v) => setForm({ ...form, factTypes: v as FactType[] })}
@@ -1389,7 +1401,9 @@ function UpdateMentalModelDialog({
                   <p className="text-xs text-muted-foreground">{t("optionsFactTypesEmpty")}</p>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-foreground">{t("optionsIncludeChunksLabel")}</label>
+                  <label className="text-sm font-medium text-foreground">
+                    {t("optionsIncludeChunksLabel")}
+                  </label>
                   <Select
                     value={form.includeChunks || "default"}
                     onValueChange={(v) =>
@@ -1410,7 +1424,9 @@ function UpdateMentalModelDialog({
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-foreground">{t("optionsRecallMaxTokensLabel")}</label>
+                  <label className="text-sm font-medium text-foreground">
+                    {t("optionsRecallMaxTokensLabel")}
+                  </label>
                   <Input
                     type="number"
                     value={form.recallMaxTokens}
@@ -1588,9 +1604,7 @@ function FilesView({
                 <CompactMarkdown>{selected.content}</CompactMarkdown>
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground italic">
-                {t("emptyContent")}
-              </p>
+              <p className="text-sm text-muted-foreground italic">{t("emptyContent")}</p>
             )}
           </article>
         ) : (
