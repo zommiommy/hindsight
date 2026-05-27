@@ -215,6 +215,55 @@ class OracleOps(DataAccessOps):
             list(zip(unit_ids, entity_ids)),
         )
 
+    async def enqueue_link_recompute_victims(
+        self,
+        conn: DatabaseConnection,
+        table: str,
+        bank_id: str,
+        victim_unit_ids: list,
+    ) -> None:
+        if not victim_unit_ids:
+            return
+        # Oracle doesn't support ON CONFLICT; rely on the PK and the
+        # IGNORE_ROW_ON_DUPKEY_INDEX hint to skip duplicates server-side.
+        # The hint name must match the PK constraint exactly.
+        await conn.executemany(
+            f"""
+            INSERT /*+ IGNORE_ROW_ON_DUPKEY_INDEX({table}, pk_link_recompute_queue) */
+            INTO {table} (bank_id, victim_unit_id)
+            VALUES ($1, $2)
+            """,
+            [(bank_id, vid) for vid in victim_unit_ids],
+        )
+
+    async def claim_link_recompute_batch(
+        self,
+        conn: DatabaseConnection,
+        table: str,
+        bank_id: str,
+        limit: int,
+    ) -> list:
+        # Two-step claim: select the batch, then delete by exact keys. Oracle's
+        # DELETE ... RETURNING doesn't accept a multi-row subquery, so we can't
+        # do it in one statement like the PG version.
+        rows = await conn.fetch(
+            f"""
+            SELECT victim_unit_id FROM {table}
+            WHERE bank_id = $1
+            ORDER BY enqueued_at
+            FETCH FIRST $2 ROWS ONLY
+            """,
+            bank_id,
+            limit,
+        )
+        victim_ids = [str(row["victim_unit_id"]) for row in rows]
+        if victim_ids:
+            await conn.executemany(
+                f"DELETE FROM {table} WHERE bank_id = $1 AND victim_unit_id = $2",
+                [(bank_id, vid) for vid in victim_ids],
+            )
+        return victim_ids
+
     async def fetch_unit_dates(
         self,
         conn: DatabaseConnection,

@@ -290,6 +290,48 @@ class PostgreSQLOps(DataAccessOps):
             entity_ids,
         )
 
+    async def enqueue_link_recompute_victims(
+        self,
+        conn: DatabaseConnection,
+        table: str,
+        bank_id: str,
+        victim_unit_ids: list,
+    ) -> None:
+        if not victim_unit_ids:
+            return
+        await conn.execute(
+            f"""
+            INSERT INTO {table} (bank_id, victim_unit_id)
+            SELECT $1, v FROM unnest($2::uuid[]) AS t(v)
+            ON CONFLICT (bank_id, victim_unit_id) DO NOTHING
+            """,
+            bank_id,
+            victim_unit_ids,
+        )
+
+    async def claim_link_recompute_batch(
+        self,
+        conn: DatabaseConnection,
+        table: str,
+        bank_id: str,
+        limit: int,
+    ) -> list:
+        rows = await conn.fetch(
+            f"""
+            DELETE FROM {table}
+            WHERE (bank_id, victim_unit_id) IN (
+                SELECT bank_id, victim_unit_id FROM {table}
+                WHERE bank_id = $1
+                ORDER BY enqueued_at
+                LIMIT $2
+            )
+            RETURNING victim_unit_id
+            """,
+            bank_id,
+            limit,
+        )
+        return [str(row["victim_unit_id"]) for row in rows]
+
     async def fetch_unit_dates(
         self,
         conn: DatabaseConnection,

@@ -391,6 +391,40 @@ class DataAccessOps(ABC):
         """Insert a webhook delivery task into async_operations."""
         ...
 
+    # -- Link recompute queue --------------------------------------------
+
+    @abstractmethod
+    async def enqueue_link_recompute_victims(
+        self,
+        conn: DatabaseConnection,
+        table: str,
+        bank_id: str,
+        victim_unit_ids: list,
+    ) -> None:
+        """Insert victim unit IDs into link_recompute_queue, deduplicating on
+        the (bank_id, victim_unit_id) primary key.
+
+        Called inside the existing delete transaction so enqueue is atomic with
+        the delete. Order is unspecified.
+        """
+        ...
+
+    @abstractmethod
+    async def claim_link_recompute_batch(
+        self,
+        conn: DatabaseConnection,
+        table: str,
+        bank_id: str,
+        limit: int,
+    ) -> list:
+        """Atomically claim a batch of victims from link_recompute_queue and
+        remove them from the table.
+
+        Returns the list of victim_unit_id values as strings. Empty list when
+        the queue for ``bank_id`` is drained.
+        """
+        ...
+
     # -- Task claiming operations ------------------------------------------
 
     @abstractmethod
