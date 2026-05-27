@@ -78,14 +78,8 @@ Config lives in `~/.openclaw/openclaw.json`. The defaults work for most coding w
 | `autoRetain` | `true` | Capture conversations after every turn |
 | `recallBudget` | `mid` | Recall thoroughness: `low` / `mid` / `high` |
 | `recallMaxTokens` | `1024` | How much memory context injected per turn |
-| `enableKnowledgeTools` | `false` | Expose explicit recall/retain/reflect tools to the agent |
 
-The `enableKnowledgeTools` flag controls how memory surfaces in OpenClaw:
-
-- **`false`** (default): Memories auto-injected before every turn. The agent doesn't need to know memory exists — it just has context. This is the equivalent of Hermes's `context` mode.
-- **`true`**: In addition to auto-recall, the agent gets `agent_knowledge_recall`, `agent_knowledge_retain`, and `agent_knowledge_reflect` tools. Use this when you want the agent to explicitly surface what it knows about a specific component or retain a decision mid-session. This is the equivalent of Hermes's `hybrid` mode.
-
-For coding work, start with `false`. If you find yourself wishing the agent could search memory for a specific topic mid-session, flip it to `true`.
+Both `autoRecall` and `autoRetain` default to `true`, which means memory works out of the box with no agent-side changes. OpenClaw doesn't need to know memory exists — it just has context. Memories are injected into the system prompt before each turn, and conversations are retained in the background after each response.
 
 For deployment: if you work across machines or share memory with a team, use cloud. If you want everything local with no external dependencies, the embedded daemon runs a local PostgreSQL instance in the background. First startup takes about a minute; subsequent starts are fast. Startup logs land at `~/.hindsight/profiles/openclaw.log`.
 
@@ -121,7 +115,7 @@ The kinds of facts that pay off here:
 
 These aren't facts you'd think to paste at the start of a debugging session. They're the institutional knowledge that separates debugging blindly from debugging with full context.
 
-With `enableKnowledgeTools: true`, the agent can call `agent_knowledge_reflect` to synthesize a coherent summary across all related memories. Instead of retrieving individual facts through semantic search, reflect asks the LLM to generate a synthesized answer. It's slower, but for "help me understand this class of bug" queries, the synthesized context is more useful than a list of individual facts.
+For this workflow, `recallBudget: high` is worth the extra cost. Instead of the default 10–15 memories, high-budget retrieval runs deeper — more context, more retrieval strategies. When you're chasing a bug that spans multiple subsystems and prior sessions, the additional recall surface pays for itself.
 
 ### Onboarding to Someone Else's Code
 
@@ -167,7 +161,7 @@ under our load profile caused intermittent timeouts above ~200 concurrent
 requests. The fix wasn't tuning, it was the ORM abstraction. Remember this.
 ```
 
-With `enableKnowledgeTools: true`, the agent can also call `agent_knowledge_retain` to explicitly flag something for retention. But the background extraction catches most of what matters without that step.
+The background extraction catches most of what matters without any explicit action on your part.
 
 **Before/after: what memory recall looks like in a session**
 
