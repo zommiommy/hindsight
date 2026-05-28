@@ -14,10 +14,12 @@ Grok Build natively reads Claude Code plugin format — hooks, MCP servers, skil
 
 ## Quick Start
 
+Grok Build reads Claude Code plugins natively, so installation uses the standard Claude Code commands. Grok Build will discover and activate the plugin automatically.
+
 ```bash
 # 1. Add the Hindsight marketplace and install the plugin
-grok plugin marketplace add vectorize-io/hindsight
-grok plugin install hindsight-memory
+claude plugin marketplace add vectorize-io/hindsight
+claude plugin install hindsight-memory
 
 # 2. Configure your LLM provider for memory extraction
 # Option A: OpenAI (auto-detected)
