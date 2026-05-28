@@ -1430,6 +1430,25 @@ class MemoryEngine(MemoryEngineInterface):
                             error_message=str(e),
                             schema=schema,
                         )
+
+                        # When another consolidation is already pending for the same
+                        # bank, skip the retry. The pending op will process the same
+                        # unconsolidated rows when it runs, so retrying ours just
+                        # multiplies retry budgets during a long transient outage
+                        # (every retain enqueues a fresh op, each independently
+                        # consuming `_retry_count` slots — a retry storm).
+                        bank_id_for_dedup = task_dict.get("bank_id", "")
+                        if bank_id_for_dedup and await self._has_other_pending_consolidation(
+                            bank_id=bank_id_for_dedup,
+                            operation_id=operation_id,
+                        ):
+                            logger.info(
+                                f"Consolidation {operation_id} for bank {bank_id_for_dedup} hit "
+                                f"transient error; another consolidation is already pending for "
+                                f"this bank — skipping retry."
+                            )
+                            raise
+
                     # Retryable: use RetryTaskAt if under the retry limit, else re-raise (poller marks failed)
                     retry_count = task_dict.get("_retry_count", 0)
                     if retry_count < 3:
@@ -9529,6 +9548,42 @@ class MemoryEngine(MemoryEngineInterface):
                 cursor,
             )
         return [dict(row) for row in rows]
+
+    async def _has_other_pending_consolidation(
+        self,
+        *,
+        bank_id: str,
+        operation_id: str,
+    ) -> bool:
+        """Return True if any consolidation op other than ``operation_id`` is
+        ``pending`` for ``bank_id``.
+
+        Used by the task-retry path to skip retrying a transient consolidation
+        failure when another pending op already covers the same bank — the other
+        op will process the same unconsolidated rows when it runs.
+
+        A check failure (DB hiccup) returns ``False`` so the caller proceeds
+        with the normal retry path rather than swallowing a real failure.
+        """
+        backend = await self._get_backend()
+        try:
+            async with acquire_with_retry(backend) as conn:
+                existing = await conn.fetchval(
+                    f"""
+                    SELECT 1 FROM {fq_table("async_operations")}
+                    WHERE bank_id = $1
+                      AND operation_type = 'consolidation'
+                      AND status = 'pending'
+                      AND operation_id != $2
+                    LIMIT 1
+                    """,
+                    bank_id,
+                    uuid.UUID(operation_id),
+                )
+            return existing is not None
+        except Exception as e:
+            logger.warning(f"Failed to check for other pending consolidation ops for bank {bank_id}: {e}")
+            return False
 
     async def _submit_async_operation(
         self,
