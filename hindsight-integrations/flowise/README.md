@@ -47,8 +47,8 @@ pnpm start  # opens http://localhost:3000
 
 Stores free-text content in a memory bank. Hindsight extracts facts asynchronously after the call returns.
 
-| Field | Description |
-|---|---|
+| Field           | Description                                                |
+| --------------- | ---------------------------------------------------------- |
 | Default Bank ID | Memory bank to retain into when the agent doesn't pass one |
 
 Tool input schema (the agent passes these): `bankId`, `content`, optional `tags`.
@@ -57,10 +57,10 @@ Tool input schema (the agent passes these): `bankId`, `content`, optional `tags`
 
 Searches a bank for memories relevant to a query. Returns ranked results.
 
-| Field | Description |
-|---|---|
+| Field           | Description                                           |
+| --------------- | ----------------------------------------------------- |
 | Default Bank ID | Memory bank to search when the agent doesn't pass one |
-| Default Budget | `low` / `mid` / `high` |
+| Default Budget  | `low` / `mid` / `high`                                |
 
 Tool input schema: `bankId`, `query`, optional `budget`, `maxTokens`, `tags`.
 
@@ -68,10 +68,10 @@ Tool input schema: `bankId`, `query`, optional `budget`, `maxTokens`, `tags`.
 
 Returns an LLM-synthesized answer over a bank.
 
-| Field | Description |
-|---|---|
+| Field           | Description                                               |
+| --------------- | --------------------------------------------------------- |
 | Default Bank ID | Memory bank to reflect on when the agent doesn't pass one |
-| Default Budget | `low` / `mid` / `high` |
+| Default Budget  | `low` / `mid` / `high`                                    |
 
 Tool input schema: `bankId`, `query`, optional `budget`.
 

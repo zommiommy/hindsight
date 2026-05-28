@@ -61,7 +61,7 @@ export interface INodeCredential {
 // `@langchain/core/tools`) the chain is well-known, so the shim returns the
 // expected names. The real upstream implementation handles arbitrary inputs.
 export function getBaseClasses(_target: unknown): string[] {
-  return ['DynamicStructuredTool', 'StructuredTool', 'BaseTool', 'Tool'];
+  return ["DynamicStructuredTool", "StructuredTool", "BaseTool", "Tool"];
 }
 
 // Stub for credential resolution. Upstream this fetches the user's saved
@@ -70,7 +70,7 @@ export function getBaseClasses(_target: unknown): string[] {
 // can drive `init()` without a real store.
 export async function getCredentialData(
   credentialId: string,
-  _options: ICommonObject,
+  _options: ICommonObject
 ): Promise<ICommonObject> {
   if (!credentialId) return {};
   try {
@@ -85,10 +85,10 @@ export async function getCredentialData(
 export function getCredentialParam(
   paramName: string,
   credentialData: ICommonObject,
-  nodeData: INodeData,
+  nodeData: INodeData
 ): string | undefined {
   const fromInputs = nodeData?.inputs?.[paramName];
-  if (typeof fromInputs === 'string' && fromInputs.length > 0) return fromInputs;
+  if (typeof fromInputs === "string" && fromInputs.length > 0) return fromInputs;
   const fromCred = credentialData[paramName];
-  return typeof fromCred === 'string' ? fromCred : undefined;
+  return typeof fromCred === "string" ? fromCred : undefined;
 }

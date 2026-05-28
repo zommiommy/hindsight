@@ -9,4 +9,4 @@
  * duplication; this file exists purely so the upstream relative path
  * (`<components>/src/utils`) resolves locally.
  */
-export { getBaseClasses, getCredentialData, getCredentialParam } from './Interface';
+export { getBaseClasses, getCredentialData, getCredentialParam } from "./Interface";

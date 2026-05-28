@@ -13,11 +13,6 @@
     "noEmit": true,
     "useUnknownInCatchVariables": false
   },
-  "include": [
-    "nodes/**/*.ts",
-    "credentials/**/*.ts",
-    "src/**/*.ts",
-    "tests/**/*.ts"
-  ],
+  "include": ["nodes/**/*.ts", "credentials/**/*.ts", "src/**/*.ts", "tests/**/*.ts"],
   "exclude": ["node_modules"]
 }
