@@ -36,7 +36,7 @@ describe("HindsightRetain node", () => {
     expect(node.label).toBe("Hindsight Retain");
     expect(node.name).toBe("hindsightRetain");
     expect(node.category).toBe("Tools");
-    expect(node.icon).toBe("hindsight.svg");
+    expect(node.icon).toBe("hindsight.png");
     expect(node.version).toBe(1.0);
   });
 

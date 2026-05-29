@@ -33,7 +33,7 @@ class HindsightRetain_Tools implements INode {
     this.name = "hindsightRetain";
     this.version = 1.0;
     this.type = "HindsightRetain";
-    this.icon = "hindsight.svg";
+    this.icon = "hindsight.png";
     this.category = "Tools";
     this.description =
       "Store free-text content as long-term memory in a Hindsight bank. Hindsight extracts facts asynchronously after the call returns.";

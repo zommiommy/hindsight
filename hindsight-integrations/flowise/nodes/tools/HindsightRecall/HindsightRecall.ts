@@ -38,7 +38,7 @@ class HindsightRecall_Tools implements INode {
     this.name = "hindsightRecall";
     this.version = 1.0;
     this.type = "HindsightRecall";
-    this.icon = "hindsight.svg";
+    this.icon = "hindsight.png";
     this.category = "Tools";
     this.description =
       "Search a Hindsight memory bank for memories relevant to a query. Returns ranked results.";

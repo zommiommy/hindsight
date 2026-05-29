@@ -31,7 +31,7 @@ class HindsightReflect_Tools implements INode {
     this.name = "hindsightReflect";
     this.version = 1.0;
     this.type = "HindsightReflect";
-    this.icon = "hindsight.svg";
+    this.icon = "hindsight.png";
     this.category = "Tools";
     this.description =
       'Get an LLM-synthesized answer over a Hindsight memory bank. Useful for "what do we know about X?" style questions.';
