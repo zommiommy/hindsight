@@ -5,6 +5,7 @@ Covers the new fields exposed by GET /v1/default/banks/{bank_id}/stats
 (operations_by_status) and the new endpoint
 GET /v1/default/banks/{bank_id}/stats/memories-timeseries.
 """
+
 import uuid
 from datetime import datetime
 
@@ -83,9 +84,7 @@ async def test_bank_stats_exposes_operations_by_status(api_client, test_bank_id)
         ("90d", 90, "day"),
     ],
 )
-async def test_memories_timeseries_periods(
-    api_client, test_bank_id, period, expected_count, expected_trunc
-):
+async def test_memories_timeseries_periods(api_client, test_bank_id, period, expected_count, expected_trunc):
     """Every period must return the full expected bucket count and trunc."""
     try:
         response = await api_client.post(
@@ -139,9 +138,7 @@ async def test_memories_timeseries_invalid_period_falls_back(api_client, test_ba
 
 
 @pytest.mark.asyncio
-async def test_memories_timeseries_empty_bank_returns_zero_filled_buckets(
-    api_client, test_bank_id
-):
+async def test_memories_timeseries_empty_bank_returns_zero_filled_buckets(api_client, test_bank_id):
     """A bank with no memories must still return the full zero-filled bucket set."""
     try:
         response = await api_client.get(
@@ -240,5 +237,45 @@ async def test_list_memories_filter_by_consolidation_state_rejects_unknown(api_c
             params={"consolidation_state": "bogus"},
         )
         assert response.status_code == 400
+    finally:
+        await api_client.delete(f"/v1/default/banks/{test_bank_id}")
+
+
+@pytest.mark.asyncio
+async def test_bank_stats_served_from_cache_on_repeat_call(api_client, memory, test_bank_id):
+    """A second /stats call within the TTL must not re-run the aggregations.
+
+    The cache layer wraps the DB-heavy `_compute_bank_stats` body; counting
+    its invocations is the cleanest way to prove the wiring works without
+    relying on timing.
+    """
+    try:
+        response = await api_client.post(
+            f"/v1/default/banks/{test_bank_id}/memories",
+            json={"items": [{"content": "Bob is a project manager.", "context": "team"}]},
+        )
+        assert response.status_code == 200
+
+        original = memory._compute_bank_stats
+        call_count = 0
+
+        async def counting_compute(bank_id: str):
+            nonlocal call_count
+            call_count += 1
+            return await original(bank_id)
+
+        # Make sure no stale entry exists from prior test ordering.
+        await memory._bank_stats_cache.clear()
+        memory._compute_bank_stats = counting_compute  # type: ignore[method-assign]
+        try:
+            first = await api_client.get(f"/v1/default/banks/{test_bank_id}/stats")
+            second = await api_client.get(f"/v1/default/banks/{test_bank_id}/stats")
+            assert first.status_code == 200
+            assert second.status_code == 200
+            assert first.json() == second.json()
+            assert call_count == 1
+        finally:
+            memory._compute_bank_stats = original  # type: ignore[method-assign]
+            await memory._bank_stats_cache.clear()
     finally:
         await api_client.delete(f"/v1/default/banks/{test_bank_id}")
