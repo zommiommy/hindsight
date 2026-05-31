@@ -77,30 +77,6 @@ def _extract_map_entities(
                 existing_texts_lower.add(label_str.lower())
 
 
-def _merge_classified_tags(
-    llm_fact: dict,
-    caller_tags: list[str] | None,
-    effective_tag_enums,
-) -> list[str]:
-    """Merge LLM-emitted enumerated-tag classifications with caller-supplied tags.
-
-    Reads `llm_fact["tags"]` (a `{namespace: value(s)}` map produced by the
-    Task-5 dynamic schema), converts it to flat `namespace:value` strings via
-    `assignments_to_tag_strings` (which validates against the configured
-    vocabulary and lowercases), and unions with the caller-supplied tags.
-
-    Returns a sorted, deduplicated list of strings. Tags from the caller
-    preserve their original casing; LLM-emitted tags are already lowercased.
-    When `effective_tag_enums` is None (no enumerations configured),
-    `assignments_to_tag_strings` returns an empty list and this is a no-op
-    on top of the caller-supplied tags.
-    """
-    llm_tag_assignments = llm_fact.get("tags") if isinstance(llm_fact, dict) else None
-    classified_tags = assignments_to_tag_strings(llm_tag_assignments, effective_tag_enums)
-    caller = list(caller_tags) if caller_tags else []
-    return sorted({*caller, *classified_tags})
-
-
 def _infer_temporal_date(fact_text: str, event_date: datetime | None) -> str | None:
     """
     Infer a temporal date from fact text when LLM didn't provide occurred_start.
