@@ -158,6 +158,53 @@ Use consistent naming patterns to keep tag filtering predictable. Common convent
 
 See [Recall API](./recall#tags) for filtering by tags during retrieval.
 
+### tag_enumerations {#tag-enumerations}
+
+Declare an enumerated tag vocabulary on the retain call and Hindsight's extractor will classify each extracted memory along every declared axis. The picked values are written as `namespace:value` tags on the memory unit alongside any tags you passed directly — recallable via the existing `tags`/`tags_match` filter. Two-line summary: **declare a vocabulary, get classified tags automatically.**
+
+```python
+client.retain(
+    bank_id="user-chris",
+    content=chat_transcript,
+    context="CRM agent chat session — user correcting the assistant",
+    document_id=f"crm-chat:{session_id}",
+    timestamp=session_started_at,
+    tags=["user:chris", f"session:{session_id}"],
+    tag_enumerations=[
+        {
+            "namespace": "feedback",
+            "description": "Type of correction the user is giving the assistant",
+            "type": "multi-values",
+            "optional": True,
+            "values": [
+                {"value": "behavior",  "description": "Process / sequencing — when to ask vs ship, what order to do things, what to verify first"},
+                {"value": "style",     "description": "Tone, verbosity, formatting, voice, response length"},
+                {"value": "execution", "description": "Implementation choices — reuse vs reimplement, file structure, code patterns, DB-vs-code"},
+            ],
+        }
+    ],
+)
+
+# Later, filter by classification
+behavioral_corrections = client.recall(
+    bank_id="user-chris",
+    query="behavior feedback",
+    tags=["feedback:behavior"],
+    tags_match="any_strict",
+)
+```
+
+| Field | Description |
+|-------|-------------|
+| `namespace` | Axis identifier. Becomes the prefix in `namespace:value` tags written to each memory. |
+| `description` | Shown to the LLM to guide classification — keep it concrete and contrastive. |
+| `type` | `"value"` for single-pick, `"multi-values"` for zero-or-more picks. There is no `"text"` form — picks must come from `values`. |
+| `optional` | When `true` (default) the LLM may omit the axis if nothing applies. Only meaningful for `"value"`; `"multi-values"` axes are always optional. |
+| `values[].value` | The literal string that becomes the tag suffix (`namespace:value`). |
+| `values[].description` | Read by the LLM at extraction time. Classification quality depends directly on the quality of these descriptions. |
+
+**Bank merge.** A bank can declare default `tag_enumerations` via the [bank config API](/developer/api/memory-banks#tag-enumerations). Per-retain entries are merged with the bank-level config by `namespace` — per-retain wins on collision, every other namespace from the bank config still applies. This lets a bank define a stable global vocabulary while individual retain calls can override or add axes for one-off content types.
+
 ### observation_scopes
 
 Controls which [observations](../observations) this memory contributes to during consolidation. Each scope runs an independent pass, creating or updating observations tagged with only that scope's tags.

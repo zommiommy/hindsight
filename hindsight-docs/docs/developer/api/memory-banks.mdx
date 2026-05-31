@@ -175,6 +175,42 @@ By default, entity labels are extracted **alongside** regular named entities (pe
 }
 ```
 
+### tag_enumerations {#tag-enumerations}
+
+Per-bank enumerated tag vocabularies. The retain extractor classifies each extracted memory along every declared axis and writes the picks as `namespace:value` tags directly on the memory unit — filterable via the standard `tags`/`tags_match` parameters on recall and reflect. Two-line summary: **declare a vocabulary, get classified tags automatically.**
+
+Each entry in `tag_enumerations` is one classification axis:
+
+```json
+{
+  "tag_enumerations": [
+    {
+      "namespace": "feedback",
+      "description": "Type of correction the user is giving the assistant",
+      "type": "multi-values",
+      "optional": true,
+      "values": [
+        { "value": "behavior",  "description": "Process / sequencing — when to ask vs ship, what order to do things, what to verify first" },
+        { "value": "style",     "description": "Tone, verbosity, formatting, voice, response length" },
+        { "value": "execution", "description": "Implementation choices — reuse vs reimplement, file structure, code patterns, DB-vs-code" }
+      ]
+    }
+  ]
+}
+```
+
+| Field | Default | Description |
+|-------|---------|-------------|
+| `namespace` | — | Axis identifier. Becomes the prefix in `namespace:value` tags written to each memory. |
+| `description` | `""` | Shown to the LLM to guide classification. |
+| `type` | `"value"` | `"value"` → pick one enum value; `"multi-values"` → pick zero or more. No free-text form — picks must come from `values`. |
+| `values` | `[]` | Allowed values. Picks outside this list are dropped. |
+| `optional` | `true` | When `true` the LLM may skip the axis if nothing applies. Only meaningful for `"value"`; `"multi-values"` axes are always optional. |
+
+**Quality of classification depends on quality of descriptions** — both the axis-level `description` and each `values[].description` are read by the LLM at extraction time. Concrete, contrastive descriptions help the model disambiguate; vague ones produce noise.
+
+`tag_enumerations` is bank-only (no `HINDSIGHT_API_*` env var). It can be overridden per retain request by passing `tag_enumerations` on the call — per-retain entries are merged with the bank-level config by `namespace`, with per-retain winning on collision. See [Dynamic tag classification](/developer/api/retain#tag-enumerations) for per-retain usage.
+
 ### enable_observations {#observations-configuration}
 
 Toggles observation consolidation on or off. When `false`, no consolidation runs for this bank — neither automatic nor manual. Defaults to `true` when the observations feature is enabled on the server.
