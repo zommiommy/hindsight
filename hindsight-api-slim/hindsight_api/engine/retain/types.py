@@ -28,6 +28,8 @@ class RetainContentDict(TypedDict, total=False):
         update_mode: How to handle existing documents with the same document_id (optional).
             "replace" (default) deletes old data and reprocesses. "append" concatenates
             new content to the existing document and reprocesses.
+        tag_enumerations: Per-retain tag enumeration vocabularies; merged with
+            bank-level by namespace (per-retain wins on collision).
     """
 
     content: str  # Required
@@ -41,6 +43,7 @@ class RetainContentDict(TypedDict, total=False):
         Literal["per_tag", "combined", "all_combinations"] | list[list[str]]
     )  # Observation scopes for consolidation
     update_mode: Literal["replace", "append"]
+    tag_enumerations: list[dict]  # Per-retain tag enumeration vocabularies; merged with bank-level by namespace
 
 
 @dataclass
@@ -60,6 +63,7 @@ class RetainContent:
     observation_scopes: Literal["per_tag", "combined", "all_combinations"] | list[list[str]] | None = (
         None  # Observation scopes
     )
+    tag_enumerations: list[dict] | None = None  # Per-retain tag enumeration vocabularies
 
 
 @dataclass

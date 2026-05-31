@@ -470,6 +470,16 @@ class MemoryItem(BaseModel):
         default=None,
         description="Optional tags for visibility scoping. Memories with tags can be filtered during recall.",
     )
+    tag_enumerations: list[dict[str, Any]] | None = Field(
+        default=None,
+        description=(
+            "Per-retain enumerated tag vocabularies for this item. Same shape "
+            "as the bank-level setting "
+            "({namespace, description, type:'value'|'multi-values', optional, "
+            "values:[{value, description}]}). Merged with the bank-level config "
+            "by namespace; per-retain wins on collision."
+        ),
+    )
 
     @field_validator("content")
     @classmethod
@@ -5900,6 +5910,8 @@ def _register_routes(app: FastAPI):
                     content_dict["entities"] = [{"text": e.text, "type": e.type or "CONCEPT"} for e in item.entities]
                 if item.tags:
                     content_dict["tags"] = item.tags
+                if item.tag_enumerations is not None:
+                    content_dict["tag_enumerations"] = item.tag_enumerations
                 if item.observation_scopes is not None:
                     content_dict["observation_scopes"] = item.observation_scopes
                 if item.update_mode is not None:

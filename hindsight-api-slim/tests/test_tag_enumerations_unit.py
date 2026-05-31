@@ -318,3 +318,18 @@ def test_configurable_fields_includes_tag_enumerations():
     assert "tag_enumerations" in HindsightConfig._CONFIGURABLE_FIELDS
     # Also reachable via the public helper.
     assert "tag_enumerations" in HindsightConfig.get_configurable_fields()
+
+
+def test_retain_content_carries_tag_enumerations():
+    from hindsight_api.engine.retain.types import RetainContent
+
+    cfg = [{"namespace": "feedback", "type": "value", "values": [{"value": "a"}]}]
+    rc = RetainContent(content="x", tag_enumerations=cfg)
+    assert rc.tag_enumerations == cfg
+
+
+def test_retain_content_default_tag_enumerations_is_none():
+    from hindsight_api.engine.retain.types import RetainContent
+
+    rc = RetainContent(content="x")
+    assert rc.tag_enumerations is None

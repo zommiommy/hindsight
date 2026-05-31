@@ -939,6 +939,7 @@ async def _streaming_retain_batch(
                 entities=source.entities,
                 tags=source.tags,
                 observation_scopes=source.observation_scopes,
+                tag_enumerations=source.tag_enumerations,
             )
             extracted, processed, chunk_meta, usage = await _extract_and_embed(
                 [content],
@@ -1866,6 +1867,7 @@ def _build_contents(contents_dicts: list[RetainContentDict], document_tags: list
             entities=item.get("entities", []),
             tags=merged_tags,
             observation_scopes=item.get("observation_scopes"),
+            tag_enumerations=item.get("tag_enumerations"),
         )
         contents.append(content)
     return contents
@@ -1922,6 +1924,7 @@ def _build_delta_contents(
             entities=template_content.entities,
             tags=template_content.tags,
             observation_scopes=template_content.observation_scopes,
+            tag_enumerations=template_content.tag_enumerations,
         )
         delta_contents.append(delta_content)
         delta_chunk_map[len(delta_contents) - 1] = original_chunk_idx
