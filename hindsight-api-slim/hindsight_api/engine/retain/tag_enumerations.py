@@ -73,6 +73,9 @@ def merge_tag_enumerations(
     return TagEnumerationsConfig(enumerations=list(by_ns.values()))
 
 
+# Returns the (field_type, FieldInfo) pair that Pydantic's create_model
+# accepts as a kwargs value. Not a domain tuple — this is a Pydantic
+# structural interface.
 def build_tag_enumerations_response_field(
     cfg: TagEnumerationsConfig | None,
 ) -> tuple[type, Any] | tuple[None, None]:
@@ -90,6 +93,8 @@ def build_tag_enumerations_response_field(
     if cfg is None or not cfg.enumerations:
         return None, None
 
+    # create_model accepts heterogeneous (type, FieldInfo) tuples as values;
+    # precise typing is impractical against its overloads.
     fields: dict[str, Any] = {}
     for e in cfg.enumerations:
         values = tuple(v.value for v in e.values if v.value)

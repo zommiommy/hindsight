@@ -6,6 +6,7 @@ from pydantic import ValidationError
 from hindsight_api.engine.retain.tag_enumerations import (
     TagEnumeration,
     TagEnumerationsConfig,
+    TagEnumValue,
     build_tag_enumerations_response_field,
     merge_tag_enumerations,
     parse_tag_enumerations,
@@ -210,5 +211,86 @@ def test_assignments_to_tag_strings_drops_unknown_namespace():
     assert out == []
 
 
-# Suppress unused-import warnings for symbols imported for coverage.
-_ = (TagEnumeration, TagEnumerationsConfig)
+def test_parse_rejects_colon_in_namespace():
+    """`:` is reserved as the namespace/value separator."""
+    raw = [{"namespace": "a:b", "type": "value", "values": [{"value": "x"}]}]
+    with pytest.raises(ValueError):
+        parse_tag_enumerations(raw)
+
+
+def test_parse_accepts_dict_form():
+    """parse_tag_enumerations accepts both list and {enumerations: [...]} dict."""
+    raw = {
+        "enumerations": [
+            {"namespace": "feedback", "type": "value", "values": [{"value": "a"}]},
+        ]
+    }
+    cfg = parse_tag_enumerations(raw)
+    assert cfg is not None
+    assert len(cfg.enumerations) == 1
+    assert cfg.enumerations[0].namespace == "feedback"
+
+
+def test_build_response_field_value_required():
+    """type=value, optional=False produces a required Literal field."""
+    cfg = parse_tag_enumerations(
+        [
+            {
+                "namespace": "severity",
+                "type": "value",
+                "optional": False,
+                "values": [{"value": "low"}, {"value": "high"}],
+            }
+        ]
+    )
+    field_type, field_info = build_tag_enumerations_response_field(cfg)
+    from pydantic import create_model
+
+    M = create_model("M", tags=(field_type, field_info))
+    assert M(tags={"severity": "low"}).tags.severity == "low"
+    with pytest.raises(ValidationError):
+        M(tags={})  # required field missing
+    with pytest.raises(ValidationError):
+        M(tags={"severity": "zzz"})
+
+
+def test_assignments_to_tag_strings_accepts_pydantic_model():
+    """Production path: LLM response arrives as the dynamic Pydantic model."""
+    from hindsight_api.engine.retain.tag_enumerations import assignments_to_tag_strings
+
+    cfg = parse_tag_enumerations(
+        [
+            {
+                "namespace": "feedback",
+                "type": "multi-values",
+                "values": [{"value": "behavior"}, {"value": "style"}],
+            }
+        ]
+    )
+    field_type, field_info = build_tag_enumerations_response_field(cfg)
+    instance = field_type(feedback=["behavior", "style"])
+    out = assignments_to_tag_strings(instance, cfg)
+    assert sorted(out) == ["feedback:behavior", "feedback:style"]
+
+
+def test_tag_enumeration_model_direct_validation():
+    """The TagEnumeration model enforces its invariants when constructed directly."""
+    # Happy path
+    e = TagEnumeration(
+        namespace="x",
+        type="value",
+        values=[TagEnumValue(value="a")],
+    )
+    assert e.namespace == "x"
+    # Empty namespace rejected
+    with pytest.raises(ValueError):
+        TagEnumeration(namespace="", type="value", values=[TagEnumValue(value="a")])
+    # No values rejected
+    with pytest.raises(ValueError):
+        TagEnumeration(namespace="x", type="value", values=[])
+
+
+def test_tag_enumerations_config_is_constructible():
+    """Smoke check that TagEnumerationsConfig is part of the public API."""
+    cfg = TagEnumerationsConfig(enumerations=[])
+    assert cfg.enumerations == []
