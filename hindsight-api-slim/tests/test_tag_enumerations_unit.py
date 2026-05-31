@@ -333,3 +333,48 @@ def test_retain_content_default_tag_enumerations_is_none():
 
     rc = RetainContent(content="x")
     assert rc.tag_enumerations is None
+
+
+def test_build_extraction_prompt_and_schema_accepts_tag_enumerations_kwarg():
+    """Kwarg threading + bank ⊕ per-retain merge should produce a config object
+    in the function's internals. We don't yet assert the prompt/schema change
+    (Task 5) — just that the call accepts the kwarg without error."""
+    from hindsight_api.config import HindsightConfig
+    from hindsight_api.engine.retain.fact_extraction import (
+        _build_extraction_prompt_and_schema,
+    )
+
+    cfg = HindsightConfig.from_env()
+    cfg.tag_enumerations = [
+        {
+            "namespace": "severity",
+            "type": "value",
+            "optional": True,
+            "values": [{"value": "low"}, {"value": "high"}],
+        }
+    ]
+    per_retain = [
+        {
+            "namespace": "feedback",
+            "type": "multi-values",
+            "values": [{"value": "behavior"}, {"value": "style"}],
+        }
+    ]
+    # Just confirm the call signature accepts the kwarg and doesn't crash.
+    # No assertion on prompt/schema content yet — that's Task 5.
+    prompt, schema = _build_extraction_prompt_and_schema(cfg, tag_enumerations_raw=per_retain)
+    assert isinstance(prompt, str) and len(prompt) > 0
+    assert schema is not None
+
+
+def test_build_extraction_prompt_and_schema_works_without_tag_enumerations():
+    """Backwards compatibility: existing callers that don't pass the kwarg still work."""
+    from hindsight_api.config import HindsightConfig
+    from hindsight_api.engine.retain.fact_extraction import (
+        _build_extraction_prompt_and_schema,
+    )
+
+    cfg = HindsightConfig.from_env()
+    prompt, schema = _build_extraction_prompt_and_schema(cfg)
+    assert isinstance(prompt, str) and len(prompt) > 0
+    assert schema is not None

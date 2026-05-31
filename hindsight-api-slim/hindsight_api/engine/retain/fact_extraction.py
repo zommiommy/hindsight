@@ -25,6 +25,10 @@ from .entity_labels import (
     is_label_entity,
     parse_entity_labels,
 )
+from .tag_enumerations import (
+    merge_tag_enumerations,
+    parse_tag_enumerations,
+)
 
 
 def _extract_map_entities(
@@ -873,7 +877,7 @@ def _build_labels_prompt_section(labels_cfg: EntityLabelsConfig | list | None, f
     return "\n".join(lines)
 
 
-def _build_extraction_prompt_and_schema(config) -> tuple[str, type]:
+def _build_extraction_prompt_and_schema(config, tag_enumerations_raw: list | None = None) -> tuple[str, type]:
     """
     Build extraction prompt and response schema based on config.
 
@@ -945,6 +949,13 @@ def _build_extraction_prompt_and_schema(config) -> tuple[str, type]:
     # Add entity labels section if configured and build dynamic schema
     entity_labels_raw = getattr(config, "entity_labels", None)
     labels_cfg = parse_entity_labels(entity_labels_raw)
+    # Resolve effective tag enumerations: bank-level ⊕ per-retain merge.
+    # The merged config will be consumed by Task 5 (prompt + schema injection).
+    bank_tag_enums = parse_tag_enumerations(getattr(config, "tag_enumerations", None))
+    per_retain_tag_enums = parse_tag_enumerations(tag_enumerations_raw)
+    effective_tag_enums = merge_tag_enumerations(bank_tag_enums, per_retain_tag_enums)
+    # `effective_tag_enums` will be consumed by Task 5 (prompt + schema injection).
+    _ = effective_tag_enums  # silence unused-var lint until Task 5 wires it in
     free_form_entities = getattr(config, "entities_allow_free_form", True)
     labels_section = _build_labels_prompt_section(labels_cfg, free_form_entities)
     if labels_section:
@@ -1074,6 +1085,7 @@ async def _extract_facts_from_chunk(
     config,
     agent_name: str = None,
     metadata: dict[str, str] | None = None,
+    tag_enumerations_raw: list | None = None,
 ) -> tuple[list[dict[str, str]], TokenUsage]:
     """
     Extract facts from a single chunk (internal helper for parallel processing).
@@ -1088,7 +1100,7 @@ async def _extract_facts_from_chunk(
     logger = logging.getLogger(__name__)
 
     # Build prompt and schema using helper function
-    prompt, response_schema = _build_extraction_prompt_and_schema(config)
+    prompt, response_schema = _build_extraction_prompt_and_schema(config, tag_enumerations_raw=tag_enumerations_raw)
 
     # Check config for extraction mode and causal link extraction
     extraction_mode = config.retain_extraction_mode
@@ -1419,6 +1431,7 @@ async def _extract_facts_with_auto_split(
     config,
     agent_name: str = None,
     metadata: dict[str, str] | None = None,
+    tag_enumerations_raw: list | None = None,
 ) -> tuple[list[dict[str, str]], TokenUsage]:
     """
     Extract facts from a chunk with automatic splitting if output exceeds token limits.
@@ -1456,6 +1469,7 @@ async def _extract_facts_with_auto_split(
             config=config,
             agent_name=agent_name,
             metadata=metadata,
+            tag_enumerations_raw=tag_enumerations_raw,
         )
     except OutputTooLongError:
         # Output exceeded token limits - split the chunk in half and retry
@@ -1502,6 +1516,7 @@ async def _extract_facts_with_auto_split(
                 config=config,
                 agent_name=agent_name,
                 metadata=metadata,
+                tag_enumerations_raw=tag_enumerations_raw,
             ),
             _extract_facts_with_auto_split(
                 chunk=second_half,
@@ -1513,6 +1528,7 @@ async def _extract_facts_with_auto_split(
                 config=config,
                 agent_name=agent_name,
                 metadata=metadata,
+                tag_enumerations_raw=tag_enumerations_raw,
             ),
         ]
 
@@ -1538,6 +1554,7 @@ async def extract_facts_from_text(
     config,
     context: str = "",
     metadata: dict[str, str] | None = None,
+    tag_enumerations_raw: list | None = None,
 ) -> tuple[list[Fact], list[tuple[str, int]], TokenUsage]:
     """
     Extract semantic facts from conversational or narrative text using LLM.
@@ -1589,6 +1606,7 @@ async def extract_facts_from_text(
             config=config,
             agent_name=agent_name,
             metadata=metadata,
+            tag_enumerations_raw=tag_enumerations_raw,
         )
         for i, chunk in enumerate(chunks)
     ]
@@ -1710,11 +1728,15 @@ async def extract_facts_from_contents_batch_api(
     all_chunks_info = []  # List of (chunk_text, content_index, chunk_index_in_content, event_date, context)
     batch_requests = []
 
-    # Build prompt and schema once (same for all chunks)
-    prompt, response_schema = _build_extraction_prompt_and_schema(config)
-
     for content_index, item in enumerate(contents):
         chunks = chunk_text(item.content, max_chars=config.retain_chunk_size)
+
+        # Build prompt and schema per content so per-retain tag_enumerations
+        # (carried on RetainContent.tag_enumerations) flow into the prompt/schema
+        # for this content's batch requests.
+        prompt, response_schema = _build_extraction_prompt_and_schema(
+            config, tag_enumerations_raw=getattr(item, "tag_enumerations", None)
+        )
 
         for chunk_index_in_content, chunk in enumerate(chunks):
             all_chunks_info.append((chunk, content_index, chunk_index_in_content, item.event_date, item.context))
@@ -2210,6 +2232,7 @@ async def extract_facts_from_contents(
             agent_name=agent_name,
             config=config,
             metadata=item.metadata or None,
+            tag_enumerations_raw=getattr(item, "tag_enumerations", None),
         )
         fact_extraction_tasks.append(task)
 
