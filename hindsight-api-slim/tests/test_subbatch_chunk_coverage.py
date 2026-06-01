@@ -124,3 +124,57 @@ async def test_oversized_replacement_chunks_cover_full_body(memory, request_cont
         assert indices == list(range(len(indices)))
     finally:
         await memory.delete_bank(bank_id, request_context=request_context)
+
+
+@pytest.mark.asyncio
+async def test_oversized_append_chunks_cover_existing_plus_new(memory, request_context):
+    """Appending an oversized body to an existing document must keep chunks
+    covering BOTH the existing body and the full new content.
+
+    retain_batch prepends the existing body to the first sub-batch before
+    chunking, so without accounting for those prepended chunks in the
+    per-document offset, the second sub-batch collides with the first
+    sub-batch's tail and overwrites it (issue #1888, append variant)."""
+    bank_id = f"test_1888_append_{_ts()}"
+    document_id = "doc-1888-append"
+
+    try:
+        # Existing body spans several chunks so the prepended-chunk offset error
+        # corrupts a detectable fraction of the document (a 1-chunk existing body
+        # only collides by one slot, which slack thresholds would miss).
+        existing = _make_body(130)
+        await memory.retain_async(
+            bank_id=bank_id,
+            content=existing,
+            context="seed",
+            document_id=document_id,
+            request_context=request_context,
+        )
+
+        new_content = _make_body(40)
+        await memory.retain_batch_async(
+            bank_id=bank_id,
+            contents=[
+                {
+                    "content": new_content,
+                    "context": "appended",
+                    "document_id": document_id,
+                    "update_mode": "append",
+                }
+            ],
+            request_context=request_context,
+        )
+
+        _, sum_chunk_text, indices = await _chunk_coverage(memory, bank_id, document_id, request_context)
+
+        # Chunks must cover the existing body plus the full appended content,
+        # not just one sub-batch of the new content.
+        expected = len(existing) + len(new_content)
+        assert sum_chunk_text >= expected * 0.85, (
+            f"append chunks cover only {sum_chunk_text}/{expected} chars (existing+new) "
+            f"— a sub-batch was overwritten (issue #1888, append variant)"
+        )
+        # No collisions: chunk_index values are unique.
+        assert len(indices) == len(set(indices)), f"duplicate chunk_index values: {indices}"
+    finally:
+        await memory.delete_bank(bank_id, request_context=request_context)

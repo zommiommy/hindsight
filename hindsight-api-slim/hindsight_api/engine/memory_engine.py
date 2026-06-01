@@ -2801,10 +2801,33 @@ class MemoryEngine(MemoryEngineInterface):
             # worth of chunks/memories (issue #1888). Counting uses the same
             # bank-resolved, strategy-applied chunk size the orchestrator chunks
             # with, so the offsets match the chunk_index values it assigns.
-            from .retain import fact_extraction
+            from .retain import fact_extraction, fact_storage
 
             sub_chunk_size = await self._resolve_retain_chunk_size(bank_id, request_context, strategy)
             chunk_offsets: dict[str, int] = {}
+
+            # In update_mode="append", retain_batch prepends the existing document
+            # body to the FIRST sub-batch as an extra content item before chunking
+            # (see orchestrator.retain_batch), consuming chunks(existing_body)
+            # additional chunk_index slots ahead of that sub-batch's own content.
+            # Capture that chunk count per document up front — the first sub-batch
+            # overwrites documents.original_text when it commits, so it can't be
+            # read back afterwards — and fold it into the offset so later
+            # sub-batches continue past the prepended chunks instead of colliding.
+            append_prepend_chunks: dict[str, int] = {}
+            backend = await self._get_backend()
+            append_doc_ids: set[str] = set()
+            for item in contents:
+                item_doc_id = item.get("document_id")
+                if item.get("update_mode") == "append" and item_doc_id:
+                    append_doc_ids.add(item_doc_id)
+            for append_doc_id in append_doc_ids:
+                async with acquire_with_retry(backend) as conn:
+                    existing_text = await fact_storage.get_document_content(conn, bank_id, append_doc_id)
+                if existing_text:
+                    append_prepend_chunks[append_doc_id] = len(
+                        fact_extraction.chunk_text(existing_text, sub_chunk_size)
+                    )
 
             for i, (sub_batch, sub_origins) in enumerate(zip(sub_batches, origin_indices), 1):
                 # Checkpoint: abort if the operation was deleted (bank was deleted) between sub-batches.
@@ -2856,6 +2879,11 @@ class MemoryEngine(MemoryEngineInterface):
                         len(fact_extraction.chunk_text(item.get("content", "") or "", sub_chunk_size))
                         for item in sub_batch
                     )
+                    # retain_batch only prepends the existing body on the global
+                    # first sub-batch (is_first_batch == i == 1), so fold its chunk
+                    # count in only there.
+                    if i == 1:
+                        sub_chunk_count += append_prepend_chunks.get(sub_doc_id, 0)
                     chunk_offsets[sub_doc_id] = sub_offset + sub_chunk_count
                 # sub_results aligns 1:1 with sub_batch items; map each
                 # back to its source input via origin_indices so callers
