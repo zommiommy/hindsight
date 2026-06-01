@@ -255,6 +255,7 @@ from .retain.types import RetainContentDict
 from .search import think_utils
 from .search.reranking import CrossEncoderReranker, apply_combined_scoring
 from .search.tags import TagGroup, TagsMatch, build_tag_groups_where_clause, build_tags_where_clause
+from .search.types import ScoredResult
 from .task_backend import TaskBackend
 from .token_encoding import get_token_encoding
 
@@ -3402,6 +3403,7 @@ class MemoryEngine(MemoryEngineInterface):
         created_before: datetime | None = None,
         _connection_budget: int | None = None,
         _quiet: bool = False,
+        rerank: bool = True,
     ) -> RecallResultModel:
         """
         Recall memories using N*4-way parallel retrieval (N fact types × 4 retrieval methods).
@@ -3558,6 +3560,7 @@ class MemoryEngine(MemoryEngineInterface):
                             include_source_facts=include_source_facts,
                             max_source_facts_tokens=max_source_facts_tokens,
                             max_source_facts_tokens_per_observation=max_source_facts_tokens_per_observation,
+                            rerank=rerank,
                         )
                         break  # Success - exit retry loop
                     except Exception as e:
@@ -3689,6 +3692,7 @@ class MemoryEngine(MemoryEngineInterface):
         include_source_facts: bool = False,
         max_source_facts_tokens: int = 4096,
         max_source_facts_tokens_per_observation: int = -1,
+        rerank: bool = True,
     ) -> RecallResultModel:
         """
         Search implementation with modular retrieval and reranking.
@@ -4074,26 +4078,43 @@ class MemoryEngine(MemoryEngineInterface):
 
             scored_results: list = []
             pre_filtered_count = 0
+            rerank_kind = "cross-encoder"
             try:
-                # Ensure reranker is initialized (for lazy initialization mode)
-                await reranker_instance.ensure_initialized()
-
-                # Pre-filter candidates to reduce reranking cost (RRF already provides good ranking)
-                # This is especially important for remote rerankers with network latency
+                # Pre-filter candidates by RRF before the (optional) cross-encoder.
+                # RRF already provides good ranking; this caps cross-encoder cost.
                 reranker_max_candidates = get_config().reranker_max_candidates
                 if len(merged_candidates) > reranker_max_candidates:
-                    # Sort by RRF score and take top candidates
                     merged_candidates.sort(key=lambda mc: mc.rrf_score, reverse=True)
                     pre_filtered_count = len(merged_candidates) - reranker_max_candidates
                     merged_candidates = merged_candidates[:reranker_max_candidates]
 
-                # Rerank using cross-encoder
-                scored_results = await reranker_instance.rerank(query, merged_candidates)
+                if rerank:
+                    # Ensure reranker is initialized (for lazy initialization mode)
+                    await reranker_instance.ensure_initialized()
+                    scored_results = await reranker_instance.rerank(query, merged_candidates)
+                else:
+                    # RRF-only: skip the cross-encoder and rank by RRF score. Used by
+                    # consolidation recall, where the cross-encoder was observed to demote
+                    # a near-identical existing observation (the dedup "twin") far below the
+                    # budget cutoff (semantic rank #1 -> reranked #37), causing the LLM to
+                    # never see it and create a duplicate. Passthrough ScoredResults keep the
+                    # downstream recency/temporal boosts working, seeded from RRF rank.
+                    rerank_kind = "rrf-passthrough"
+                    scored_results = [
+                        ScoredResult(
+                            candidate=mc,
+                            cross_encoder_score=0.0,
+                            cross_encoder_score_normalized=0.0,
+                            weight=0.0,
+                        )
+                        for mc in sorted(merged_candidates, key=lambda mc: mc.rrf_score, reverse=True)
+                    ]
 
                 step_duration = time.time() - step_start
                 pre_filter_note = f" (pre-filtered {pre_filtered_count})" if pre_filtered_count > 0 else ""
                 log_buffer.append(
-                    f"  [4] Reranking: {len(scored_results)} candidates scored in {step_duration:.3f}s{pre_filter_note}"
+                    f"  [4] Reranking [{rerank_kind}]: {len(scored_results)} candidates "
+                    f"scored in {step_duration:.3f}s{pre_filter_note}"
                 )
             finally:
                 rerank_span.set_attribute("hindsight.scored_count", len(scored_results))
@@ -4108,7 +4129,8 @@ class MemoryEngine(MemoryEngineInterface):
             # the slim/passthrough one that returns a constant score per pair.
             if scored_results:
                 ce = reranker_instance.cross_encoder
-                is_passthrough = ce is not None and ce.provider_name == "rrf"
+                # RRF-only mode is passthrough by construction; so is a configured "rrf" CE.
+                is_passthrough = (not rerank) or (ce is not None and ce.provider_name == "rrf")
                 apply_combined_scoring(
                     scored_results,
                     now=_recall_scoring_now(question_date),
@@ -4128,7 +4150,7 @@ class MemoryEngine(MemoryEngineInterface):
                 tracer.add_phase_metric(
                     "reranking",
                     step_duration,
-                    {"reranker_type": "cross-encoder", "candidates_reranked": len(scored_results)},
+                    {"reranker_type": rerank_kind, "candidates_reranked": len(scored_results)},
                 )
 
             # Step 5: Truncate to thinking_budget * 2 for token filtering
