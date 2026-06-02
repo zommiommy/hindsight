@@ -70,6 +70,12 @@ class GeminiLLM(LLMInterface):
         # Safety settings: None means use Gemini's defaults
         self._safety_settings: list | None = kwargs.get("gemini_safety_settings")
 
+        # Context-cache manager. Lazy-initialized on first cache lookup so
+        # nothing happens for providers/models/workloads that never opt in.
+        # Off by default; callers opt in via ``get_or_create_cached_prefix``.
+        self._cache_manager: Any | None = None
+        self._prompt_cache_enabled: bool = bool(kwargs.get("gemini_prompt_cache_enabled", False))
+
         if self._is_vertexai:
             self._init_vertexai(**kwargs)
         else:
@@ -227,11 +233,7 @@ class GeminiLLM(LLMInterface):
         # Add JSON schema instruction if response_format is provided.
         # When the cache is in use, the response_schema was baked into
         # the cache; the model will already enforce it on the response.
-        if (
-            not using_cache
-            and response_format is not None
-            and hasattr(response_format, "model_json_schema")
-        ):
+        if not using_cache and response_format is not None and hasattr(response_format, "model_json_schema"):
             schema = response_format.model_json_schema()
             schema_msg = f"\n\nYou must respond with valid JSON matching this schema:\n{json.dumps(schema, indent=2, ensure_ascii=False)}"
             if system_instruction:
@@ -314,13 +316,20 @@ class GeminiLLM(LLMInterface):
                 else:
                     result = content
 
-                # Extract token usage
+                # Extract token usage. ``cached_content_token_count`` and
+                # ``thoughts_token_count`` are populated on the Gemini 2.5+
+                # family; treat missing fields as 0 so older models still
+                # record sensible metrics.
                 input_tokens = 0
                 output_tokens = 0
+                cached_input_tokens = 0
+                thoughts_tokens = 0
                 if hasattr(response, "usage_metadata") and response.usage_metadata:
                     usage = response.usage_metadata
                     input_tokens = usage.prompt_token_count or 0
                     output_tokens = usage.candidates_token_count or 0
+                    cached_input_tokens = getattr(usage, "cached_content_token_count", 0) or 0
+                    thoughts_tokens = getattr(usage, "thoughts_token_count", 0) or 0
 
                 # Record metrics
                 duration = time.time() - start_time
@@ -333,6 +342,8 @@ class GeminiLLM(LLMInterface):
                     input_tokens=input_tokens,
                     output_tokens=output_tokens,
                     success=True,
+                    cached_input_tokens=cached_input_tokens,
+                    thoughts_tokens=thoughts_tokens,
                 )
 
                 # Record trace span
@@ -677,6 +688,37 @@ class GeminiLLM(LLMInterface):
         if last_exception:
             raise last_exception
         raise RuntimeError("Gemini tool call failed")
+
+    async def get_or_create_cached_prefix(
+        self,
+        system_instruction: str,
+        response_schema: Any | None = None,
+    ) -> str | None:
+        """Return a CachedContent resource name for the given prefix, or
+        ``None`` if context caching is disabled, the provider doesn't
+        support it, or Gemini rejects the create (prefix too small, etc.).
+
+        Callers pass the returned name to ``call(cached_content_name=...)``
+        and treat ``None`` as "cache unavailable — use the normal path".
+        That fallback is essential: the system must continue to work if
+        caching is disabled, if Gemini's caching API has an outage, or if
+        the prefix is below the model's minimum cacheable size.
+        """
+        if not self._prompt_cache_enabled:
+            return None
+        if self._client is None:
+            return None
+        if self._cache_manager is None:
+            # Lazy import so the cache module is only loaded when caching
+            # is actually used.
+            from hindsight_api.engine.providers.gemini_cache import GeminiCacheManager
+
+            self._cache_manager = GeminiCacheManager(self._client)
+        return await self._cache_manager.get_or_create(
+            model=self.model,
+            system_instruction=system_instruction,
+            response_schema=response_schema,
+        )
 
     async def cleanup(self) -> None:
         """Clean up resources (close connections, etc.)."""

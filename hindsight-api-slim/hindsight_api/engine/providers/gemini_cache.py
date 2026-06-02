@@ -158,8 +158,7 @@ class GeminiCacheManager:
                 )
             except _CacheNotEligible as e:
                 logger.debug(
-                    "GeminiCacheManager: prefix not eligible for caching "
-                    "(model=%s, reason=%s) — caller will fall back",
+                    "GeminiCacheManager: prefix not eligible for caching (model=%s, reason=%s) — caller will fall back",
                     model,
                     e,
                 )

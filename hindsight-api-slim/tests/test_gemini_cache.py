@@ -246,3 +246,73 @@ async def test_refreshes_after_ttl_margin(monkeypatch):
     )
     assert refreshed == "cachedContents/v2"
     assert create_mock.call_count == 2
+
+
+# ---- Integration: feature flag + GeminiLLM accessor ----------------------
+
+
+@pytest.mark.asyncio
+async def test_gemini_llm_returns_none_when_cache_disabled():
+    """The flag is off by default. ``get_or_create_cached_prefix`` returns
+    None without ever instantiating a cache manager. This is the
+    safety property: upgrade-and-do-nothing leaves behaviour unchanged."""
+    from hindsight_api.engine.providers.gemini_llm import GeminiLLM
+
+    llm = GeminiLLM(
+        provider="gemini",
+        api_key="not-real-key",
+        base_url="",
+        model="gemini-test",
+    )
+    # Flag defaults False; even with a stable prefix the cache must stay disabled.
+    result = await llm.get_or_create_cached_prefix(
+        system_instruction="A reasonably long system prompt " * 50,
+        response_schema=None,
+    )
+    assert result is None
+    assert llm._cache_manager is None  # never built
+
+
+@pytest.mark.asyncio
+async def test_gemini_llm_uses_cache_when_enabled(monkeypatch):
+    """When the flag is on, the manager is constructed lazily and its
+    get_or_create is delegated to. We don't hit the real SDK; we replace
+    the client's caches.create with a fake."""
+    from types import SimpleNamespace
+    from unittest.mock import AsyncMock
+
+    from hindsight_api.engine.providers.gemini_llm import GeminiLLM
+
+    llm = GeminiLLM(
+        provider="gemini",
+        api_key="not-real-key",
+        base_url="",
+        model="gemini-test",
+        gemini_prompt_cache_enabled=True,
+    )
+
+    # Replace the SDK-shaped client with a fake whose caches.create returns
+    # a predictable name. The lazy import inside get_or_create_cached_prefix
+    # picks up the patched module-level GeminiCacheManager naturally.
+    fake_create = AsyncMock(
+        return_value=SimpleNamespace(name="cachedContents/from-llm-test")
+    )
+    llm._client = MagicMock()
+    llm._client.aio = MagicMock()
+    llm._client.aio.caches = MagicMock()
+    llm._client.aio.caches.create = fake_create
+
+    name = await llm.get_or_create_cached_prefix(
+        system_instruction="A long enough system prompt for caching",
+        response_schema=None,
+    )
+    assert name == "cachedContents/from-llm-test"
+    # The manager was lazy-built on first use.
+    assert llm._cache_manager is not None
+    # Second call within TTL → no new SDK call.
+    again = await llm.get_or_create_cached_prefix(
+        system_instruction="A long enough system prompt for caching",
+        response_schema=None,
+    )
+    assert again == name
+    assert fake_create.call_count == 1

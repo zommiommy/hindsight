@@ -10,7 +10,7 @@ import json
 import logging
 import re
 from datetime import datetime, timedelta
-from typing import Literal, cast
+from typing import Any, Literal, cast
 
 from pydantic import BaseModel, ConfigDict, Field, create_model, field_validator
 
@@ -1097,6 +1097,27 @@ async def _extract_facts_from_chunk(
     # Build user message using helper function
     user_message = _build_user_message(chunk, chunk_index, total_chunks, event_date, context, metadata, agent_name)
 
+    # Opt into context caching when the provider supports it. The prompt
+    # and response_schema are essentially constant per (bank, mode), so
+    # caching the ~hundreds-of-tokens system prefix and reusing it across
+    # many small-payload retain calls dramatically lowers per-call input
+    # cost. ``get_or_create_cached_prefix`` returns None when caching is
+    # disabled, unsupported, or the prefix is too small; the LLM call
+    # transparently falls back to the uncached path in that case.
+    cached_prefix_name: str | None = None
+    provider_impl = getattr(llm_config, "_provider_impl", None)
+    if provider_impl is not None and hasattr(provider_impl, "get_or_create_cached_prefix"):
+        try:
+            cached_prefix_name = await provider_impl.get_or_create_cached_prefix(
+                system_instruction=prompt,
+                response_schema=response_schema,
+            )
+        except Exception:
+            # Caching is a soft optimisation — never let a cache-side
+            # error block a retain operation.
+            logger.exception("Cache prefix lookup failed; falling back to uncached call")
+            cached_prefix_name = None
+
     # Retry logic for JSON validation errors
     # Use retain-specific overrides if set, otherwise fall back to global LLM config
     llm_max_retries = (
@@ -1116,7 +1137,7 @@ async def _extract_facts_from_chunk(
                 config.retain_llm_max_backoff if config.retain_llm_max_backoff is not None else config.llm_max_backoff
             )
 
-            extraction_response_json, call_usage = await llm_config.call(
+            call_kwargs: dict[str, Any] = dict(
                 messages=[{"role": "system", "content": prompt}, {"role": "user", "content": user_message}],
                 response_format=response_schema,
                 scope="retain_extract_facts",
@@ -1128,6 +1149,10 @@ async def _extract_facts_from_chunk(
                 skip_validation=True,  # Get raw JSON, we'll validate leniently
                 return_usage=True,
             )
+            if cached_prefix_name is not None:
+                call_kwargs["cached_content_name"] = cached_prefix_name
+
+            extraction_response_json, call_usage = await llm_config.call(**call_kwargs)
             usage = usage + call_usage  # Aggregate usage across retries
 
             # Lenient parsing of facts from raw JSON

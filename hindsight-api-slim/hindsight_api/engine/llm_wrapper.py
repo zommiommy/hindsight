@@ -229,6 +229,7 @@ def create_llm_provider(
     vertexai_region: str | None = None,
     vertexai_credentials: Any = None,
     gemini_safety_settings: list | None = None,
+    gemini_prompt_cache_enabled: bool = False,
     litellmrouter_config: dict[str, Any] | None = None,
 ) -> Any:  # Returns LLMInterface
     """
@@ -317,6 +318,7 @@ def create_llm_provider(
             vertexai_region=vertexai_region,
             vertexai_credentials=vertexai_credentials,
             gemini_safety_settings=gemini_safety_settings,
+            gemini_prompt_cache_enabled=gemini_prompt_cache_enabled,
         )
 
     elif provider_lower == "anthropic":
@@ -442,6 +444,7 @@ class LLMProvider:
         groq_service_tier: str | None = None,
         openai_service_tier: str | None = None,
         gemini_safety_settings: list | None = None,
+        gemini_prompt_cache_enabled: bool = False,
         extra_body: dict[str, Any] | None = None,
         default_headers: dict[str, str] | None = None,
         litellmrouter_config: dict[str, Any] | None = None,
@@ -480,6 +483,11 @@ class LLMProvider:
         self.openai_service_tier = openai_service_tier
         # Gemini safety settings (instance default; can be overridden per-request via context var)
         self.gemini_safety_settings = gemini_safety_settings
+        # Gemini prompt caching: when True, retain extraction (and any future
+        # caller that opts in) will reuse a CachedContent prefix to cut
+        # input-token cost. Off by default so the change is observable behind
+        # a flip rather than a silent behaviour change on upgrade.
+        self.gemini_prompt_cache_enabled = gemini_prompt_cache_enabled
         # Extra body params for OpenAI-compatible providers (e.g. chat_template_kwargs)
         self.extra_body = extra_body
         # Default headers passed to provider SDK clients (e.g. proxy auth, request tracing).
@@ -598,6 +606,19 @@ class LLMProvider:
             except Exception:
                 pass  # Config may not be initialized in test environments
 
+        # Same pattern for the prompt-cache toggle — if the caller didn't pass
+        # an explicit override, pull the static server-level default.
+        if self.provider in ("gemini", "vertexai") and not self.gemini_prompt_cache_enabled:
+            from ..config import _get_raw_config
+
+            try:
+                raw_config = _get_raw_config()
+                self.gemini_prompt_cache_enabled = bool(
+                    getattr(raw_config, "llm_gemini_prompt_cache_enabled", False)
+                )
+            except Exception:
+                pass  # Config may not be initialized in test environments
+
         # For litellmrouter: prefer an explicit chain from the caller (per-op
         # construction in MemoryEngine threads the right chain through). If the caller
         # didn't supply one, fall back to the global ``llm_litellmrouter_config`` so
@@ -626,6 +647,7 @@ class LLMProvider:
             vertexai_region=vertexai_region,
             vertexai_credentials=vertexai_credentials,
             gemini_safety_settings=self.gemini_safety_settings,
+            gemini_prompt_cache_enabled=self.gemini_prompt_cache_enabled,
             litellmrouter_config=router_config,
         )
 
