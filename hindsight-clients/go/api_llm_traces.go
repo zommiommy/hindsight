@@ -33,6 +33,7 @@ type ApiListLlmRequestsRequest struct {
 	provider *string
 	traceId *string
 	documentId *string
+	memoryId *string
 	group *bool
 	startDate *string
 	endDate *string
@@ -74,6 +75,12 @@ func (r ApiListLlmRequestsRequest) TraceId(traceId string) ApiListLlmRequestsReq
 // Filter to LLM calls that processed a given document
 func (r ApiListLlmRequestsRequest) DocumentId(documentId string) ApiListLlmRequestsRequest {
 	r.documentId = &documentId
+	return r
+}
+
+// Filter to the operation run(s) that produced or consumed a given memory_unit
+func (r ApiListLlmRequestsRequest) MemoryId(memoryId string) ApiListLlmRequestsRequest {
+	r.memoryId = &memoryId
 	return r
 }
 
@@ -172,6 +179,9 @@ func (a *LLMTracesAPIService) ListLlmRequestsExecute(r ApiListLlmRequestsRequest
 	}
 	if r.documentId != nil {
 		parameterAddToHeaderOrQuery(localVarQueryParams, "document_id", r.documentId, "form", "")
+	}
+	if r.memoryId != nil {
+		parameterAddToHeaderOrQuery(localVarQueryParams, "memory_id", r.memoryId, "form", "")
 	}
 	if r.group != nil {
 		parameterAddToHeaderOrQuery(localVarQueryParams, "group", r.group, "form", "")

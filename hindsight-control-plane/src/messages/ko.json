@@ -1152,7 +1152,10 @@
     "sourceMentioned": "언급됨",
     "viewDocumentButton": "문서 보기",
     "viewChunkButton": "청크 보기",
-    "viewHistory": "기록 보기"
+    "viewHistory": "기록 보기",
+    "tracedByTitle": "생성 출처",
+    "tracedBySummary": "{calls}회 호출 · {tokens} 토큰",
+    "usedByTitle": "사용 출처"
   },
   "documentChunkModal": {
     "documentTitle": "문서 상세 정보",

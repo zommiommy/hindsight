@@ -319,10 +319,11 @@ class LLMTraceRecorder:
         self._retention_days = retention_days
         self._max_chars = max_chars
         self._sweep_task: asyncio.Task | None = None
-        # In-flight fire-and-forget write tasks, tracked so attach_memory_ids can
-        # await them before its post-operation UPDATE (otherwise the UPDATE could
-        # race ahead of the INSERTs it needs to patch).
-        self._pending: set[asyncio.Task] = set()
+        # In-flight fire-and-forget write tasks, bucketed by trace_id so
+        # attach_memory_ids can await only *its own* operation's writes before the
+        # post-operation UPDATE (otherwise the UPDATE could race ahead of the
+        # INSERTs it patches — but it must not block on unrelated operations).
+        self._pending: dict[str | None, set[asyncio.Task]] = {}
 
     def is_enabled(self, scope: str) -> bool:
         """Whether tracing is active for the given call scope."""
@@ -408,8 +409,16 @@ class LLMTraceRecorder:
             # No running event loop (e.g. during shutdown)
             logger.debug("Cannot schedule llm trace write: no running event loop")
             return
-        self._pending.add(task)
-        task.add_done_callback(self._pending.discard)
+        key = record.trace_id
+        self._pending.setdefault(key, set()).add(task)
+        task.add_done_callback(lambda t, k=key: self._discard_pending(k, t))
+
+    def _discard_pending(self, key: str | None, task: asyncio.Task) -> None:
+        bucket = self._pending.get(key)
+        if bucket is not None:
+            bucket.discard(task)
+            if not bucket:
+                self._pending.pop(key, None)
 
     async def _safe_write(self, record: LLMRequestRecord) -> None:
         """Write a trace row. Errors are logged, never raised."""
@@ -460,13 +469,13 @@ class LLMTraceRecorder:
         except Exception as e:
             logger.warning(f"LLM trace write failed for scope={record.scope}: {e}")
 
-    async def _flush_pending(self) -> None:
-        """Await all in-flight trace writes so their rows exist before an UPDATE."""
-        pending = [t for t in self._pending if not t.done()]
+    async def _flush_pending(self, trace_id: str) -> None:
+        """Await this trace's in-flight writes so its rows exist before an UPDATE."""
+        pending = [t for t in self._pending.get(trace_id, ()) if not t.done()]
         if pending:
             await asyncio.gather(*pending, return_exceptions=True)
 
-    async def attach_memory_ids(
+    def attach_memory_ids(
         self,
         trace_ctx: LLMTraceContext | None,
         *,
@@ -480,6 +489,11 @@ class LLMTraceRecorder:
         preserving order, and patches ``metadata.memory_ids`` (outputs created)
         and ``metadata.source_memory_ids`` (inputs consumed) on all rows sharing
         the trace_id. No-op when tracing is off or nothing was produced.
+
+        Fire-and-forget: the snapshotted patch is applied on a background task so
+        the retain/consolidation operation never waits on the trace write. The
+        ids are snapshotted synchronously here because the caller may reset the
+        context immediately after.
         """
         if not self._enabled or trace_ctx is None or not trace_ctx.trace_id:
             return
@@ -492,10 +506,17 @@ class LLMTraceRecorder:
             patch["source_memory_ids"] = source_ids
         if not patch:
             return
+        try:
+            asyncio.create_task(self._attach_memory_ids(trace_ctx.bank_id, trace_ctx.trace_id, patch))
+        except RuntimeError:
+            logger.debug("Cannot schedule llm trace memory_id attach: no running event loop")
 
-        # The trace-row INSERTs are fire-and-forget; flush them so this UPDATE
-        # patches rows that already exist rather than racing ahead of them.
-        await self._flush_pending()
+    async def _attach_memory_ids(self, bank_id: str | None, trace_id: str, patch: dict[str, Any]) -> None:
+        """Background worker: flush this trace's writes, then patch its rows."""
+        # The trace-row INSERTs are fire-and-forget; flush *this trace's* writes
+        # so the UPDATE patches rows that already exist rather than racing ahead
+        # of them (without blocking on unrelated operations' pending writes).
+        await self._flush_pending(trace_id)
         pool = self._pool_getter()
         if pool is None:
             return
@@ -505,12 +526,12 @@ class LLMTraceRecorder:
             async with acquire_with_retry(pool, max_retries=1) as conn:
                 await conn.execute(
                     f"UPDATE {table} SET metadata = metadata || $3::jsonb WHERE bank_id = $1 AND trace_id = $2",
-                    trace_ctx.bank_id,
-                    trace_ctx.trace_id,
+                    bank_id,
+                    trace_id,
                     json.dumps(patch),
                 )
         except Exception as e:
-            logger.warning(f"LLM trace memory_id attach failed for trace={trace_ctx.trace_id}: {e}")
+            logger.warning(f"LLM trace memory_id attach failed for trace={trace_id}: {e}")
 
     # ── retention sweep ───────────────────────────────────────────────────────
 

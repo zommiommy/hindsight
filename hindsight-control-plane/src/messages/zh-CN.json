@@ -1152,7 +1152,10 @@
     "sourceMentioned": "提及时间",
     "viewDocumentButton": "查看文档",
     "viewChunkButton": "查看块",
-    "viewHistory": "查看历史"
+    "viewHistory": "查看历史",
+    "tracedByTitle": "创建来源",
+    "tracedBySummary": "{calls} 次调用 · {tokens} 令牌",
+    "usedByTitle": "使用来源"
   },
   "documentChunkModal": {
     "documentTitle": "文档详情",

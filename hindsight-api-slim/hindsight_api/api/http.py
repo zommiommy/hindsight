@@ -6504,6 +6504,9 @@ def _register_routes(app: FastAPI):
         provider: str | None = Query(None, description="Filter by LLM provider"),
         trace_id: str | None = Query(None, description="Filter to one operation run (all LLM calls sharing a trace)"),
         document_id: str | None = Query(None, description="Filter to LLM calls that processed a given document"),
+        memory_id: str | None = Query(
+            None, description="Filter to the operation run(s) that produced or consumed a given memory_unit"
+        ),
         group: bool = Query(
             False, description="Paginate by operation run (trace) instead of by call; returns whole runs"
         ),
@@ -6524,6 +6527,7 @@ def _register_routes(app: FastAPI):
                 provider=provider,
                 trace_id=trace_id,
                 document_id=document_id,
+                memory_id=memory_id,
                 group=group,
                 start_date=datetime.fromisoformat(start_date.replace("Z", "+00:00")) if start_date else None,
                 end_date=datetime.fromisoformat(end_date.replace("Z", "+00:00")) if end_date else None,

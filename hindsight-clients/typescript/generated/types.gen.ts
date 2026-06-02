@@ -6463,6 +6463,12 @@ export type ListLlmRequestsData = {
      */
     document_id?: string | null;
     /**
+     * Memory Id
+     *
+     * Filter to the operation run(s) that produced or consumed a given memory_unit
+     */
+    memory_id?: string | null;
+    /**
      * Group
      *
      * Paginate by operation run (trace) instead of by call; returns whole runs

@@ -382,7 +382,9 @@ async def run_consolidation_job(
     finally:
         if trace_token is not None:
             reset_trace_context(trace_token)
-            await memory_engine._llm_recorder.attach_memory_ids(trace_ctx)
+            # Fire-and-forget: patched on a background task, off the consolidation
+            # critical path.
+            memory_engine._llm_recorder.attach_memory_ids(trace_ctx)
 
 
 async def _run_consolidation_job(

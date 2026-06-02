@@ -1518,6 +1518,7 @@ export class ControlPlaneClient {
       provider?: string;
       trace_id?: string;
       document_id?: string;
+      memory_id?: string;
       group?: boolean;
       start_date?: string;
       end_date?: string;
@@ -1532,6 +1533,7 @@ export class ControlPlaneClient {
     if (options?.provider) params.append("provider", options.provider);
     if (options?.trace_id) params.append("trace_id", options.trace_id);
     if (options?.document_id) params.append("document_id", options.document_id);
+    if (options?.memory_id) params.append("memory_id", options.memory_id);
     if (options?.group) params.append("group", "true");
     if (options?.start_date) params.append("start_date", options.start_date);
     if (options?.end_date) params.append("end_date", options.end_date);

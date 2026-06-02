@@ -398,6 +398,20 @@ async def test_memory_ids_mapped_to_retain_and_consolidation(trace_api_client, b
         sources = by_op["consolidation"]["metadata"].get("source_memory_ids")
         assert sources, "consolidation trace should map to the source memories it consumed"
 
+    # Reverse lookup: ?memory_id=<created fact> returns every run touching it —
+    # the retain that produced it (memory_ids) and any consolidation that consumed
+    # it as a source (source_memory_ids).
+    by_mem = (
+        await trace_api_client.get(
+            f"/v1/default/banks/{bank_id}/llm-requests", params={"memory_id": created[0]}
+        )
+    ).json()
+    assert by_mem["total"] >= 1
+    for it in by_mem["items"]:
+        meta = it["metadata"]
+        assert created[0] in (meta.get("memory_ids") or []) or created[0] in (meta.get("source_memory_ids") or [])
+    assert retain["trace_id"] in {it["trace_id"] for it in by_mem["items"]}, "producing retain trace must be returned"
+
 
 @pytest.mark.asyncio
 async def test_filter_by_status_and_operation(trace_api_client, bank_id):

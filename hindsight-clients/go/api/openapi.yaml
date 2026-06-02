@@ -3506,6 +3506,16 @@ paths:
           nullable: true
           type: string
         style: form
+      - description: Filter to the operation run(s) that produced or consumed a given
+          memory_unit
+        explode: true
+        in: query
+        name: memory_id
+        required: false
+        schema:
+          nullable: true
+          type: string
+        style: form
       - description: Paginate by operation run (trace) instead of by call; returns
           whole runs
         explode: true

@@ -50,6 +50,7 @@ class LLMTracesApi:
         provider: Annotated[Optional[StrictStr], Field(description="Filter by LLM provider")] = None,
         trace_id: Annotated[Optional[StrictStr], Field(description="Filter to one operation run (all LLM calls sharing a trace)")] = None,
         document_id: Annotated[Optional[StrictStr], Field(description="Filter to LLM calls that processed a given document")] = None,
+        memory_id: Annotated[Optional[StrictStr], Field(description="Filter to the operation run(s) that produced or consumed a given memory_unit")] = None,
         group: Annotated[Optional[StrictBool], Field(description="Paginate by operation run (trace) instead of by call; returns whole runs")] = None,
         start_date: Annotated[Optional[StrictStr], Field(description="Filter from this ISO datetime (inclusive)")] = None,
         end_date: Annotated[Optional[StrictStr], Field(description="Filter until this ISO datetime (exclusive)")] = None,
@@ -87,6 +88,8 @@ class LLMTracesApi:
         :type trace_id: str
         :param document_id: Filter to LLM calls that processed a given document
         :type document_id: str
+        :param memory_id: Filter to the operation run(s) that produced or consumed a given memory_unit
+        :type memory_id: str
         :param group: Paginate by operation run (trace) instead of by call; returns whole runs
         :type group: bool
         :param start_date: Filter from this ISO datetime (inclusive)
@@ -129,6 +132,7 @@ class LLMTracesApi:
             provider=provider,
             trace_id=trace_id,
             document_id=document_id,
+            memory_id=memory_id,
             group=group,
             start_date=start_date,
             end_date=end_date,
@@ -166,6 +170,7 @@ class LLMTracesApi:
         provider: Annotated[Optional[StrictStr], Field(description="Filter by LLM provider")] = None,
         trace_id: Annotated[Optional[StrictStr], Field(description="Filter to one operation run (all LLM calls sharing a trace)")] = None,
         document_id: Annotated[Optional[StrictStr], Field(description="Filter to LLM calls that processed a given document")] = None,
+        memory_id: Annotated[Optional[StrictStr], Field(description="Filter to the operation run(s) that produced or consumed a given memory_unit")] = None,
         group: Annotated[Optional[StrictBool], Field(description="Paginate by operation run (trace) instead of by call; returns whole runs")] = None,
         start_date: Annotated[Optional[StrictStr], Field(description="Filter from this ISO datetime (inclusive)")] = None,
         end_date: Annotated[Optional[StrictStr], Field(description="Filter until this ISO datetime (exclusive)")] = None,
@@ -203,6 +208,8 @@ class LLMTracesApi:
         :type trace_id: str
         :param document_id: Filter to LLM calls that processed a given document
         :type document_id: str
+        :param memory_id: Filter to the operation run(s) that produced or consumed a given memory_unit
+        :type memory_id: str
         :param group: Paginate by operation run (trace) instead of by call; returns whole runs
         :type group: bool
         :param start_date: Filter from this ISO datetime (inclusive)
@@ -245,6 +252,7 @@ class LLMTracesApi:
             provider=provider,
             trace_id=trace_id,
             document_id=document_id,
+            memory_id=memory_id,
             group=group,
             start_date=start_date,
             end_date=end_date,
@@ -282,6 +290,7 @@ class LLMTracesApi:
         provider: Annotated[Optional[StrictStr], Field(description="Filter by LLM provider")] = None,
         trace_id: Annotated[Optional[StrictStr], Field(description="Filter to one operation run (all LLM calls sharing a trace)")] = None,
         document_id: Annotated[Optional[StrictStr], Field(description="Filter to LLM calls that processed a given document")] = None,
+        memory_id: Annotated[Optional[StrictStr], Field(description="Filter to the operation run(s) that produced or consumed a given memory_unit")] = None,
         group: Annotated[Optional[StrictBool], Field(description="Paginate by operation run (trace) instead of by call; returns whole runs")] = None,
         start_date: Annotated[Optional[StrictStr], Field(description="Filter from this ISO datetime (inclusive)")] = None,
         end_date: Annotated[Optional[StrictStr], Field(description="Filter until this ISO datetime (exclusive)")] = None,
@@ -319,6 +328,8 @@ class LLMTracesApi:
         :type trace_id: str
         :param document_id: Filter to LLM calls that processed a given document
         :type document_id: str
+        :param memory_id: Filter to the operation run(s) that produced or consumed a given memory_unit
+        :type memory_id: str
         :param group: Paginate by operation run (trace) instead of by call; returns whole runs
         :type group: bool
         :param start_date: Filter from this ISO datetime (inclusive)
@@ -361,6 +372,7 @@ class LLMTracesApi:
             provider=provider,
             trace_id=trace_id,
             document_id=document_id,
+            memory_id=memory_id,
             group=group,
             start_date=start_date,
             end_date=end_date,
@@ -393,6 +405,7 @@ class LLMTracesApi:
         provider,
         trace_id,
         document_id,
+        memory_id,
         group,
         start_date,
         end_date,
@@ -446,6 +459,10 @@ class LLMTracesApi:
         if document_id is not None:
             
             _query_params.append(('document_id', document_id))
+            
+        if memory_id is not None:
+            
+            _query_params.append(('memory_id', memory_id))
             
         if group is not None:
             

@@ -3111,7 +3111,9 @@ class MemoryEngine(MemoryEngineInterface):
             # show which memories the ingestion produced. result[0] is the
             # per-content-item list of created unit ids (see retain_batch).
             created_ids = [uid for group in result[0] for uid in group]
-            await self._llm_recorder.attach_memory_ids(retain_llm.trace_context(), created=created_ids)
+            # Fire-and-forget: the mapping is patched on a background task so it
+            # never adds latency to the retain response.
+            self._llm_recorder.attach_memory_ids(retain_llm.trace_context(), created=created_ids)
             return result
 
     def recall(
@@ -6348,6 +6350,7 @@ class MemoryEngine(MemoryEngineInterface):
         provider: str | None = None,
         trace_id: str | None = None,
         document_id: str | None = None,
+        memory_id: str | None = None,
         start_date: datetime | None = None,
         end_date: datetime | None = None,
         group: bool = False,
@@ -6389,6 +6392,15 @@ class MemoryEngine(MemoryEngineInterface):
             # extraction path); a document accrues one trace per retain run.
             where_clauses.append(f"metadata->>'document_id' = ${idx}")
             params.append(document_id)
+            idx += 1
+        if memory_id is not None:
+            # Match the run(s) that produced this memory (metadata.memory_ids) or
+            # consumed it as a consolidation source (metadata.source_memory_ids),
+            # so a memory resolves both the trace that created it and the traces
+            # that used it. The `?` operator tests array membership on the jsonb;
+            # both clauses reference the same bind param.
+            where_clauses.append(f"(metadata->'memory_ids' ? ${idx} OR metadata->'source_memory_ids' ? ${idx})")
+            params.append(memory_id)
             idx += 1
         if start_date is not None:
             where_clauses.append(f"started_at >= ${idx}")

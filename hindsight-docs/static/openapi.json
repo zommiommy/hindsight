@@ -5134,6 +5134,24 @@
             "description": "Filter to LLM calls that processed a given document"
           },
           {
+            "name": "memory_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter to the operation run(s) that produced or consumed a given memory_unit",
+              "title": "Memory Id"
+            },
+            "description": "Filter to the operation run(s) that produced or consumed a given memory_unit"
+          },
+          {
             "name": "group",
             "in": "query",
             "required": false,

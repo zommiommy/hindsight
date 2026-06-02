@@ -1152,7 +1152,10 @@
     "sourceMentioned": "言及日時",
     "viewDocumentButton": "ドキュメントを表示",
     "viewChunkButton": "チャンクを表示",
-    "viewHistory": "履歴を表示"
+    "viewHistory": "履歴を表示",
+    "tracedByTitle": "作成元",
+    "tracedBySummary": "{calls} 回の呼び出し · {tokens} トークン",
+    "usedByTitle": "使用元"
   },
   "documentChunkModal": {
     "documentTitle": "ドキュメント詳細",

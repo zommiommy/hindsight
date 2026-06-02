@@ -1152,7 +1152,10 @@
     "sourceMentioned": "Mentioned",
     "viewDocumentButton": "View Document",
     "viewChunkButton": "View Chunk",
-    "viewHistory": "View History"
+    "viewHistory": "View History",
+    "tracedByTitle": "Created by",
+    "tracedBySummary": "{calls} calls · {tokens} tokens",
+    "usedByTitle": "Used by"
   },
   "documentChunkModal": {
     "documentTitle": "Document Details",
