@@ -168,6 +168,7 @@ class GeminiLLM(LLMInterface):
         skip_validation: bool = False,
         strict_schema: bool = False,
         return_usage: bool = False,
+        cached_content_name: str | None = None,
     ) -> Any:
         """
         Make a Gemini/VertexAI API call with retry logic.
@@ -184,6 +185,13 @@ class GeminiLLM(LLMInterface):
             skip_validation: Return raw JSON without Pydantic validation.
             strict_schema: Use strict JSON schema enforcement (not supported by Gemini).
             return_usage: If True, return tuple (result, TokenUsage).
+            cached_content_name: Optional CachedContent resource name (from
+                ``GeminiCacheManager.get_or_create``). When set, the
+                system_instruction and response_schema are assumed to live
+                in the cache; this call will skip resending them and the
+                cached prefix is billed at the cached-input rate instead
+                of the standard input rate. Pass ``None`` to use the
+                normal uncached path.
 
         Returns:
             If return_usage=False: Parsed response if response_format provided, else text.
@@ -191,15 +199,22 @@ class GeminiLLM(LLMInterface):
         """
         start_time = time.time()
 
-        # Convert OpenAI-style messages to Gemini format
+        # Convert OpenAI-style messages to Gemini format. When a cache is
+        # in use, the system_instruction was baked into the CachedContent
+        # at create time — strip any system messages from the in-band
+        # payload so we don't duplicate (and pay for) the prefix.
         system_instruction = None
         gemini_contents = []
+        using_cache = cached_content_name is not None
 
         for msg in messages:
             role = msg.get("role", "user")
             content = msg.get("content", "")
 
             if role == "system":
+                if using_cache:
+                    # System prompt lives in the cache; ignore in-band.
+                    continue
                 if system_instruction:
                     system_instruction += "\n\n" + content
                 else:
@@ -209,8 +224,14 @@ class GeminiLLM(LLMInterface):
             else:
                 gemini_contents.append(genai_types.Content(role="user", parts=[genai_types.Part(text=content)]))
 
-        # Add JSON schema instruction if response_format is provided
-        if response_format is not None and hasattr(response_format, "model_json_schema"):
+        # Add JSON schema instruction if response_format is provided.
+        # When the cache is in use, the response_schema was baked into
+        # the cache; the model will already enforce it on the response.
+        if (
+            not using_cache
+            and response_format is not None
+            and hasattr(response_format, "model_json_schema")
+        ):
             schema = response_format.model_json_schema()
             schema_msg = f"\n\nYou must respond with valid JSON matching this schema:\n{json.dumps(schema, indent=2, ensure_ascii=False)}"
             if system_instruction:
@@ -218,13 +239,18 @@ class GeminiLLM(LLMInterface):
             else:
                 system_instruction = schema_msg
 
-        # Build generation config
+        # Build generation config. When a cache is in use, the SDK
+        # rejects re-sending system_instruction and response_schema
+        # alongside ``cached_content`` — the cache IS the prefix.
         config_kwargs: dict[str, Any] = {}
-        if system_instruction:
-            config_kwargs["system_instruction"] = system_instruction
-        if response_format is not None:
-            config_kwargs["response_mime_type"] = "application/json"
-            config_kwargs["response_schema"] = response_format
+        if using_cache:
+            config_kwargs["cached_content"] = cached_content_name
+        else:
+            if system_instruction:
+                config_kwargs["system_instruction"] = system_instruction
+            if response_format is not None:
+                config_kwargs["response_mime_type"] = "application/json"
+                config_kwargs["response_schema"] = response_format
         if temperature is not None:
             config_kwargs["temperature"] = temperature
         # Gemini's equivalent of OpenAI-style max_completion_tokens is max_output_tokens.
