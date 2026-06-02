@@ -1155,7 +1155,7 @@
     "viewHistory": "Verlauf anzeigen",
     "tracedByTitle": "Erstellt von",
     "tracedBySummary": "{calls} Aufrufe · {tokens} Tokens",
-    "usedByTitle": "Verwendet von"
+    "consolidatedByTitle": "Konsolidiert von"
   },
   "documentChunkModal": {
     "documentTitle": "Dokumentdetails",

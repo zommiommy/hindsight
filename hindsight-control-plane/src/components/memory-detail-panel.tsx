@@ -136,7 +136,7 @@ function MemoryTraceRef({ bankId, memoryId }: { bankId: string; memoryId: string
         <div>
           <div className="flex items-center gap-2 text-xs font-bold text-muted-foreground uppercase mb-3">
             <Activity className="h-3.5 w-3.5" />
-            {t("usedByTitle")}
+            {t("consolidatedByTitle")}
           </div>
           <div className="space-y-1">{usedRuns.map(renderRun)}</div>
         </div>

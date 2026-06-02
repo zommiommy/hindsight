@@ -1155,7 +1155,7 @@
     "viewHistory": "View History",
     "tracedByTitle": "Created by",
     "tracedBySummary": "{calls} calls · {tokens} tokens",
-    "usedByTitle": "Used by"
+    "consolidatedByTitle": "Consolidated by"
   },
   "documentChunkModal": {
     "documentTitle": "Document Details",

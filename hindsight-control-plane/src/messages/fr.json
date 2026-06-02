@@ -1155,7 +1155,7 @@
     "viewHistory": "Voir l'historique",
     "tracedByTitle": "Créé par",
     "tracedBySummary": "{calls} appels · {tokens} tokens",
-    "usedByTitle": "Utilisé par"
+    "consolidatedByTitle": "Consolidé par"
   },
   "documentChunkModal": {
     "documentTitle": "Détails du document",

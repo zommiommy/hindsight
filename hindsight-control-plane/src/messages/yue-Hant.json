@@ -1155,7 +1155,7 @@
     "viewHistory": "檢視歷史",
     "tracedByTitle": "建立來源",
     "tracedBySummary": "{calls} 次呼叫 · {tokens} 個權杖",
-    "usedByTitle": "使用來源"
+    "consolidatedByTitle": "整合來源"
   },
   "documentChunkModal": {
     "documentTitle": "文件詳情",
