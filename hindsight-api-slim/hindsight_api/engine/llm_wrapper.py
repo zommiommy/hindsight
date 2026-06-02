@@ -613,9 +613,7 @@ class LLMProvider:
 
             try:
                 raw_config = _get_raw_config()
-                self.gemini_prompt_cache_enabled = bool(
-                    getattr(raw_config, "llm_gemini_prompt_cache_enabled", False)
-                )
+                self.gemini_prompt_cache_enabled = bool(getattr(raw_config, "llm_gemini_prompt_cache_enabled", False))
             except Exception:
                 pass  # Config may not be initialized in test environments
 

@@ -316,3 +316,66 @@ async def test_gemini_llm_uses_cache_when_enabled(monkeypatch):
     )
     assert again == name
     assert fake_create.call_count == 1
+
+
+# ---- Tools: cache key + create wiring -----------------------------------
+
+
+def test_fingerprint_changes_with_tools():
+    """Two prefixes that differ ONLY in tools must hash differently —
+    otherwise a loop that adds a tool would silently reuse a stale
+    cache that doesn't know about it."""
+    tools_a = [
+        {"type": "function", "function": {"name": "search", "description": "search", "parameters": {}}}
+    ]
+    tools_b = [
+        {"type": "function", "function": {"name": "search", "description": "search", "parameters": {}}},
+        {"type": "function", "function": {"name": "fetch", "description": "fetch", "parameters": {}}},
+    ]
+    fp_a = GeminiCacheManager.fingerprint("m", "sys", None, tools=tools_a)
+    fp_b = GeminiCacheManager.fingerprint("m", "sys", None, tools=tools_b)
+    assert fp_a != fp_b
+
+
+def test_fingerprint_stable_under_dict_reordering():
+    """The tools list contains dicts; iteration order of dict keys
+    must not affect the fingerprint (otherwise upstream re-serialisation
+    would produce phantom cache misses)."""
+    tools_1 = [{"type": "function", "function": {"description": "d", "name": "n", "parameters": {"a": 1, "b": 2}}}]
+    tools_2 = [{"function": {"parameters": {"b": 2, "a": 1}, "name": "n", "description": "d"}, "type": "function"}]
+    fp_1 = GeminiCacheManager.fingerprint("m", "sys", None, tools=tools_1)
+    fp_2 = GeminiCacheManager.fingerprint("m", "sys", None, tools=tools_2)
+    assert fp_1 == fp_2
+
+
+@pytest.mark.asyncio
+async def test_get_or_create_passes_tools_to_create():
+    """When tools are provided, the underlying caches.create call
+    must include them so the cached prefix actually contains the tool
+    definitions."""
+    captured = {}
+
+    async def fake_create(*, model, config):
+        captured["model"] = model
+        captured["config_dict"] = config.__dict__ if hasattr(config, "__dict__") else dict(config)
+        return SimpleNamespace(name="cachedContents/with-tools")
+
+    client = MagicMock()
+    client.aio = MagicMock()
+    client.aio.caches = MagicMock()
+    client.aio.caches.create = fake_create
+
+    mgr = GeminiCacheManager(client)
+    tools = [
+        {"type": "function", "function": {"name": "search", "description": "do a search", "parameters": {"type": "object"}}}
+    ]
+    name = await mgr.get_or_create(
+        model="gemini-3.1-flash-lite",
+        system_instruction="You are a helpful tool-using assistant.",
+        tools=tools,
+    )
+    assert name == "cachedContents/with-tools"
+    # The Gemini SDK's CreateCachedContentConfig accepted a `tools` list.
+    cfg = captured["config_dict"]
+    assert "tools" in cfg, f"tools should be in cache config; got keys: {list(cfg.keys())}"
+    assert cfg["tools"], "tools list should be non-empty"

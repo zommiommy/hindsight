@@ -90,7 +90,8 @@ class GeminiCacheManager:
     def fingerprint(
         model: str,
         system_instruction: str,
-        response_schema: Any | None,
+        response_schema: Any | None = None,
+        tools: list[dict[str, Any]] | None = None,
     ) -> str:
         """Stable hash of the cacheable surface.
 
@@ -102,6 +103,13 @@ class GeminiCacheManager:
         for callers (e.g. fact extraction) that rebuild the schema
         class on every request via a builder helper — without the
         normalisation the cache would never hit.
+
+        ``tools`` is the OpenAI-style tools list (each entry has a
+        ``"function"`` dict with name/description/parameters). When
+        supplied, the tool definitions become part of the cache key so a
+        loop that adds or renames a tool gets a fresh cache and doesn't
+        silently use a stale schema. Tools are serialised with
+        ``sort_keys=True`` to neutralise dict-ordering drift.
         """
         hasher = hashlib.sha256()
         hasher.update(model.encode("utf-8"))
@@ -123,6 +131,14 @@ class GeminiCacheManager:
                 hasher.update(json.dumps(response_schema, sort_keys=True).encode("utf-8"))
             except (TypeError, ValueError):
                 hasher.update(repr(response_schema).encode("utf-8"))
+        hasher.update(b"\x00")
+        if tools:
+            try:
+                hasher.update(json.dumps(tools, sort_keys=True).encode("utf-8"))
+            except (TypeError, ValueError):
+                hasher.update(repr(tools).encode("utf-8"))
+        else:
+            hasher.update(b"no-tools")
         return hasher.hexdigest()
 
     async def get_or_create(
@@ -131,15 +147,21 @@ class GeminiCacheManager:
         model: str,
         system_instruction: str,
         response_schema: Any | None = None,
+        tools: list[dict[str, Any]] | None = None,
     ) -> str | None:
         """Return a CachedContent resource name for the given prefix, or
         ``None`` if Gemini rejects the create (prefix too small, model
         does not support caching, etc.).
 
-        ``None`` is a normal, expected return value — the caller falls
+        ``tools`` is the OpenAI-style tools list. When supplied, the tool
+        definitions are baked into the CachedContent so the caller's
+        ``call_with_tools`` doesn't need to resend them on every
+        iteration. Pass ``None`` for non-tool calls.
+
+        ``None`` return is a normal, expected value — the caller falls
         back to an uncached call and the system continues to work.
         """
-        key = self.fingerprint(model, system_instruction, response_schema)
+        key = self.fingerprint(model, system_instruction, response_schema, tools)
 
         async with self._lock:
             entry = self._entries.get(key)
@@ -155,6 +177,7 @@ class GeminiCacheManager:
                     model=model,
                     system_instruction=system_instruction,
                     response_schema=response_schema,
+                    tools=tools,
                 )
             except _CacheNotEligible as e:
                 logger.debug(
@@ -193,6 +216,7 @@ class GeminiCacheManager:
         model: str,
         system_instruction: str,
         response_schema: Any | None,
+        tools: list[dict[str, Any]] | None = None,
     ) -> str | None:
         """Wrap ``client.aio.caches.create`` with the config we want.
 
@@ -210,6 +234,24 @@ class GeminiCacheManager:
         if response_schema is not None:
             config_kwargs["response_schema"] = response_schema
             config_kwargs["response_mime_type"] = "application/json"
+        if tools:
+            # OpenAI-style {"function": {...}} entries must be converted to
+            # Gemini's Tool/FunctionDeclaration shape before caching.
+            gemini_tools = []
+            for tool in tools:
+                func = tool.get("function", {})
+                gemini_tools.append(
+                    genai_types.Tool(
+                        function_declarations=[
+                            genai_types.FunctionDeclaration(
+                                name=func.get("name", ""),
+                                description=func.get("description", ""),
+                                parameters=func.get("parameters"),
+                            )
+                        ]
+                    )
+                )
+            config_kwargs["tools"] = gemini_tools
 
         try:
             cached = await self._client.aio.caches.create(

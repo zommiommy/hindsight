@@ -436,6 +436,7 @@ class GeminiLLM(LLMInterface):
         initial_backoff: float = 1.0,
         max_backoff: float = 30.0,
         tool_choice: str | dict[str, Any] = "auto",
+        cached_content_name: str | None = None,
     ) -> LLMToolCallResult:
         """
         Make a Gemini/VertexAI API call with tool/function calling support.
@@ -450,27 +451,39 @@ class GeminiLLM(LLMInterface):
             initial_backoff: Initial backoff time in seconds.
             max_backoff: Maximum backoff time in seconds.
             tool_choice: How to choose tools (Gemini uses "auto" only).
+            cached_content_name: Optional CachedContent resource name (from
+                ``GeminiCacheManager.get_or_create`` with ``tools=...``). When
+                set, the system_instruction and tool definitions are assumed
+                to live in the cache; this call will skip resending them and
+                the cached prefix is billed at the cached-input rate. The
+                ``tools`` argument is still required (the caller may pass
+                an empty list when the cache holds them) so existing call
+                sites don't break.
 
         Returns:
             LLMToolCallResult with content and/or tool_calls.
         """
         start_time = time.time()
+        using_cache = cached_content_name is not None
 
-        # Convert tools to Gemini format
+        # Convert tools to Gemini format. When the cache is in use, the
+        # tool definitions are baked into the CachedContent at create time
+        # and the SDK rejects re-sending them alongside ``cached_content``.
         gemini_tools = []
-        for tool in tools:
-            func = tool.get("function", {})
-            gemini_tools.append(
-                genai_types.Tool(
-                    function_declarations=[
-                        genai_types.FunctionDeclaration(
-                            name=func.get("name", ""),
-                            description=func.get("description", ""),
-                            parameters=func.get("parameters"),
-                        )
-                    ]
+        if not using_cache:
+            for tool in tools:
+                func = tool.get("function", {})
+                gemini_tools.append(
+                    genai_types.Tool(
+                        function_declarations=[
+                            genai_types.FunctionDeclaration(
+                                name=func.get("name", ""),
+                                description=func.get("description", ""),
+                                parameters=func.get("parameters"),
+                            )
+                        ]
+                    )
                 )
-            )
 
         # Convert messages
         system_instruction = None
@@ -483,6 +496,11 @@ class GeminiLLM(LLMInterface):
             content = msg.get("content", "")
 
             if role == "system":
+                if using_cache:
+                    # System prompt is in the CachedContent; skip in-band so
+                    # we don't duplicate the prefix.
+                    i += 1
+                    continue
                 system_instruction = (system_instruction + "\n\n" + content) if system_instruction else content
                 i += 1
             elif role == "tool":
@@ -530,9 +548,17 @@ class GeminiLLM(LLMInterface):
                 gemini_contents.append(genai_types.Content(role="user", parts=[genai_types.Part(text=content)]))
                 i += 1
 
-        config_kwargs: dict[str, Any] = {"tools": gemini_tools}
-        if system_instruction:
-            config_kwargs["system_instruction"] = system_instruction
+        # When using a cached prefix, the SDK rejects re-sending
+        # system_instruction or tools alongside ``cached_content`` — the
+        # cache IS the prefix. tool_config (mode / allowed_function_names)
+        # is still a per-request decision and stays out of the cache.
+        config_kwargs: dict[str, Any] = {}
+        if using_cache:
+            config_kwargs["cached_content"] = cached_content_name
+        else:
+            config_kwargs["tools"] = gemini_tools
+            if system_instruction:
+                config_kwargs["system_instruction"] = system_instruction
         if temperature is not None:
             config_kwargs["temperature"] = temperature
         # See note in `call`: Gemini's max_output_tokens is the equivalent of
@@ -615,12 +641,18 @@ class GeminiLLM(LLMInterface):
 
                 finish_reason = "tool_calls" if tool_calls else "stop"
 
-                # Extract token usage
+                # Extract token usage. ``cached_content_token_count`` and
+                # ``thoughts_token_count`` are populated on the Gemini 2.5+
+                # family; absent fields are treated as 0.
                 input_tokens = 0
                 output_tokens = 0
+                cached_input_tokens = 0
+                thoughts_tokens = 0
                 if response.usage_metadata:
                     input_tokens = response.usage_metadata.prompt_token_count or 0
                     output_tokens = response.usage_metadata.candidates_token_count or 0
+                    cached_input_tokens = getattr(response.usage_metadata, "cached_content_token_count", 0) or 0
+                    thoughts_tokens = getattr(response.usage_metadata, "thoughts_token_count", 0) or 0
 
                 # Record metrics
                 duration = time.time() - start_time
@@ -633,6 +665,8 @@ class GeminiLLM(LLMInterface):
                     input_tokens=input_tokens,
                     output_tokens=output_tokens,
                     success=True,
+                    cached_input_tokens=cached_input_tokens,
+                    thoughts_tokens=thoughts_tokens,
                 )
 
                 # Record OpenTelemetry span
@@ -693,16 +727,23 @@ class GeminiLLM(LLMInterface):
         self,
         system_instruction: str,
         response_schema: Any | None = None,
+        tools: list[dict[str, Any]] | None = None,
     ) -> str | None:
         """Return a CachedContent resource name for the given prefix, or
         ``None`` if context caching is disabled, the provider doesn't
         support it, or Gemini rejects the create (prefix too small, etc.).
 
+        ``tools`` is the OpenAI-style tools list; pass it when caching a
+        prefix that will be used by ``call_with_tools()``. The fingerprint
+        includes the tool definitions so a loop that swaps a tool gets a
+        fresh cache automatically.
+
         Callers pass the returned name to ``call(cached_content_name=...)``
-        and treat ``None`` as "cache unavailable — use the normal path".
-        That fallback is essential: the system must continue to work if
-        caching is disabled, if Gemini's caching API has an outage, or if
-        the prefix is below the model's minimum cacheable size.
+        or ``call_with_tools(cached_content_name=...)`` and treat ``None``
+        as "cache unavailable — use the normal path". That fallback is
+        essential: the system must continue to work if caching is disabled,
+        if Gemini's caching API has an outage, or if the prefix is below
+        the model's minimum cacheable size.
         """
         if not self._prompt_cache_enabled:
             return None
@@ -718,6 +759,7 @@ class GeminiLLM(LLMInterface):
             model=self.model,
             system_instruction=system_instruction,
             response_schema=response_schema,
+            tools=tools,
         )
 
     async def cleanup(self) -> None:
