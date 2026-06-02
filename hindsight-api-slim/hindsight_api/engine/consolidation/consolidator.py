@@ -361,7 +361,7 @@ async def run_consolidation_job(
 
     # Build a configured LLM wrapper that applies per-bank settings (e.g. safety settings)
     # to every call without leaking across operations.
-    llm_config = memory_engine._consolidation_llm_config.with_config(config)
+    llm_config = memory_engine._consolidation_llm_config.with_config(config, bank_id=bank_id, operation="consolidation")
 
     perf = ConsolidationPerfLog(bank_id)
     max_memories_per_batch = config.consolidation_batch_size
