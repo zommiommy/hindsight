@@ -632,7 +632,7 @@ function LLMRequestChart({ bankId }: { bankId: string }) {
     );
   };
 
-  const toggleBtn = (active: boolean) => (active ? "default" : "outline") as const;
+  const toggleBtn = (active: boolean): "default" | "outline" => (active ? "default" : "outline");
 
   return (
     <Card>
