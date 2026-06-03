@@ -15,6 +15,9 @@ fi
 
 # Enable observations (required for consolidation)
 export HINDSIGHT_API_ENABLE_OBSERVATIONS=true
+# Note: the benchmark uses SyncTaskBackend (inline/serial task execution) and disables
+# auto-consolidation per-bank, so its explicit drain loop is the sole consolidator with no
+# background worker racing it. See benchmarks/obs/obs_benchmark.py for the reasoning.
 
 echo "Running observation duplication benchmark with configuration:"
 echo "  HINDSIGHT_API_LLM_PROVIDER=${HINDSIGHT_API_LLM_PROVIDER:-not set}"

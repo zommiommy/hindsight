@@ -19,6 +19,7 @@ Run with::
     cd hindsight-dev && uv run python -m benchmarks.obs.obs_benchmark
 """
 
+import argparse
 import asyncio
 import json
 import os
@@ -31,6 +32,7 @@ from pathlib import Path
 from hindsight_api.config import DEFAULT_EMBEDDINGS_LOCAL_MODEL, _get_raw_config
 from hindsight_api.engine.consolidation.consolidator import run_consolidation_job
 from hindsight_api.engine.memory_engine import MemoryEngine, fq_table
+from hindsight_api.engine.task_backend import SyncTaskBackend
 from hindsight_api.models import RequestContext
 from rich.console import Console
 from rich.table import Table
@@ -113,12 +115,25 @@ def _score_observations(observations: list[Observation], *, model_name: str, for
     return result
 
 
-async def _run_document(memory: MemoryEngine, dataset: Path, *, model_name: str, force_cpu: bool) -> _DocResult:
+async def _run_document(
+    memory: MemoryEngine, dataset: Path, *, model_name: str, force_cpu: bool, fraction: float, wipe: bool
+) -> _DocResult:
     bank_id = f"obs-bench-{uuid.uuid4().hex[:8]}"
     content = dataset.read_text(encoding="utf-8").rstrip("\n")
+    if fraction < 1.0:
+        # Run only the first `fraction` of the document — lets us scale up incrementally
+        # (1/4 -> 1/2 -> full) instead of always paying the full ~1h drain.
+        content = content[: int(len(content) * fraction)]
     ctx = RequestContext()
+    console.print(f"   bank={bank_id} chars={len(content)}")
 
     await memory.get_bank_profile(bank_id=bank_id, request_context=ctx)
+    # Confine consolidation to our explicit drain loop below so it's the single, well-defined
+    # measurement point: disable retain's auto-consolidation for THIS bank so retain doesn't
+    # also fire a consolidation pass during ingestion. Serial correctness is already guaranteed
+    # by SyncTaskBackend (see main()); this just keeps the drain loop the sole consolidator,
+    # it is not what prevents the race.
+    await memory._config_resolver.update_bank_config(bank_id, {"enable_auto_consolidation": False}, ctx)
     try:
         await memory.retain_async(
             bank_id=bank_id,
@@ -186,7 +201,11 @@ async def _run_document(memory: MemoryEngine, dataset: Path, *, model_name: str,
         result.avg_sources_per_obs = round(sum(r["n_src"] for r in rows) / len(rows), 1) if rows else 0.0
         return result
     finally:
-        await memory.delete_bank(bank_id, request_context=ctx)
+        # Persist by default so the bank can be inspected after the run; --wipe-bank deletes.
+        if wipe:
+            await memory.delete_bank(bank_id, request_context=ctx)
+        else:
+            console.print(f"   [dim]kept bank {bank_id} for inspection (pass --wipe-bank to delete)[/dim]")
 
 
 def _display(results: list[_DocResult]) -> None:
@@ -222,10 +241,24 @@ def _display(results: list[_DocResult]) -> None:
 
 
 async def main() -> None:
+    parser = argparse.ArgumentParser(description="Observation duplication benchmark.")
+    parser.add_argument(
+        "--wipe-bank", action="store_true", help="Delete each bank after measuring (default: keep for inspection)."
+    )
+    parser.add_argument(
+        "--fraction", type=float, default=1.0, help="Run only the first fraction (0-1] of each document (default: 1.0)."
+    )
+    parser.add_argument("--dataset", default=None, help="Run only the dataset whose filename contains this substring.")
+    args = parser.parse_args()
+    if not 0.0 < args.fraction <= 1.0:
+        parser.error("--fraction must be in (0, 1]")
+
     console.print("\n[bold cyan]Observation Duplication Benchmark[/bold cyan]")
     console.print("=" * 80)
 
     datasets = sorted(DATASETS_DIR.glob("*.txt"))
+    if args.dataset:
+        datasets = [d for d in datasets if args.dataset in d.name]
     if not datasets:
         console.print(f"[red]No dataset .txt files found in {DATASETS_DIR}[/red]")
         return
@@ -237,15 +270,30 @@ async def main() -> None:
     config = _get_raw_config()
     config.enable_observations = True
     config.retain_mission = RETAIN_MISSION
+    # Auto-consolidation is disabled per-bank in _run_document so our drain loop is the
+    # sole consolidator (see the comment there).
 
-    console.print(f"\nDatasets: {len(datasets)} | LLM: {os.getenv('HINDSIGHT_API_LLM_MODEL', 'not set')}")
+    db_url = os.getenv("HINDSIGHT_API_DATABASE_URL", "pg0")
+    console.print(
+        f"\nDatasets: {len(datasets)} | LLM: {os.getenv('HINDSIGHT_API_LLM_MODEL', 'not set')} "
+        f"| fraction: {args.fraction} | persist: {not args.wipe_bank} | db: {db_url}"
+    )
 
     memory = MemoryEngine(
-        db_url=os.getenv("HINDSIGHT_API_DATABASE_URL", "pg0"),
+        db_url=db_url,
         memory_llm_provider=os.getenv("HINDSIGHT_API_LLM_PROVIDER", "groq"),
         memory_llm_api_key=os.getenv("HINDSIGHT_API_LLM_API_KEY"),
         memory_llm_model=os.getenv("HINDSIGHT_API_LLM_MODEL", "openai/gpt-oss-120b"),
         memory_llm_base_url=os.getenv("HINDSIGHT_API_LLM_BASE_URL") or None,
+        # SyncTaskBackend runs every submitted task INLINE/serially instead of queuing it
+        # for a background worker poller — and that is what prevents consolidation
+        # corruption here. The default BrokerTaskBackend queues consolidation ops (both
+        # retain's auto-submit AND the consolidator's own round-limit re-submit,
+        # consolidator.py ~L835) that a worker poller runs CONCURRENTLY with our drain loop;
+        # two consolidators mutating the same rows leave facts with both consolidated_at AND
+        # consolidation_failed_at. Inline execution serializes them all, so the drain loop is
+        # the sole consolidator.
+        task_backend=SyncTaskBackend(),
     )
     await memory.initialize()
 
@@ -253,7 +301,9 @@ async def main() -> None:
     try:
         for dataset in datasets:
             console.print(f"\n[cyan]→ {dataset.name}[/cyan]")
-            result = await _run_document(memory, dataset, model_name=model_name, force_cpu=force_cpu)
+            result = await _run_document(
+                memory, dataset, model_name=model_name, force_cpu=force_cpu, fraction=args.fraction, wipe=args.wipe_bank
+            )
             results.append(result)
             console.print(
                 f"  facts={result.facts} consolidated={result.facts_consolidated} "
