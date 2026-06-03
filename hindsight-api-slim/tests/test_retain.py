@@ -2804,6 +2804,16 @@ def test_retain_mission_in_user_preamble_not_cached_prefix():
     assert spec not in prompt_verbose
     assert spec in _retain_mission_preamble(config)
 
+    # The payoff: two banks with DIFFERENT missions produce the IDENTICAL system
+    # prompt → the same cache fingerprint → one shared CachedContent for both,
+    # instead of one cache per mission.
+    config.retain_extraction_mode = "concise"
+    config.retain_mission = "Track project A architecture decisions."
+    prompt_a, _ = _build_extraction_prompt_and_schema(config)
+    config.retain_mission = "Track customer B support incidents."
+    prompt_b, _ = _build_extraction_prompt_and_schema(config)
+    assert prompt_a == prompt_b
+
 
 def test_retain_mission_absent_when_not_set():
     """Test that no FOCUS section appears when retain_mission is not set."""
