@@ -604,7 +604,14 @@ async def run_reflect_agent(
                 scope="reflect_tool_call",
                 tool_choice=iter_tool_choice,
             )
-            if cached_prefix_name is not None:
+            # Gemini rejects ``cached_content`` alongside a per-request
+            # ``tool_config`` (forced tool choice): "CachedContent can not be used
+            # with GenerateContent request setting system_instruction, tools or
+            # tool_config." The forced-sequence iterations set tool_config, so only
+            # the ``auto`` iterations can reference the cache; forced iterations send
+            # the prefix inline. The cache (tools + system prompt) is identical
+            # either way, so this just limits *which* iterations are billed cached.
+            if cached_prefix_name is not None and iter_tool_choice == "auto":
                 ct_kwargs["cached_content_name"] = cached_prefix_name
             result = await llm_config.call_with_tools(**ct_kwargs)
             llm_duration = int((time.time() - llm_start) * 1000)

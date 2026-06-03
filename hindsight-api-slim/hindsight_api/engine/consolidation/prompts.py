@@ -145,3 +145,51 @@ def build_batch_consolidation_prompt(
         f"{_DECISION_GUIDE}\n\n"
         f"{_OUTPUT_SECTION}" + output_language_directive(llm_output_language)
     )
+
+
+def build_consolidation_system_prompt(
+    observations_mission: str | None = None,
+    llm_output_language: str | None = None,
+) -> str:
+    """Stable, cacheable system instruction for batch consolidation.
+
+    This is the byte-identical-across-batches half of the consolidation prompt:
+    mission, processing rules, decision guide, and output format. The per-batch
+    INPUT (new facts + existing observations) and any capacity constraint are
+    sent separately as the user message (see :func:`build_consolidation_input`),
+    so this prefix stays constant within a consolidation run and can be served
+    from a Gemini context cache. Returns the final text (brace-escaped examples
+    already unescaped), so callers use it verbatim as the system message and as
+    the cached prefix.
+    """
+    mission = escape_for_prompt(observations_mission or _DEFAULT_MISSION)
+    template = (
+        "You are a memory consolidation system. Synthesize new facts into "
+        "observations, merging with existing observations when appropriate.\n\n"
+        f"## MISSION\n\n{mission}\n\n"
+        f"{_MISSION_PRIORITY_NOTE}\n\n"
+        f"{_PROCESSING_RULES}\n\n"
+        f"{_DECISION_GUIDE}\n\n"
+        f"{_OUTPUT_SECTION}" + output_language_directive(llm_output_language)
+    )
+    # No {facts_text}/{observations_text} placeholders here — the only braces are
+    # the doubled {{ }} in the OUTPUT examples, which .format() unescapes.
+    return template.format()
+
+
+def build_consolidation_input(
+    facts_text: str,
+    observations_text: str,
+    observation_capacity_note: str | None = None,
+) -> str:
+    """Per-batch user message: the INPUT data plus any capacity constraint.
+
+    Kept separate from :func:`build_consolidation_system_prompt` so the cached
+    system prefix stays batch-stable — the capacity note (which varies as
+    observation slots fill) lives here, not in the cached prefix.
+    """
+    capacity_section = ""
+    if observation_capacity_note:
+        capacity_section = f"## CAPACITY CONSTRAINT\n\n{escape_for_prompt(observation_capacity_note)}\n\n"
+    template = capacity_section + _INPUT_SECTION
+    return template.format(facts_text=facts_text, observations_text=observations_text)

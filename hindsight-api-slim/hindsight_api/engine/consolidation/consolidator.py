@@ -41,7 +41,10 @@ from ..llm_trace import (
 from ..llm_wrapper import sanitize_llm_output
 from ..memory_engine import Budget, fq_table
 from ..retain import embedding_utils
-from .prompts import build_batch_consolidation_prompt
+from .prompts import (
+    build_consolidation_input,
+    build_consolidation_system_prompt,
+)
 
 if TYPE_CHECKING:
     from asyncpg import Connection
@@ -1576,15 +1579,36 @@ async def _consolidate_batch_with_llm(
                 f"(out of {max_observations_per_scope}). Prefer UPDATE over CREATE when possible."
             )
 
-    prompt_template = build_batch_consolidation_prompt(
+    # Split the prompt: a stable system instruction (mission + rules + decision
+    # guide + output format) that is byte-identical across batches, and a
+    # per-batch user message (capacity note + facts + existing observations).
+    # The split lets the system prefix be served from a Gemini context cache —
+    # the capacity note and response_schema (both batch-variable) are kept OUT
+    # of the cached prefix so it never busts within a run.
+    system_prompt = build_consolidation_system_prompt(
         config.observations_mission,
-        observation_capacity_note,
         llm_output_language=getattr(config, "llm_output_language", None),
     )
-    prompt = prompt_template.format(
+    user_content = build_consolidation_input(
         facts_text=facts_lines,
         observations_text=observations_text,
+        observation_capacity_note=observation_capacity_note,
     )
+
+    # Opt into context caching of the stable system prefix when the provider
+    # supports it (gemini/vertexai with the flag on). response_schema is NOT
+    # passed to the fingerprint: it varies per batch (max_creates) but is not
+    # part of the cached prefix, so keying on it would needlessly bust the cache.
+    cached_prefix_name: str | None = None
+    provider_impl = getattr(llm_config, "_provider_impl", None)
+    if provider_impl is not None and hasattr(provider_impl, "get_or_create_cached_prefix"):
+        try:
+            cached_prefix_name = await provider_impl.get_or_create_cached_prefix(
+                system_instruction=system_prompt,
+            )
+        except Exception:
+            logger.exception("Consolidation cache prefix lookup failed; falling back to uncached call")
+            cached_prefix_name = None
 
     # Use a constrained response model when observation limit is active
     response_model = _build_response_model(max_creates=remaining_observation_slots)
@@ -1605,12 +1629,17 @@ async def _consolidate_batch_with_llm(
     for attempt in range(1, max_attempts + 1):
         try:
             call_kwargs: dict[str, Any] = {
-                "messages": [{"role": "user", "content": prompt}],
+                "messages": [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_content},
+                ],
                 "response_format": response_model,
                 "scope": "consolidation",
             }
             if inner_max_retries is not None:
                 call_kwargs["max_retries"] = inner_max_retries
+            if cached_prefix_name is not None:
+                call_kwargs["cached_content_name"] = cached_prefix_name
             response: _ConsolidationBatchResponse = await llm_config.call(**call_kwargs)
             # Defensive truncation: some LLM providers may not enforce JSON schema max_length
             creates = response.creates
@@ -1627,7 +1656,7 @@ async def _consolidate_batch_with_llm(
                 updates=updates,
                 deletes=response.deletes,
                 obs_count=len(union_observations),
-                prompt_chars=len(prompt),
+                prompt_chars=len(system_prompt) + len(user_content),
             )
         except Exception as exc:
             last_exc = exc
@@ -1639,7 +1668,9 @@ async def _consolidate_batch_with_llm(
         f"[CONSOLIDATION] LLM batch call failed after {max_attempts} attempts for {batch_label}, "
         f"skipping batch. Last error: {last_exc}"
     )
-    return _BatchLLMResult(obs_count=len(union_observations), prompt_chars=len(prompt), failed=True)
+    return _BatchLLMResult(
+        obs_count=len(union_observations), prompt_chars=len(system_prompt) + len(user_content), failed=True
+    )
 
 
 async def _create_observation_directly(
