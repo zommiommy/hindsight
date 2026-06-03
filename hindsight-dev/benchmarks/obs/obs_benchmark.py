@@ -249,6 +249,11 @@ async def main() -> None:
         "--fraction", type=float, default=1.0, help="Run only the first fraction (0-1] of each document (default: 1.0)."
     )
     parser.add_argument("--dataset", default=None, help="Run only the dataset whose filename contains this substring.")
+    parser.add_argument(
+        "--output",
+        default=None,
+        help="Also write the result JSON to this path (used by CI to publish to the perf dashboard).",
+    )
     args = parser.parse_args()
     if not 0.0 < args.fraction <= 1.0:
         parser.error("--fraction must be in (0, 1]")
@@ -317,39 +322,48 @@ async def main() -> None:
     _display(results)
 
     total_obs = sum(r.observations for r in results)
+    total_exact = sum(r.exact_redundant for r in results)
+    by_threshold = {
+        str(threshold): sum(m.redundant_observations for r in results for m in r.near if m.threshold == threshold)
+        for threshold in NEAR_THRESHOLDS
+    }
+    # Headline metric for the trend dashboard: near-duplicate rate at the tightest
+    # threshold (lower is better). NEAR_THRESHOLDS[0] is the strictest (0.97).
+    headline_threshold = NEAR_THRESHOLDS[0]
+    overall_duplication_rate = (by_threshold[str(headline_threshold)] / total_obs) if total_obs else 0.0
     aggregate = {
         "total_observations": total_obs,
-        "total_exact_redundant": sum(r.exact_redundant for r in results),
-        "by_threshold": {
-            str(threshold): {
-                "redundant_observations": sum(
-                    m.redundant_observations for r in results for m in r.near if m.threshold == threshold
-                ),
-            }
-            for threshold in NEAR_THRESHOLDS
-        },
+        "total_exact_redundant": total_exact,
+        "overall_duplication_rate": overall_duplication_rate,
+        "overall_exact_rate": (total_exact / total_obs) if total_obs else 0.0,
+        "by_threshold": {str(t): {"redundant_observations": by_threshold[str(t)]} for t in NEAR_THRESHOLDS},
     }
+
+    # Top-level headline fields mirror locomo's `overall_accuracy` so the publish
+    # script and dashboard manifest can read a single number per run.
+    payload = {
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "overall_duplication_rate": overall_duplication_rate,
+        "duplication_threshold": headline_threshold,
+        "total_observations": total_obs,
+        "config": {
+            "llm_provider": os.getenv("HINDSIGHT_API_LLM_PROVIDER"),
+            "llm_model": os.getenv("HINDSIGHT_API_LLM_MODEL"),
+            "embedding_model": model_name,
+            "near_thresholds": list(NEAR_THRESHOLDS),
+            "fraction": args.fraction,
+        },
+        "documents": [asdict(r) for r in results],
+        "aggregate": aggregate,
+    }
+    serialized = json.dumps(payload, indent=2, default=str)
 
     output_dir = Path("benchmarks/results")
     output_dir.mkdir(parents=True, exist_ok=True)
     output_file = output_dir / f"obs_benchmark_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}.json"
-    output_file.write_text(
-        json.dumps(
-            {
-                "timestamp": datetime.now(timezone.utc).isoformat(),
-                "config": {
-                    "llm_provider": os.getenv("HINDSIGHT_API_LLM_PROVIDER"),
-                    "llm_model": os.getenv("HINDSIGHT_API_LLM_MODEL"),
-                    "embedding_model": model_name,
-                    "near_thresholds": list(NEAR_THRESHOLDS),
-                },
-                "documents": [asdict(r) for r in results],
-                "aggregate": aggregate,
-            },
-            indent=2,
-            default=str,
-        )
-    )
+    output_file.write_text(serialized)
+    if args.output:
+        Path(args.output).write_text(serialized)
     console.print(f"\n[green]✓[/green] Results saved to: {output_file}\n")
 
 
