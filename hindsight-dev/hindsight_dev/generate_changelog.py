@@ -51,6 +51,7 @@ INTEGRATIONS: dict[str, IntegrationMeta] = {
     "claude-code": IntegrationMeta("hindsight-memory", "Claude Code"),
     "llamaindex": IntegrationMeta("hindsight-llamaindex", "LlamaIndex"),
     "codex": IntegrationMeta("hindsight-codex", "Codex"),
+    "cline": IntegrationMeta("hindsight-cline", "Cline"),
     "autogen": IntegrationMeta("hindsight-autogen", "AutoGen"),
     "paperclip": IntegrationMeta("@vectorize-io/hindsight-paperclip", "Paperclip"),
     "opencode": IntegrationMeta("@vectorize-io/opencode-hindsight", "OpenCode"),

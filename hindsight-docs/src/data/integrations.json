@@ -131,6 +131,16 @@
       "icon": "/img/icons/openai.png"
     },
     {
+      "id": "cline",
+      "name": "Cline",
+      "description": "Automatic long-term memory for the Cline coding agent via lifecycle hooks (no MCP). Recalls relevant context before each task and retains what happened after.",
+      "type": "official",
+      "by": "hindsight",
+      "category": "tool",
+      "link": "/sdks/integrations/cline",
+      "icon": "/img/icons/cline.svg"
+    },
+    {
       "id": "openclaw",
       "name": "OpenClaw",
       "description": "Integrate Hindsight with OpenClaw to add memory capabilities to Claude-based agent workflows.",
