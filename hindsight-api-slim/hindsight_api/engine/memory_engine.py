@@ -6588,28 +6588,27 @@ class MemoryEngine(MemoryEngineInterface):
                 bank_id,
             )
 
-            # Link stats — filter on ml.bank_id (indexed) instead of joining through mu.bank_id.
-            # With the idx_memory_links_bank_link_type index this turns a full-table hash join
-            # into an indexed scan + PK lookups.  link_counts and link_counts_by_fact_type are
-            # derived in Python from the breakdown.
-            link_breakdown_stats = await conn.fetch(
+            # Link counts — group by link_type on memory_links only. The
+            # previous shape joined memory_links -> memory_units to produce a
+            # (fact_type, link_type) matrix; an audit of every caller (UIs,
+            # MCP tool, SDK clients, integrations) found that the matrix and
+            # its fact-type rollup are declared in response types but never
+            # read. Dropping the join removes a multi-second per-call hash
+            # scan on large banks. The response keys link_breakdown and
+            # link_counts_by_fact_type are preserved (empty) below so SDKs
+            # and openapi-generated clients do not break.
+            link_count_rows = await conn.fetch(
                 f"""
-                SELECT mu.fact_type, ml.link_type, COUNT(*) as count
-                FROM {fq_table("memory_links")} ml
-                JOIN {fq_table("memory_units")} mu ON ml.from_unit_id = mu.id
-                WHERE ml.bank_id = $1
-                GROUP BY mu.fact_type, ml.link_type
+                SELECT link_type, COUNT(*) as count
+                FROM {fq_table("memory_links")}
+                WHERE bank_id = $1
+                GROUP BY link_type
                 """,
                 bank_id,
             )
 
-            link_counts: dict[str, int] = {}
+            link_counts: dict[str, int] = {row["link_type"]: row["count"] for row in link_count_rows}
             link_counts_by_fact_type: dict[str, int] = {}
-            for row in link_breakdown_stats:
-                link_counts[row["link_type"]] = link_counts.get(row["link_type"], 0) + row["count"]
-                link_counts_by_fact_type[row["fact_type"]] = (
-                    link_counts_by_fact_type.get(row["fact_type"], 0) + row["count"]
-                )
 
             ops_stats = await conn.fetch(
                 f"""
@@ -6644,11 +6643,13 @@ class MemoryEngine(MemoryEngineInterface):
                 "bank_id": bank_id,
                 "node_counts": node_counts,
                 "link_counts": link_counts,
+                # link_counts_by_fact_type and link_breakdown are retained in
+                # the response shape but no longer populated — no consumer reads
+                # them and producing them required the expensive
+                # memory_links⇒memory_units join. See the get_bank_stats
+                # join-removal note above for the audit.
                 "link_counts_by_fact_type": link_counts_by_fact_type,
-                "link_breakdown": [
-                    {"fact_type": row["fact_type"], "link_type": row["link_type"], "count": row["count"]}
-                    for row in link_breakdown_stats
-                ],
+                "link_breakdown": [],
                 "operations": ops_by_status,
                 "total_documents": doc_count_row["count"] if doc_count_row else 0,
                 "last_consolidated_at": last_consolidated_at.isoformat() if last_consolidated_at else None,
