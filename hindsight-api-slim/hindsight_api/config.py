@@ -500,10 +500,20 @@ ENV_RECALL_BUDGET_ADAPTIVE_HIGH = "HINDSIGHT_API_RECALL_BUDGET_ADAPTIVE_HIGH"
 ENV_RECALL_BUDGET_MIN = "HINDSIGHT_API_RECALL_BUDGET_MIN"
 ENV_RECALL_BUDGET_MAX = "HINDSIGHT_API_RECALL_BUDGET_MAX"
 
+# Recall candidate gating (per-source cap + BM25 score floor)
+ENV_BM25_MIN_SCORE = "HINDSIGHT_API_BM25_MIN_SCORE"
+ENV_RECALL_MAX_CANDIDATES_PER_SOURCE = "HINDSIGHT_API_RECALL_MAX_CANDIDATES_PER_SOURCE"
+
 # Audit log settings
 ENV_AUDIT_LOG_ENABLED = "HINDSIGHT_API_AUDIT_LOG_ENABLED"
 ENV_AUDIT_LOG_ACTIONS = "HINDSIGHT_API_AUDIT_LOG_ACTIONS"
 ENV_AUDIT_LOG_RETENTION_DAYS = "HINDSIGHT_API_AUDIT_LOG_RETENTION_DAYS"
+
+# LLM request tracing settings
+ENV_LLM_TRACE_ENABLED = "HINDSIGHT_API_LLM_TRACE_ENABLED"
+ENV_LLM_TRACE_SCOPES = "HINDSIGHT_API_LLM_TRACE_SCOPES"
+ENV_LLM_TRACE_RETENTION_DAYS = "HINDSIGHT_API_LLM_TRACE_RETENTION_DAYS"
+ENV_LLM_TRACE_MAX_CHARS = "HINDSIGHT_API_LLM_TRACE_MAX_CHARS"
 
 # Disposition settings
 ENV_DISPOSITION_SKEPTICISM = "HINDSIGHT_API_DISPOSITION_SKEPTICISM"
@@ -599,6 +609,14 @@ DEFAULT_RERANKER_LITELLM_TIMEOUT = 60.0
 DEFAULT_RERANKER_LITELLM_SDK_TIMEOUT = 60.0
 DEFAULT_RERANKER_GOOGLE_TIMEOUT = 60.0
 DEFAULT_RERANKER_MAX_CANDIDATES = 300
+# Minimum BM25 score a row must exceed to enter fusion. 0.0 gates out
+# zero-score (non-matching) rows on backends — notably VectorChord — whose
+# operator ranks every document rather than pre-filtering to term matches.
+DEFAULT_BM25_MIN_SCORE = 0.0
+# Per-source candidate cap applied to each retrieval arm (semantic, BM25, graph,
+# temporal) before RRF, so a single over-expanding backend cannot fill the
+# reranker's global candidate budget on its own. 0 disables the cap.
+DEFAULT_RECALL_MAX_CANDIDATES_PER_SOURCE = 0
 DEFAULT_RERANKER_FLASHRANK_MODEL = "ms-marco-MiniLM-L-12-v2"  # Best balance of speed and quality
 DEFAULT_RERANKER_FLASHRANK_CACHE_DIR = None  # Use default cache directory
 DEFAULT_RERANKER_FLASHRANK_CPU_MEM_ARENA = False  # Disable ONNX CPU memory arena to bound RSS
@@ -795,6 +813,12 @@ DEFAULT_METRICS_INCLUDE_BANK_ID = False  # Disabled by default to avoid high-car
 DEFAULT_AUDIT_LOG_ENABLED = False  # Disabled by default
 DEFAULT_AUDIT_LOG_ACTIONS = ""  # Empty = audit all eligible actions
 DEFAULT_AUDIT_LOG_RETENTION_DAYS = -1  # -1 = keep forever
+
+# LLM request tracing defaults
+DEFAULT_LLM_TRACE_ENABLED = False  # Disabled by default
+DEFAULT_LLM_TRACE_SCOPES = ""  # Empty = trace all call scopes
+DEFAULT_LLM_TRACE_RETENTION_DAYS = -1  # -1 = keep forever
+DEFAULT_LLM_TRACE_MAX_CHARS = 50000  # Truncate stored input/output beyond this many chars
 
 # Default MCP tool descriptions (can be customized via env vars)
 DEFAULT_MCP_RETAIN_DESCRIPTION = """Store important information to long-term memory.
@@ -1169,6 +1193,8 @@ class HindsightConfig:
     reranker_tei_max_concurrent: int
     reranker_tei_http_timeout: float
     reranker_max_candidates: int
+    bm25_min_score: float
+    recall_max_candidates_per_source: int
     reranker_cohere_api_key: str | None
     reranker_cohere_model: str
     reranker_cohere_base_url: str | None
@@ -1359,6 +1385,12 @@ class HindsightConfig:
     audit_log_enabled: bool  # Master switch for audit logging
     audit_log_actions: list[str]  # Allowlist of action types (empty = all)
     audit_log_retention_days: int  # -1 = keep forever, >0 = delete after N days
+
+    # LLM request tracing configuration (static - server-level only)
+    llm_trace_enabled: bool  # Master switch for per-bank LLM request tracing
+    llm_trace_scopes: list[str]  # Allowlist of call scopes to trace (empty = all)
+    llm_trace_retention_days: int  # -1 = keep forever, >0 = delete after N days
+    llm_trace_max_chars: int  # Truncate stored input/output beyond this many chars
 
     # Webhook configuration (static - server-level only, not per-bank)
     webhook_url: str | None  # Global webhook URL (None = disabled)
@@ -1889,6 +1921,10 @@ class HindsightConfig:
                 os.getenv(ENV_RERANKER_TEI_HTTP_TIMEOUT, str(DEFAULT_RERANKER_TEI_HTTP_TIMEOUT))
             ),
             reranker_max_candidates=int(os.getenv(ENV_RERANKER_MAX_CANDIDATES, str(DEFAULT_RERANKER_MAX_CANDIDATES))),
+            bm25_min_score=float(os.getenv(ENV_BM25_MIN_SCORE, str(DEFAULT_BM25_MIN_SCORE))),
+            recall_max_candidates_per_source=int(
+                os.getenv(ENV_RECALL_MAX_CANDIDATES_PER_SOURCE, str(DEFAULT_RECALL_MAX_CANDIDATES_PER_SOURCE))
+            ),
             # Cohere reranker (with backward-compatible fallback to shared API key)
             reranker_cohere_api_key=os.getenv(ENV_RERANKER_COHERE_API_KEY) or os.getenv(ENV_COHERE_API_KEY),
             reranker_cohere_model=os.getenv(ENV_RERANKER_COHERE_MODEL, DEFAULT_RERANKER_COHERE_MODEL),
@@ -2196,6 +2232,15 @@ class HindsightConfig:
             audit_log_retention_days=int(
                 os.getenv(ENV_AUDIT_LOG_RETENTION_DAYS, str(DEFAULT_AUDIT_LOG_RETENTION_DAYS))
             ),
+            # LLM request tracing configuration (static, server-level only)
+            llm_trace_enabled=os.getenv(ENV_LLM_TRACE_ENABLED, str(DEFAULT_LLM_TRACE_ENABLED)).lower() == "true",
+            llm_trace_scopes=[
+                s.strip() for s in os.getenv(ENV_LLM_TRACE_SCOPES, DEFAULT_LLM_TRACE_SCOPES).split(",") if s.strip()
+            ],
+            llm_trace_retention_days=int(
+                os.getenv(ENV_LLM_TRACE_RETENTION_DAYS, str(DEFAULT_LLM_TRACE_RETENTION_DAYS))
+            ),
+            llm_trace_max_chars=int(os.getenv(ENV_LLM_TRACE_MAX_CHARS, str(DEFAULT_LLM_TRACE_MAX_CHARS))),
             # Webhook configuration (static, server-level only)
             webhook_url=os.getenv(ENV_WEBHOOK_URL) or DEFAULT_WEBHOOK_URL,
             webhook_secret=os.getenv(ENV_WEBHOOK_SECRET) or DEFAULT_WEBHOOK_SECRET,

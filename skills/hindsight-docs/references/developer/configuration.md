@@ -842,6 +842,8 @@ For advanced authentication (JWT, OAuth, multi-tenant schemas), implement a cust
 | `HINDSIGHT_API_RECALL_CONNECTION_BUDGET` | Max concurrent DB connections per recall operation | `4` |
 | `HINDSIGHT_API_RECALL_MAX_QUERY_TOKENS` | Maximum token length of a recall query; requests exceeding this limit are rejected with HTTP 400 | `500` |
 | `HINDSIGHT_API_RERANKER_MAX_CANDIDATES` | Max candidates to rerank per recall (RRF pre-filters the rest) | `300` |
+| `HINDSIGHT_API_BM25_MIN_SCORE` | Minimum BM25 score a row must exceed to enter fusion. Gates out zero-score, non-matching rows on backends (notably `vchord`) whose operator ranks every document instead of pre-filtering to query-term matches. `0` keeps only genuine term matches; raise it to require stronger matches. | `0` |
+| `HINDSIGHT_API_RECALL_MAX_CANDIDATES_PER_SOURCE` | Cap on candidates each retrieval source (semantic, BM25, graph, temporal) contributes to RRF, applied before the global reranker cap. Prevents one over-expanding backend from filling the reranker budget on its own. `0` disables the cap. | `0` |
 | `HINDSIGHT_API_MENTAL_MODEL_REFRESH_CONCURRENCY` | Max concurrent mental model refreshes | `8` |
 | `HINDSIGHT_API_ENABLE_MENTAL_MODEL_HISTORY` | Track history of content changes to each mental model (previous content + timestamp). Disable to reduce storage if audit trails are not needed. | `true` |
 | `HINDSIGHT_API_MENTAL_MODEL_HISTORY_MAX_ENTRIES` | Max entries retained in the per-mental-model history jsonb array. Older entries are dropped at write time. Prevents the array from crossing Postgres's hard 256MB jsonb size limit (which would otherwise make further UPDATEs to the row fail with SQLSTATE 54000). Each entry stores only the slim `{based_on}` slice of the prior `reflect_response` (the only field consumed by the control-plane UI's history view) so per-row size stays bounded and HOT updates apply. | `50` |
@@ -1429,6 +1431,21 @@ Audit logging captures mutating operations (retain, recall, reflect, bank config
 | `HINDSIGHT_API_AUDIT_LOG_ENABLED` | Master switch for audit logging. Must be `true` for any audit events to be written. | `false` |
 | `HINDSIGHT_API_AUDIT_LOG_ACTIONS` | Comma-separated allowlist of action types to audit (empty = all eligible actions) | `""` |
 | `HINDSIGHT_API_AUDIT_LOG_RETENTION_DAYS` | Number of days to retain audit log entries. `-1` = keep forever. | `-1` |
+
+### LLM Request Tracing
+
+LLM request tracing records every LLM call Hindsight makes — for retain, reflect, and consolidation — into an `llm_requests` table, queryable per bank via the `/llm-requests` endpoint. Each row captures the input messages, the model output, token usage (input / output / cached / total, taken from the provider response), finish reason, provider/model, timing, and caller metadata. **Failed calls are recorded too** (`status = "error"` with the error message), so the table is useful for debugging what the LLM is doing and why a call failed. Capture is wired into the OpenTelemetry GenAI recording path (the same `record_llm_call` hook used for OTLP span export), so it stays consistent with the provider-reported request details.
+
+**LLM request tracing is disabled by default.** With `HINDSIGHT_API_LLM_TRACE_ENABLED=false`, the `llm_requests` table stays empty and `/llm-requests` returns `{"total": 0, "items": []}` regardless of activity. Set the flag to `true` and restart the API to start capturing calls.
+
+> **Note:** Traced rows contain the full prompt and model output, which may include sensitive memory content and can be large. Keep tracing disabled in production unless you need it, and use `HINDSIGHT_API_LLM_TRACE_MAX_CHARS` to bound how much of each payload is stored.
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `HINDSIGHT_API_LLM_TRACE_ENABLED` | Master switch for LLM request tracing. Must be `true` for any calls to be recorded. | `false` |
+| `HINDSIGHT_API_LLM_TRACE_SCOPES` | Comma-separated allowlist of call scopes to trace (e.g. `retain_extract_facts,reflect`; empty = all scopes) | `""` |
+| `HINDSIGHT_API_LLM_TRACE_RETENTION_DAYS` | Number of days to retain trace rows. `-1` = keep forever. | `-1` |
+| `HINDSIGHT_API_LLM_TRACE_MAX_CHARS` | Truncate stored input/output beyond this many characters (keeps the row, stores a truncated preview). | `50000` |
 
 ### Programmatic Configuration
 

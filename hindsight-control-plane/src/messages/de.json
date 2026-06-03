@@ -74,6 +74,8 @@
     "auditLogs": "Audit-Protokolle",
     "webhooksDescription": "Verwalten Sie Webhook-Endpunkte, um Ereignisbenachrichtigungen von dieser Speicherbank zu empfangen.",
     "auditLogsDescription": "Zeigen Sie das Audit-Protokoll aller Operationen an, die auf dieser Speicherbank durchgeführt wurden.",
+    "llmRequests": "LLM Requests",
+    "llmRequestsDescription": "Verfolgen Sie jeden LLM-Aufruf, der für diese Speicherbank durchgeführt wurde, einschließlich Fehlern.",
     "recallAnalyzer": "Recall-Analysator",
     "recallAnalyzerDescription": "Analysieren Sie den Speicher-Recall mit detaillierten Trace-Informationen und Abrufmethoden.",
     "reflect": "Reflect",
@@ -403,7 +405,56 @@
     "subBatchesCount": "Teilbatches ({count})",
     "rawPayload": "Rohdaten-Payload",
     "loadRaw": "Rohdaten laden",
-    "rawPayloadHelp": "Zeigt die vollständigen Parameter, mit denen der Vorgang eingereicht wurde (kann groß sein)."
+    "rawPayloadHelp": "Zeigt die vollständigen Parameter, mit denen der Vorgang eingereicht wurde (kann groß sein).",
+    "operationCount": "{count} Vorgänge",
+    "unknown": "Unbekannt",
+    "notAvailable": "N/V",
+    "operationDetailsLoadError": "Vorgangsdetails konnten nicht geladen werden",
+    "status": {
+      "all": "Alle",
+      "pending": "Ausstehend",
+      "processing": "In Bearbeitung",
+      "completed": "Abgeschlossen",
+      "failed": "Fehlgeschlagen",
+      "cancelled": "Abgebrochen"
+    },
+    "operationType": {
+      "all": "Alle Typen",
+      "retain": "Retain",
+      "consolidation": "Konsolidierung",
+      "refreshMentalModel": "Mental-Model-Aktualisierung",
+      "fileConvertRetain": "Datei konvertieren und Retain",
+      "webhookDelivery": "Webhook-Zustellung",
+      "graphMaintenance": "Graph-Wartung"
+    },
+    "table": {
+      "id": "Vorgangs-ID",
+      "type": "Typ",
+      "created": "Erstellt",
+      "status": "Status",
+      "index": "Index",
+      "items": "Elemente"
+    },
+    "action": {
+      "cancel": "Abbrechen",
+      "retry": "Wiederholen"
+    },
+    "pagination": "Zeige {start}-{end} von {total}",
+    "paginationPrevious": "Zurück",
+    "paginationNext": "Weiter",
+    "emptyState": "Keine Vorgänge",
+    "emptyStateWithStatus": "Keine Vorgänge mit Status {status}",
+    "field": {
+      "status": "Status",
+      "type": "Typ",
+      "created": "Erstellt",
+      "updated": "Aktualisiert",
+      "completed": "Abgeschlossen"
+    },
+    "metadata": "Metadaten",
+    "error": "Fehler",
+    "rawPayloadParentHelp": "Dies ist ein übergeordneter Vorgang: Die Rohdaten-Payload wird in jedem Teilbatch gespeichert. Öffnen Sie einen untergeordneten Vorgang, um seine Payload zu prüfen.",
+    "rawPayloadEmpty": "Für diesen Vorgang ist keine Rohdaten-Payload gespeichert."
   },
   "dataView": {
     "loadingMemories": "Erinnerungen werden geladen...",
@@ -552,6 +603,8 @@
     "tagsInputPlaceholder": "tag1, tag2, tag3",
     "labelEventDate": "Ereignisdatum",
     "memoryCompositionTitle": "Speicherzusammensetzung",
+    "retainTracesTitle": "Retain-Traces",
+    "retainTracesSummary": "{calls, plural, one {# Aufruf} other {# Aufrufe}} · {tokens} Tokens",
     "loadingChunks": "Fragmente werden geladen...",
     "noChunksFound": "Keine Fragmente für dieses Dokument gefunden",
     "clickChunksTabToLoad": "Klicken Sie auf den Tab „Fragmente“, um Fragmente zu laden"
@@ -948,6 +1001,73 @@
     "detailMetadata": "Metadaten",
     "entryCount": "{count, plural, one {# Eintrag} other {# Einträge}}"
   },
+  "llmRequestsView": {
+    "callVolume": "Aufrufvolumen",
+    "tokenVolume": "Token-Volumen",
+    "metricCalls": "Aufrufe",
+    "metricTokens": "Tokens",
+    "tokenModeTotal": "Gesamt",
+    "tokenModeBreakdown": "Aufschlüsselung",
+    "cumulative": "Kumulativ",
+    "tokensInput": "Eingabe",
+    "tokensOutput": "Ausgabe",
+    "tokensCached": "Zwischengespeichert",
+    "tokensTotal": "Gesamt",
+    "tableHeaderTokens": "Tokens",
+    "chartLoading": "Wird geladen...",
+    "chartNoData": "Keine Daten für diesen Zeitraum",
+    "statusAll": "Alle Status",
+    "statusSuccess": "Erfolg",
+    "statusError": "Fehler",
+    "operationAll": "Alle Operationen",
+    "operationRetain": "Retain",
+    "operationReflect": "Reflect",
+    "operationConsolidation": "Konsolidierung",
+    "operationRefreshMentalModel": "Mentales Modell aktualisieren",
+    "periodToday": "Heute",
+    "periodLast7Days": "Letzte 7 Tage",
+    "periodLast30Days": "Letzte 30 Tage",
+    "dateRangeAll": "Gesamter Zeitraum",
+    "dateRangeLastHour": "Letzte Stunde",
+    "dateRangeLast24Hours": "Letzte 24 Stunden",
+    "dateRangeLast7Days": "Letzte 7 Tage",
+    "dateRangeLast30Days": "Letzte 30 Tage",
+    "refresh": "Aktualisieren",
+    "tableHeaderTime": "Zeit",
+    "tableHeaderOperation": "Operation",
+    "tableHeaderScope": "Scope",
+    "tableHeaderStatus": "Status",
+    "tableHeaderDuration": "Dauer",
+    "tableLoading": "Wird geladen...",
+    "tableNoRequests": "Keine LLM Requests gefunden",
+    "paginationPage": "Seite {current} von {total}",
+    "previous": "Vorherige",
+    "next": "Nächste",
+    "detailDialogTitle": "LLM Request: {operation}",
+    "detailOperation": "Operation:",
+    "detailScope": "Scope:",
+    "detailProvider": "Provider:",
+    "detailModel": "Modell:",
+    "detailStatus": "Status:",
+    "detailStarted": "Gestartet:",
+    "detailDuration": "Dauer:",
+    "detailInput": "Eingabe",
+    "detailOutput": "Ausgabe",
+    "detailError": "Fehler",
+    "detailLlmInfo": "LLM-Info",
+    "detailMetadata": "Metadaten",
+    "detailTrace": "Trace:",
+    "detailSpan": "Span:",
+    "detailParentSpan": "Übergeordneter Span:",
+    "detailViewRun": "Alle Aufrufe in diesem Lauf anzeigen",
+    "traceFilterActive": "Vorgangslauf:",
+    "traceFilterClear": "Löschen",
+    "groupByRun": "Gruppieren",
+    "groupByRunHint": "LLM-Aufrufe nach Vorgangsausführung gruppieren",
+    "entryCount": "{count, plural, one {# Eintrag} other {# Einträge}}",
+    "memoriesCreated": "Erstellte Erinnerungen ({count}):",
+    "memoriesSource": "Quell-Erinnerungen ({count}):"
+  },
   "observationHistory": {
     "unchanged": "unverändert",
     "new": "neu",
@@ -1081,7 +1201,10 @@
     "sourceMentioned": "Erwähnt",
     "viewDocumentButton": "Dokument ansehen",
     "viewChunkButton": "Block ansehen",
-    "viewHistory": "Verlauf anzeigen"
+    "viewHistory": "Verlauf anzeigen",
+    "tracedByTitle": "Erstellt von",
+    "tracedBySummary": "{calls} Aufrufe · {tokens} Tokens",
+    "consolidatedByTitle": "Konsolidiert von"
   },
   "documentChunkModal": {
     "documentTitle": "Dokumentdetails",
@@ -1210,7 +1333,8 @@
     "legendMany": "viele",
     "linkTypeSemantic": "semantisch",
     "linkTypeTemporal": "zeitlich",
-    "linkTypeEntity": "Entität"
+    "linkTypeEntity": "Entität",
+    "linkTypeCausal": "kausal"
   },
   "metadata": {
     "title": "Hindsight Cloud",
@@ -1406,6 +1530,10 @@
       "auditLogs": {
         "list": "Audit-Protokolle konnten nicht aufgelistet werden",
         "stats": "Audit-Protokollstatistiken konnten nicht abgerufen werden"
+      },
+      "llmRequests": {
+        "list": "LLM Requests konnten nicht aufgelistet werden",
+        "stats": "LLM Request-Statistiken konnten nicht abgerufen werden"
       },
       "tags": {
         "list": "Tags konnten nicht aufgelistet werden"
