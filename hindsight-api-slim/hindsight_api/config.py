@@ -410,6 +410,10 @@ ENV_FILE_CONVERSION_MAX_BATCH_SIZE = "HINDSIGHT_API_FILE_CONVERSION_MAX_BATCH_SI
 ENV_ENABLE_FILE_UPLOAD_API = "HINDSIGHT_API_ENABLE_FILE_UPLOAD_API"
 ENV_FILE_DELETE_AFTER_RETAIN = "HINDSIGHT_API_FILE_DELETE_AFTER_RETAIN"
 
+# Document transfer (export/import documents between banks without re-running the LLM)
+ENV_ENABLE_DOCUMENT_EXPORT_API = "HINDSIGHT_API_ENABLE_DOCUMENT_EXPORT_API"
+ENV_ENABLE_DOCUMENT_IMPORT_API = "HINDSIGHT_API_ENABLE_DOCUMENT_IMPORT_API"
+
 # Observations settings (consolidated knowledge from facts)
 ENV_ENABLE_OBSERVATIONS = "HINDSIGHT_API_ENABLE_OBSERVATIONS"
 ENV_ENABLE_AUTO_CONSOLIDATION = "HINDSIGHT_API_ENABLE_AUTO_CONSOLIDATION"
@@ -478,6 +482,7 @@ WORKER_SLOT_RESERVATION_TYPES: dict[str, tuple[str, int]] = {
     "file_convert_retain": ("HINDSIGHT_API_WORKER_FILE_CONVERT_RETAIN_MAX_SLOTS", 0),
     "refresh_mental_model": ("HINDSIGHT_API_WORKER_REFRESH_MENTAL_MODEL_MAX_SLOTS", 0),
     "graph_maintenance": ("HINDSIGHT_API_WORKER_GRAPH_MAINTENANCE_MAX_SLOTS", 0),
+    "import_documents": ("HINDSIGHT_API_WORKER_IMPORT_DOCUMENTS_MAX_SLOTS", 0),
 }
 ENV_WORKER_CONSOLIDATION_BANK_PRIORITY = "HINDSIGHT_API_WORKER_CONSOLIDATION_BANK_PRIORITY"
 ENV_RETAIN_MAX_CONCURRENT = "HINDSIGHT_API_RETAIN_MAX_CONCURRENT"
@@ -506,6 +511,14 @@ ENV_RECALL_BUDGET_MAX = "HINDSIGHT_API_RECALL_BUDGET_MAX"
 # Recall candidate gating (per-source cap + BM25 score floor)
 ENV_BM25_MIN_SCORE = "HINDSIGHT_API_BM25_MIN_SCORE"
 ENV_RECALL_MAX_CANDIDATES_PER_SOURCE = "HINDSIGHT_API_RECALL_MAX_CANDIDATES_PER_SOURCE"
+# Per-strategy recall boost. Prioritises specific retrieval arms (semantic,
+# bm25, graph, temporal) on recall via a human priority level — e.g.
+# "graph:high" to strongly favour graph hits, or "graph:high,semantic:low".
+# Valid levels: low | medium | high. The level (not a raw number) is the knob
+# because the boost is applied on two different score scales — see
+# engine/search/recall_boost.py for the level -> magnitude mapping and rationale.
+# Empty disables the feature.
+ENV_RECALL_STRATEGY_BOOSTS = "HINDSIGHT_API_RECALL_STRATEGY_BOOSTS"
 
 # Audit log settings
 ENV_AUDIT_LOG_ENABLED = "HINDSIGHT_API_AUDIT_LOG_ENABLED"
@@ -620,6 +633,56 @@ DEFAULT_BM25_MIN_SCORE = 0.0
 # temporal) before RRF, so a single over-expanding backend cannot fill the
 # reranker's global candidate budget on its own. 0 disables the cap.
 DEFAULT_RECALL_MAX_CANDIDATES_PER_SOURCE = 0
+# Per-strategy recall boost, as a comma-separated "strategy:level" list (e.g.
+# "graph:high,semantic:low"). Empty disables the feature. See
+# ENV_RECALL_STRATEGY_BOOSTS for the full rationale.
+DEFAULT_RECALL_STRATEGY_BOOSTS = ""
+# Retrieval arms that can be boosted; mirrors fusion.py source_names.
+RECALL_STRATEGY_NAMES = ("semantic", "bm25", "graph", "temporal")
+# User-facing priority levels. Kept in sync with recall_boost.BOOST_LEVELS by a
+# guard test; defined here (not imported) so config stays free of the heavy
+# engine.search import graph.
+RECALL_BOOST_LEVELS = ("low", "medium", "high")
+# Level applied when a strategy is listed without one (e.g. "graph" or "graph:").
+DEFAULT_RECALL_BOOST_LEVEL = "medium"
+
+
+def _parse_strategy_boosts(raw: str | None) -> dict[str, str]:
+    """Parse a "strategy:level,strategy:level" string into a boost map.
+
+    A strategy listed without a level (``"graph"`` or ``"graph:"``) defaults to
+    ``medium``. Only the strategies you list are boosted; any strategy you omit
+    keeps its normal, unboosted weight. Unknown strategy names, unknown levels,
+    and malformed entries are skipped with a warning so a typo degrades to a
+    no-op boost rather than breaking recall.
+    """
+    if not raw or not raw.strip():
+        return {}
+    boosts: dict[str, str] = {}
+    for entry in raw.split(","):
+        entry = entry.strip()
+        if not entry:
+            continue
+        name, _sep, level = entry.partition(":")
+        name = name.strip().lower()
+        level = level.strip().lower() or DEFAULT_RECALL_BOOST_LEVEL
+        if name not in RECALL_STRATEGY_NAMES:
+            logger.warning(
+                "Ignoring unknown recall strategy %r in boost (valid: %s)", name, ", ".join(RECALL_STRATEGY_NAMES)
+            )
+            continue
+        if level not in RECALL_BOOST_LEVELS:
+            logger.warning(
+                "Ignoring unknown recall boost level %r for %r (valid: %s)",
+                level,
+                name,
+                ", ".join(RECALL_BOOST_LEVELS),
+            )
+            continue
+        boosts[name] = level
+    return boosts
+
+
 DEFAULT_RERANKER_FLASHRANK_MODEL = "ms-marco-MiniLM-L-12-v2"  # Best balance of speed and quality
 DEFAULT_RERANKER_FLASHRANK_CACHE_DIR = None  # Use default cache directory
 DEFAULT_RERANKER_FLASHRANK_CPU_MEM_ARENA = False  # Disable ONNX CPU memory arena to bound RSS
@@ -724,6 +787,10 @@ DEFAULT_FILE_CONVERSION_MAX_BATCH_SIZE_MB = 100  # Max total batch size in MB (a
 DEFAULT_FILE_CONVERSION_MAX_BATCH_SIZE = 10  # Max files per batch upload
 DEFAULT_ENABLE_FILE_UPLOAD_API = True  # Enable file upload endpoint
 DEFAULT_FILE_DELETE_AFTER_RETAIN = True  # Delete file bytes after retain (saves storage)
+
+# Document transfer defaults (export/import enabled by default; gated independently)
+DEFAULT_ENABLE_DOCUMENT_EXPORT_API = True
+DEFAULT_ENABLE_DOCUMENT_IMPORT_API = True
 
 # Observations defaults (consolidated knowledge from facts)
 DEFAULT_ENABLE_OBSERVATIONS = True  # Observations enabled by default
@@ -1199,6 +1266,7 @@ class HindsightConfig:
     reranker_max_candidates: int
     bm25_min_score: float
     recall_max_candidates_per_source: int
+    recall_strategy_boosts: dict[str, str]
     reranker_cohere_api_key: str | None
     reranker_cohere_model: str
     reranker_cohere_base_url: str | None
@@ -1292,6 +1360,8 @@ class HindsightConfig:
     file_conversion_max_batch_size: int  # Max files per request
     enable_file_upload_api: bool
     file_delete_after_retain: bool
+    enable_document_export_api: bool
+    enable_document_import_api: bool
 
     # Observations settings (consolidated knowledge from facts)
     enable_observations: bool
@@ -1931,6 +2001,9 @@ class HindsightConfig:
             recall_max_candidates_per_source=int(
                 os.getenv(ENV_RECALL_MAX_CANDIDATES_PER_SOURCE, str(DEFAULT_RECALL_MAX_CANDIDATES_PER_SOURCE))
             ),
+            recall_strategy_boosts=_parse_strategy_boosts(
+                os.getenv(ENV_RECALL_STRATEGY_BOOSTS, DEFAULT_RECALL_STRATEGY_BOOSTS)
+            ),
             # Cohere reranker (with backward-compatible fallback to shared API key)
             reranker_cohere_api_key=os.getenv(ENV_RERANKER_COHERE_API_KEY) or os.getenv(ENV_COHERE_API_KEY),
             reranker_cohere_model=os.getenv(ENV_RERANKER_COHERE_MODEL, DEFAULT_RERANKER_COHERE_MODEL),
@@ -2081,6 +2154,14 @@ class HindsightConfig:
             == "true",
             file_delete_after_retain=os.getenv(
                 ENV_FILE_DELETE_AFTER_RETAIN, str(DEFAULT_FILE_DELETE_AFTER_RETAIN)
+            ).lower()
+            == "true",
+            enable_document_export_api=os.getenv(
+                ENV_ENABLE_DOCUMENT_EXPORT_API, str(DEFAULT_ENABLE_DOCUMENT_EXPORT_API)
+            ).lower()
+            == "true",
+            enable_document_import_api=os.getenv(
+                ENV_ENABLE_DOCUMENT_IMPORT_API, str(DEFAULT_ENABLE_DOCUMENT_IMPORT_API)
             ).lower()
             == "true",
             # Observations settings (consolidated knowledge from facts)
