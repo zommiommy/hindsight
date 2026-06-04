@@ -2815,6 +2815,50 @@ def test_retain_mission_in_user_preamble_not_cached_prefix():
     assert prompt_a == prompt_b
 
 
+@pytest.mark.parametrize("mode", ["concise", "verbose"])
+def test_retain_cacheable_prefix_invariant_to_per_bank_freetext(mode):
+    """The cacheable system prompt must NOT depend on per-bank free-text settings.
+
+    For the concise and verbose modes (the ones we cache), the system prefix has
+    to be byte-identical across banks so a single Gemini CachedContent serves all
+    of them. The high-cardinality, user-supplied free-text fields — the retain
+    mission, and custom instructions (which only apply to custom mode anyway) —
+    must never leak into it; if they did, every bank would fragment the cache.
+
+    Structural toggles (causal links, entity labels, output language) MAY change
+    the prefix — they are low-cardinality and correctly keyed by the cache
+    fingerprint — so they are deliberately NOT exercised here.
+    """
+    from types import SimpleNamespace
+
+    from hindsight_api.engine.retain.fact_extraction import _build_extraction_prompt_and_schema
+
+    def make(**overrides):
+        defaults = {
+            "retain_extraction_mode": mode,
+            "retain_extract_causal_links": False,
+            "retain_mission": None,
+            "retain_custom_instructions": None,
+            "retain_taxonomy": None,
+            "entity_labels": None,
+            "entities_allow_free_form": True,
+            "llm_output_language": None,
+        }
+        defaults.update(overrides)
+        return SimpleNamespace(**defaults)
+
+    baseline, _ = _build_extraction_prompt_and_schema(make())
+
+    # The mission must not change the cacheable prefix, whatever its value.
+    for mission in ["Track A decisions.", '{"focus": "compliance"}', "Ünïcödé brief", "x" * 600]:
+        prompt, _ = _build_extraction_prompt_and_schema(make(retain_mission=mission))
+        assert prompt == baseline, f"retain_mission leaked into the cacheable {mode} prefix"
+
+    # Custom instructions are a custom-mode field; they must not touch concise/verbose.
+    prompt, _ = _build_extraction_prompt_and_schema(make(retain_custom_instructions="Do X with {braces}"))
+    assert prompt == baseline, f"retain_custom_instructions leaked into the cacheable {mode} prefix"
+
+
 def test_retain_mission_absent_when_not_set():
     """Test that no FOCUS section appears when retain_mission is not set."""
     from unittest.mock import MagicMock
