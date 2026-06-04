@@ -50,6 +50,11 @@ logger = logging.getLogger(__name__)
 # at the boundary doesn't race against expiry.
 _DEFAULT_TTL_SECONDS = 55 * 60
 _DEFAULT_REFRESH_MARGIN_SECONDS = 5 * 60
+# Cap on the cache-create network call. It runs while holding the manager lock, so
+# a hung create would block every concurrent caller (e.g. all chunks of a 10-chunk
+# retain batch waiting on the cold-start create). On timeout the create soft-fails
+# to None and callers proceed uncached, rather than stalling the whole batch.
+_DEFAULT_CREATE_TIMEOUT_SECONDS = 30.0
 
 
 @dataclass
@@ -79,10 +84,12 @@ class GeminiCacheManager:
         *,
         ttl_seconds: int = _DEFAULT_TTL_SECONDS,
         refresh_margin_seconds: int = _DEFAULT_REFRESH_MARGIN_SECONDS,
+        create_timeout_seconds: float = _DEFAULT_CREATE_TIMEOUT_SECONDS,
     ) -> None:
         self._client = client
         self._ttl_seconds = ttl_seconds
         self._refresh_margin_seconds = refresh_margin_seconds
+        self._create_timeout_seconds = create_timeout_seconds
         self._entries: dict[str, _CacheEntry] = {}
         self._lock = asyncio.Lock()
 
@@ -269,9 +276,12 @@ class GeminiCacheManager:
             config_kwargs["tools"] = gemini_tools
 
         try:
-            cached = await self._client.aio.caches.create(
-                model=model,
-                config=genai_types.CreateCachedContentConfig(**config_kwargs),
+            cached = await asyncio.wait_for(
+                self._client.aio.caches.create(
+                    model=model,
+                    config=genai_types.CreateCachedContentConfig(**config_kwargs),
+                ),
+                timeout=self._create_timeout_seconds,
             )
         except Exception as e:
             # Gemini returns a 400 with a "minimum token count" message

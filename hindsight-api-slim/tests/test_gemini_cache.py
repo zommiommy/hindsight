@@ -381,6 +381,31 @@ async def test_call_falls_back_to_uncached_when_cache_400s():
     assert mgr._entries == {}
 
 
+@pytest.mark.asyncio
+async def test_create_cache_times_out_and_falls_back():
+    """The create runs under the manager lock, so a hung caches.create would block
+    every concurrent caller (e.g. all chunks of a retain batch). It must time out
+    and return None so callers proceed uncached instead of stalling."""
+    import asyncio
+    from types import SimpleNamespace
+
+    from hindsight_api.engine.providers.gemini_cache import GeminiCacheManager
+
+    async def _hang(*args, **kwargs):
+        await asyncio.sleep(5)
+        return SimpleNamespace(name="never")
+
+    client = MagicMock()
+    client.aio = MagicMock()
+    client.aio.caches = MagicMock()
+    client.aio.caches.create = _hang
+
+    mgr = GeminiCacheManager(client, create_timeout_seconds=0.05)
+    result = await mgr.get_or_create(model="m", system_instruction="long enough prefix " * 20)
+    assert result is None
+    assert mgr._entries == {}
+
+
 # ---- Tools: cache key + create wiring -----------------------------------
 
 
