@@ -1602,7 +1602,7 @@ async def _consolidate_batch_with_llm(
     # part of the cached prefix, so keying on it would needlessly bust the cache.
     cached_prefix_name: str | None = None
     provider_impl = getattr(llm_config, "_provider_impl", None)
-    if provider_impl is not None and hasattr(provider_impl, "get_or_create_cached_prefix"):
+    if provider_impl is not None and provider_impl.supports_prompt_caching():
         try:
             cached_prefix_name = await provider_impl.get_or_create_cached_prefix(
                 system_instruction=system_prompt,
@@ -1640,7 +1640,7 @@ async def _consolidate_batch_with_llm(
             if inner_max_retries is not None:
                 call_kwargs["max_retries"] = inner_max_retries
             if cached_prefix_name is not None:
-                call_kwargs["cached_content_name"] = cached_prefix_name
+                call_kwargs["cached_prefix"] = cached_prefix_name
             response: _ConsolidationBatchResponse = await llm_config.call(**call_kwargs)
             # Defensive truncation: some LLM providers may not enforce JSON schema max_length
             creates = response.creates

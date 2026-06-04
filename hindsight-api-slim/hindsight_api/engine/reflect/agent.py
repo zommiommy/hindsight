@@ -393,7 +393,7 @@ async def run_reflect_agent(
     # the uncached path in that case.
     cached_prefix_name: str | None = None
     provider_impl = getattr(llm_config, "_provider_impl", None)
-    if provider_impl is not None and hasattr(provider_impl, "get_or_create_cached_prefix"):
+    if provider_impl is not None and provider_impl.supports_prompt_caching():
         try:
             cached_prefix_name = await provider_impl.get_or_create_cached_prefix(
                 system_instruction=system_prompt,
@@ -612,7 +612,7 @@ async def run_reflect_agent(
             # the prefix inline. The cache (tools + system prompt) is identical
             # either way, so this just limits *which* iterations are billed cached.
             if cached_prefix_name is not None and iter_tool_choice == "auto":
-                ct_kwargs["cached_content_name"] = cached_prefix_name
+                ct_kwargs["cached_prefix"] = cached_prefix_name
             result = await llm_config.call_with_tools(**ct_kwargs)
             llm_duration = int((time.time() - llm_start) * 1000)
             consecutive_errors = 0

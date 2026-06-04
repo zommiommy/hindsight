@@ -174,7 +174,7 @@ class GeminiLLM(LLMInterface):
         skip_validation: bool = False,
         strict_schema: bool = False,
         return_usage: bool = False,
-        cached_content_name: str | None = None,
+        cached_prefix: str | None = None,
     ) -> Any:
         """
         Make a Gemini/VertexAI API call with retry logic.
@@ -191,7 +191,7 @@ class GeminiLLM(LLMInterface):
             skip_validation: Return raw JSON without Pydantic validation.
             strict_schema: Use strict JSON schema enforcement (not supported by Gemini).
             return_usage: If True, return tuple (result, TokenUsage).
-            cached_content_name: Optional CachedContent resource name (from
+            cached_prefix: Optional CachedContent resource name (from
                 ``GeminiCacheManager.get_or_create``). When set, the
                 system_instruction is assumed to live in the cache; this call
                 skips resending it and the cached prefix is billed at the
@@ -212,7 +212,7 @@ class GeminiLLM(LLMInterface):
         # payload so we don't duplicate (and pay for) the prefix.
         system_instruction = None
         gemini_contents = []
-        using_cache = cached_content_name is not None
+        using_cache = cached_prefix is not None
 
         for msg in messages:
             role = msg.get("role", "user")
@@ -251,7 +251,7 @@ class GeminiLLM(LLMInterface):
         # ``cached_content``.
         config_kwargs: dict[str, Any] = {}
         if using_cache:
-            config_kwargs["cached_content"] = cached_content_name
+            config_kwargs["cached_content"] = cached_prefix
         elif system_instruction:
             config_kwargs["system_instruction"] = system_instruction
         if response_format is not None:
@@ -446,7 +446,7 @@ class GeminiLLM(LLMInterface):
         initial_backoff: float = 1.0,
         max_backoff: float = 30.0,
         tool_choice: str | dict[str, Any] = "auto",
-        cached_content_name: str | None = None,
+        cached_prefix: str | None = None,
     ) -> LLMToolCallResult:
         """
         Make a Gemini/VertexAI API call with tool/function calling support.
@@ -461,7 +461,7 @@ class GeminiLLM(LLMInterface):
             initial_backoff: Initial backoff time in seconds.
             max_backoff: Maximum backoff time in seconds.
             tool_choice: How to choose tools (Gemini uses "auto" only).
-            cached_content_name: Optional CachedContent resource name (from
+            cached_prefix: Optional CachedContent resource name (from
                 ``GeminiCacheManager.get_or_create`` with ``tools=...``). When
                 set, the system_instruction and tool definitions are assumed
                 to live in the cache; this call will skip resending them and
@@ -474,7 +474,7 @@ class GeminiLLM(LLMInterface):
             LLMToolCallResult with content and/or tool_calls.
         """
         start_time = time.time()
-        using_cache = cached_content_name is not None
+        using_cache = cached_prefix is not None
 
         # Convert tools to Gemini format. When the cache is in use, the
         # tool definitions are baked into the CachedContent at create time
@@ -564,7 +564,7 @@ class GeminiLLM(LLMInterface):
         # is still a per-request decision and stays out of the cache.
         config_kwargs: dict[str, Any] = {}
         if using_cache:
-            config_kwargs["cached_content"] = cached_content_name
+            config_kwargs["cached_content"] = cached_prefix
         else:
             config_kwargs["tools"] = gemini_tools
             if system_instruction:
@@ -734,8 +734,17 @@ class GeminiLLM(LLMInterface):
             raise last_exception
         raise RuntimeError("Gemini tool call failed")
 
+    def supports_prompt_caching(self) -> bool:
+        """True when explicit Gemini context caching is enabled for this instance.
+
+        Reflects the opt-in flag so callers skip the cache lookup entirely when
+        it's off; ``get_or_create_cached_prefix`` also returns None in that case.
+        """
+        return self._prompt_cache_enabled
+
     async def get_or_create_cached_prefix(
         self,
+        *,
         system_instruction: str,
         response_schema: Any | None = None,
         tools: list[dict[str, Any]] | None = None,
@@ -749,8 +758,8 @@ class GeminiLLM(LLMInterface):
         includes the tool definitions so a loop that swaps a tool gets a
         fresh cache automatically.
 
-        Callers pass the returned name to ``call(cached_content_name=...)``
-        or ``call_with_tools(cached_content_name=...)`` and treat ``None``
+        Callers pass the returned name to ``call(cached_prefix=...)``
+        or ``call_with_tools(cached_prefix=...)`` and treat ``None``
         as "cache unavailable — use the normal path". That fallback is
         essential: the system must continue to work if caching is disabled,
         if Gemini's caching API has an outage, or if the prefix is below
