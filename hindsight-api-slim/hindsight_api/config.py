@@ -1704,7 +1704,9 @@ class HindsightConfig:
             or DEFAULT_LLM_VERTEXAI_SERVICE_ACCOUNT_KEY,
             # Gemini safety settings (JSON-encoded list of {category, threshold} dicts)
             llm_gemini_safety_settings=json.loads(os.getenv(ENV_LLM_GEMINI_SAFETY_SETTINGS, "null")),
-            llm_prompt_cache_enabled=os.getenv(ENV_LLM_PROMPT_CACHE_ENABLED, str(DEFAULT_LLM_PROMPT_CACHE_ENABLED)).lower()
+            llm_prompt_cache_enabled=os.getenv(
+                ENV_LLM_PROMPT_CACHE_ENABLED, str(DEFAULT_LLM_PROMPT_CACHE_ENABLED)
+            ).lower()
             in ("1", "true", "yes", "on"),
             # Built-in llama.cpp configuration
             llamacpp_model_path=os.getenv(ENV_LLAMACPP_MODEL_PATH) or None,
