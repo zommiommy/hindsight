@@ -38,6 +38,7 @@ from ..utils import mask_network_location
 from ..worker.exceptions import DeferOperation, RetryTaskAt
 from ..worker.stage import set_stage
 from .audit import AuditLogger, audit_context
+from .bank_stats_cache import BankStatsCache
 from .db_budget import budgeted_operation
 from .operation_metadata import (
     BatchRetainChildMetadata,
@@ -631,6 +632,15 @@ class MemoryEngine(MemoryEngineInterface):
 
             tenant_extension = DefaultTenantExtension(config={})
         self._tenant_extension = tenant_extension
+
+        # Cache for get_bank_stats — short TTL + concurrent-loader coalescing.
+        # The query joins memory_links to memory_units and can be a multi-second
+        # parallel scan on large banks; a single polling client used to be able
+        # to pin the primary by issuing several concurrent calls.
+        self._bank_stats_cache = BankStatsCache(
+            ttl_seconds=config.bank_stats_cache_ttl_seconds,
+            max_entries=config.bank_stats_cache_max_entries,
+        )
 
     @property
     def audit_logger(self) -> AuditLogger:
@@ -4138,6 +4148,10 @@ class MemoryEngine(MemoryEngineInterface):
             if bank_internal_id:
                 await bank_utils.drop_bank_vector_indexes(conn, bank_internal_id)
 
+        # Drop any cached stats for this bank — counts have changed and the
+        # TTL would otherwise serve pre-delete values for up to a minute.
+        await self._bank_stats_cache.invalidate(get_current_schema(), bank_id)
+
         if invalidated_obs > 0:
             try:
                 await self.submit_async_consolidation(bank_id=bank_id, request_context=request_context)
@@ -5843,10 +5857,12 @@ class MemoryEngine(MemoryEngineInterface):
         # (not held during LLM calls which can be slow)
         pool = await self._get_pool()
 
-        # Get bank stats for freshness info
-        bank_stats = await self.get_bank_stats(bank_id, request_context=request_context)
-        last_consolidated_at = bank_stats.last_consolidated_at if hasattr(bank_stats, "last_consolidated_at") else None
-        pending_consolidation = bank_stats.pending_consolidation if hasattr(bank_stats, "pending_consolidation") else 0
+        # Pull only the consolidation freshness — get_bank_stats also computes
+        # link aggregations that reflect() does not use and which can take many
+        # seconds on large banks.
+        freshness = await self.get_bank_freshness(bank_id, request_context=request_context)
+        last_consolidated_at = freshness.get("last_consolidated_at")
+        pending_consolidation = freshness.get("pending_consolidation", 0)
 
         # Create tool callbacks that acquire connections only when needed
         from .retain import embedding_utils
@@ -6567,13 +6583,28 @@ class MemoryEngine(MemoryEngineInterface):
         *,
         request_context: "RequestContext",
     ) -> dict[str, Any]:
-        """Get statistics about memory nodes and links for a bank."""
+        """Get statistics about memory nodes and links for a bank.
+
+        Results are served from a short-TTL per-process cache so a polling
+        client cannot drive the link/unit aggregations multiple times per
+        second; concurrent misses on the same bank are coalesced onto a
+        single in-flight loader.
+        """
         await self._authenticate_tenant(request_context)
         if self._operation_validator:
             from hindsight_api.extensions import BankReadContext
 
             ctx = BankReadContext(bank_id=bank_id, operation="get_bank_stats", request_context=request_context)
             await self._validate_operation(self._operation_validator.validate_bank_read(ctx))
+
+        schema = get_current_schema()
+        return await self._bank_stats_cache.get_or_load(
+            schema,
+            bank_id,
+            lambda: self._compute_bank_stats(bank_id),
+        )
+
+    async def _compute_bank_stats(self, bank_id: str) -> dict[str, Any]:
         pool = await self._get_pool()
 
         async with acquire_with_retry(pool) as conn:
@@ -6588,27 +6619,53 @@ class MemoryEngine(MemoryEngineInterface):
                 bank_id,
             )
 
-            # Link counts — group by link_type on memory_links only. The
-            # previous shape joined memory_links -> memory_units to produce a
-            # (fact_type, link_type) matrix; an audit of every caller (UIs,
-            # MCP tool, SDK clients, integrations) found that the matrix and
-            # its fact-type rollup are declared in response types but never
-            # read. Dropping the join removes a multi-second per-call hash
-            # scan on large banks. The response keys link_breakdown and
-            # link_counts_by_fact_type are preserved (empty) below so SDKs
-            # and openapi-generated clients do not break.
-            link_count_rows = await conn.fetch(
+            # Non-entity link counts — no join, group by link_type only. With a
+            # (bank_id, link_type) index this is an index-only scan; without one
+            # it is at worst a single seq scan over memory_links rather than the
+            # multi-second hash join through memory_units that this used to be.
+            # The previous shape produced a (fact_type, link_type) matrix; only
+            # the hindsight-cli `bank stats` renderer still consumes the
+            # per-fact-type slice, and it tolerates empty maps (the section
+            # prints with no rows). Response keys are kept populated below for
+            # schema stability so existing SDK deserializers don't break.
+            non_entity_link_rows = await conn.fetch(
                 f"""
                 SELECT link_type, COUNT(*) as count
                 FROM {fq_table("memory_links")}
-                WHERE bank_id = $1
+                WHERE bank_id = $1 AND link_type <> 'entity'
                 GROUP BY link_type
                 """,
                 bank_id,
             )
 
-            link_counts: dict[str, int] = {row["link_type"]: row["count"] for row in link_count_rows}
-            link_counts_by_fact_type: dict[str, int] = {}
+            # Entity links are derived from unit_entities (no longer stored in
+            # memory_links). Replicate the historical writer cap: each unit
+            # linked bidirectionally to up to MAX_LINKS_PER_ENTITY others sharing
+            # each entity. Aggregated to a single scalar — the per-fact-type
+            # slice doubled the join cost and only fed link_counts_by_fact_type
+            # / link_breakdown, which the UI ignores and the CLI renders into
+            # sections that degrade gracefully when empty.
+            max_links_per_entity = 10
+            entity_total_row = await conn.fetchrow(
+                f"""
+                WITH per_entity AS (
+                    SELECT ue.entity_id, COUNT(*) AS n
+                    FROM {fq_table("unit_entities")} ue
+                    JOIN {fq_table("memory_units")} mu ON mu.id = ue.unit_id
+                    WHERE mu.bank_id = $1
+                    GROUP BY ue.entity_id
+                )
+                SELECT COALESCE(SUM(LEAST(n - 1, $2)), 0)::bigint AS count
+                FROM per_entity
+                """,
+                bank_id,
+                max_links_per_entity,
+            )
+            entity_link_total = int(entity_total_row["count"] or 0) if entity_total_row else 0
+
+            link_counts: dict[str, int] = {row["link_type"]: row["count"] for row in non_entity_link_rows}
+            if entity_link_total > 0:
+                link_counts["entity"] = entity_link_total
 
             ops_stats = await conn.fetch(
                 f"""
@@ -6639,16 +6696,19 @@ class MemoryEngine(MemoryEngineInterface):
             ops_by_status = {row["status"]: row["count"] for row in ops_stats}
             last_consolidated_at = consolidation_row["last_consolidated_at"] if consolidation_row else None
 
+            # link_counts_by_fact_type and link_breakdown are retained in the
+            # response shape but no longer populated — producing them required
+            # the expensive memory_links⇒memory_units join we just deleted. The
+            # UI does not read them; hindsight-cli `bank stats` does, and after
+            # this change its "Links by Fact Type" section prints empty and the
+            # "Detailed Link Breakdown" section is skipped (`is_empty()` guard).
+            # Drop these keys, and the matching CLI rendering, once downstream
+            # SDKs are regenerated.
             return {
                 "bank_id": bank_id,
                 "node_counts": node_counts,
                 "link_counts": link_counts,
-                # link_counts_by_fact_type and link_breakdown are retained in
-                # the response shape but no longer populated — no consumer reads
-                # them and producing them required the expensive
-                # memory_links⇒memory_units join. See the get_bank_stats
-                # join-removal note above for the audit.
-                "link_counts_by_fact_type": link_counts_by_fact_type,
+                "link_counts_by_fact_type": {},
                 "link_breakdown": [],
                 "operations": ops_by_status,
                 "total_documents": doc_count_row["count"] if doc_count_row else 0,
@@ -6657,6 +6717,54 @@ class MemoryEngine(MemoryEngineInterface):
                 "failed_consolidation": consolidation_row["failed"] if consolidation_row else 0,
                 "total_observations": node_counts.get("observation", 0),
             }
+
+    async def get_bank_freshness(
+        self,
+        bank_id: str,
+        *,
+        request_context: "RequestContext",
+    ) -> dict[str, Any]:
+        """Cheap subset of bank stats consumed by reflect().
+
+        Returns only the consolidation freshness fields: when the bank was last
+        consolidated and how many units are pending or failed. reflect() calls
+        this on every invocation, so it must not pay for any cross-table joins
+        or link aggregations.
+        """
+        await self._authenticate_tenant(request_context)
+        if self._operation_validator:
+            from hindsight_api.extensions import BankReadContext
+
+            ctx = BankReadContext(bank_id=bank_id, operation="get_bank_stats", request_context=request_context)
+            await self._validate_operation(self._operation_validator.validate_bank_read(ctx))
+
+        backend = await self._get_backend()
+        # The current reflect() caller reads only last_consolidated_at and
+        # pending_consolidation, but `failed` is part of this method's published
+        # contract (see interface.get_bank_freshness) so the returned shape stays
+        # a strict subset of get_bank_stats. All three come from one scan, so
+        # keeping `failed` costs nothing extra.
+        async with acquire_with_retry(backend) as conn:
+            row = await conn.fetchrow(
+                f"""
+                SELECT
+                    MAX(consolidated_at) as last_consolidated_at,
+                    COUNT(*) FILTER (WHERE consolidated_at IS NULL AND fact_type IN ('experience', 'world')) as pending,
+                    COUNT(*) FILTER (WHERE consolidation_failed_at IS NOT NULL AND fact_type IN ('experience', 'world')) as failed
+                FROM {fq_table("memory_units")}
+                WHERE bank_id = $1
+                """,
+                bank_id,
+            )
+
+        if row is None:
+            return {"last_consolidated_at": None, "pending_consolidation": 0, "failed_consolidation": 0}
+        last = row["last_consolidated_at"]
+        return {
+            "last_consolidated_at": last.isoformat() if last else None,
+            "pending_consolidation": row["pending"] or 0,
+            "failed_consolidation": row["failed"] or 0,
+        }
 
     async def get_memories_timeseries(
         self,
