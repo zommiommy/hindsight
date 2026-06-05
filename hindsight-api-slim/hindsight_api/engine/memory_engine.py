@@ -976,6 +976,34 @@ class MemoryEngine(MemoryEngineInterface):
             tenant_extension = DefaultTenantExtension(config={})
         self._tenant_extension = tenant_extension
 
+        # Load memory defense extension; default to Lite when env var is unset.
+        # Lazy imports avoid a circular dependency: extensions/__init__ imports
+        # MCPExtension which imports MemoryEngine at module level.
+        from ..extensions.builtin.memory_defense_lite import (  # noqa: PLC0415
+            MemoryDefenseLiteExtension,
+        )
+        from ..extensions.context import DefaultExtensionContext  # noqa: PLC0415
+        from ..extensions.loader import load_extension  # noqa: PLC0415
+        from ..extensions.memory_defense import MemoryDefenseExtension  # noqa: PLC0415
+
+        # Build the extension context now; webhook_manager is populated later in
+        # initialize() once the pool is ready.  current_schema is a per-request
+        # value written by _authenticate() and execute_task().
+        self._ext_ctx = DefaultExtensionContext(
+            database_url=config.database_url or "",
+            memory_engine=self,
+            webhook_manager=None,
+            current_schema=None,
+        )
+
+        loaded = load_extension("MEMORY_DEFENSE", MemoryDefenseExtension, context=self._ext_ctx)
+        if loaded is not None:
+            self._memory_defense: MemoryDefenseExtension = loaded
+        else:
+            lite = MemoryDefenseLiteExtension({})
+            lite.set_context(self._ext_ctx)
+            self._memory_defense = lite
+
         # Cache for get_bank_stats — short TTL + concurrent-loader coalescing.
         # The query joins memory_links to memory_units and can be a multi-second
         # parallel scan on large banks; a single polling client used to be able
@@ -1055,6 +1083,7 @@ class MemoryEngine(MemoryEngineInterface):
         tenant_context = await self._tenant_extension.authenticate(request_context)
 
         _current_schema.set(tenant_context.schema_name)
+        self._ext_ctx.current_schema = tenant_context.schema_name
         return tenant_context.schema_name
 
     async def _handle_import_documents(self, task_dict: dict[str, Any]):
@@ -1540,6 +1569,7 @@ class MemoryEngine(MemoryEngineInterface):
         schema = task_dict.pop("_schema", None)
         if schema:
             _current_schema.set(schema)
+            self._ext_ctx.current_schema = schema
 
         # Check if operation was cancelled (only for tasks with operation_id)
         if operation_id:
@@ -2634,6 +2664,9 @@ class MemoryEngine(MemoryEngineInterface):
             global_webhooks=webhook_global,
             tenant_extension=self._tenant_extension,
         )
+        # Propagate the now-ready webhook manager to the extension context so
+        # that the Memory Defense extension can fire webhooks.
+        self._ext_ctx.webhook_manager = self._webhook_manager
         logger.debug("Webhook manager initialized")
 
         # Long-lived HTTP client for webhook delivery tasks
@@ -3350,6 +3383,8 @@ class MemoryEngine(MemoryEngineInterface):
                 # Stream chunk-level "storing N/total" progress to the operation row as
                 # the document's chunks commit (more useful than the coarse sub-batch tick).
                 progress_callback=self._write_operation_progress,
+                webhook_manager=self._webhook_manager,
+                memory_defense_extension=self._memory_defense,
             )
             # Map the created facts onto this retain's trace so the trace view can
             # show which memories the ingestion produced. result[0] is the
@@ -4386,6 +4421,21 @@ class MemoryEngine(MemoryEngineInterface):
                     {"reranker_type": rerank_kind, "candidates_reranked": len(scored_results)},
                 )
 
+            # Step 4.8: Post-filter by quarantine status.
+            # Applied after reranking so score ordering is preserved.
+            # Quarantined rows are never surfaced via recall; they remain in the DB
+            # as audit-only orphans. None status (e.g. graph-expanded rows) is
+            # treated as active.
+            pre_filter_len = len(scored_results)
+            filtered: list = []
+            for sr in scored_results:
+                if sr.retrieval.status == "quarantined":
+                    continue
+                filtered.append(sr)
+            if len(filtered) != pre_filter_len:
+                log_buffer.append(f"  [4.8] Quarantine filter: {pre_filter_len} -> {len(filtered)}")
+            scored_results = filtered
+
             # Step 5: Truncate to thinking_budget * 2 for token filtering
             rerank_limit = thinking_budget * 2
             top_scored = scored_results[:rerank_limit]
@@ -4710,6 +4760,7 @@ class MemoryEngine(MemoryEngineInterface):
                         chunk_id=result_dict.get("chunk_id"),
                         tags=result_dict.get("tags"),
                         source_fact_ids=source_fact_ids_by_obs.get(result_id) if include_source_facts else None,
+                        status=result_dict.get("status"),
                     )
                 )
 
@@ -6191,7 +6242,9 @@ class MemoryEngine(MemoryEngineInterface):
 
             units = await conn.fetch(
                 f"""
-                SELECT id, text, event_date, context, fact_type, mentioned_at, occurred_start, occurred_end, chunk_id, proof_count, tags, consolidated_at, consolidation_failed_at
+                SELECT id, text, event_date, context, fact_type, status, document_id,
+                       mentioned_at, occurred_start, occurred_end, chunk_id, proof_count,
+                       tags, consolidated_at, consolidation_failed_at
                 FROM {fq_table("memory_units")}
                 {where_clause}
                 ORDER BY mentioned_at DESC NULLS LAST, created_at DESC
@@ -6238,6 +6291,8 @@ class MemoryEngine(MemoryEngineInterface):
                         "context": row["context"] if row["context"] else "",
                         "date": row["event_date"].isoformat() if row["event_date"] else "",
                         "fact_type": row["fact_type"],
+                        "status": row["status"],
+                        "document_id": row["document_id"],
                         "mentioned_at": row["mentioned_at"].isoformat() if row["mentioned_at"] else None,
                         "occurred_start": row["occurred_start"].isoformat() if row["occurred_start"] else None,
                         "occurred_end": row["occurred_end"].isoformat() if row["occurred_end"] else None,

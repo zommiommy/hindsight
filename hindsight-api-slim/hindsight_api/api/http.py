@@ -237,6 +237,7 @@ class RecallResult(BaseModel):
     source_fact_ids: list[str] | None = (
         None  # IDs of source facts (observation type only, when source_facts is enabled)
     )
+    status: str | None = None  # Memory Defense: active | quarantined | pending_review
 
 
 class EntityObservationResponse(BaseModel):
@@ -475,6 +476,10 @@ class MemoryItem(BaseModel):
     tags: list[str] | None = Field(
         default=None,
         description="Optional tags for visibility scoping. Memories with tags can be filtered during recall.",
+    )
+    receipt_uri: str | None = Field(
+        default=None,
+        description="Optional URI referencing a security receipt for this memory item.",
     )
 
     @field_validator("content")
@@ -3377,6 +3382,7 @@ def _register_routes(app: FastAPI):
                     chunk_id=fact.chunk_id,
                     tags=fact.tags,
                     source_fact_ids=fact.source_fact_ids,
+                    status=fact.status,
                 )
 
             recall_results = [_fact_to_result(fact) for fact in core_result.results]
@@ -5627,6 +5633,15 @@ def _register_routes(app: FastAPI):
                     app.state.memory._operation_validator.validate_bank_write(ctx)
                 )
 
+            # Validate Memory Defense policy shape before persisting.
+            if "memory_defense" in request.updates and request.updates["memory_defense"] is not None:
+                from hindsight_api.extensions.memory_defense import parse_policy
+
+                try:
+                    parse_policy(request.updates["memory_defense"])
+                except ValueError as exc:
+                    raise HTTPException(status_code=422, detail=f"invalid memory_defense policy: {exc}")
+
             # Update config via config resolver (validates configurable fields and permissions)
             await app.state.memory._config_resolver.update_bank_config(bank_id, request.updates, request_context)
 
@@ -6156,6 +6171,10 @@ def _register_routes(app: FastAPI):
         except (AuthenticationError, HTTPException):
             raise
         except Exception as e:
+            from hindsight_api.engine.retain.orchestrator import MemoryDefenseAllBlockedError
+
+            if isinstance(e, MemoryDefenseAllBlockedError):
+                raise HTTPException(status_code=422, detail={"violations": e.violations})
             import traceback
 
             # Create a summary of the input for debugging

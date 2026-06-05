@@ -927,6 +927,13 @@ curl -H "Authorization: Bearer your-secret-api-key" \
 
 Requests without a valid API key receive a `401 Unauthorized` response.
 
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `HINDSIGHT_API_TENANT_EXTENSION` | Dotted path to the loaded tenant extension. Set to `hindsight_api.extensions.builtin.tenant:ApiKeyTenantExtension` to require an API key on every request. | *(none; auth disabled)* |
+| `HINDSIGHT_API_TENANT_API_KEY` | Shared API key checked by the built-in API-key extension. Sent by clients as `Authorization: Bearer <key>`. | *(none)* |
+
+If you are enabling Memory Defense, see `docs/developer/memory-defense/` for the policy schema, detector catalog, and audit trail.
+
 :::tip Custom Authentication
 For advanced authentication (JWT, OAuth, multi-tenant schemas), implement a custom `TenantExtension`. See the [Extensions documentation](./extensions.md) for details.
 :::
@@ -1010,6 +1017,12 @@ Controls the retain (memory ingestion) pipeline.
 | `HINDSIGHT_API_RETAIN_ENTITY_RESOLUTION_BATCH_SIZE` | Max unique entity names per fuzzy candidate lookup query (`trigram` on PG, `oracle_fuzzy` on Oracle). Bounds query size so very wide retain batches don't time out a single `unnest(...)` join on banks with many entities. | `100` |
 | `HINDSIGHT_API_RETAIN_DEFAULT_STRATEGY` | Default retain strategy name. When set, all retain calls without an explicit `strategy` parameter use this strategy. | - |
 | `HINDSIGHT_API_RETAIN_BATCH_POLL_INTERVAL_SECONDS` | Batch API polling interval in seconds | `60` |
+
+### Memory Defense
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `HINDSIGHT_API_MEMORY_DEFENSE_ENABLED_DEFAULT` | When `true`, new banks have `memory_defense.enabled=true` by default. Per-bank policy is unaffected. | `false` |
 
 > **Batch-capable providers.** `HINDSIGHT_API_RETAIN_BATCH_ENABLED=true` only works with a retain LLM provider that implements a batch API: `openai`, `groq`, and `fireworks`. Batch always requires async retain (`async=true`); a sync retain with batch enabled errors. Other providers fail fast at startup.
 

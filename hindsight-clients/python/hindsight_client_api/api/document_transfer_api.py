@@ -40,7 +40,7 @@ class DocumentTransferApi:
 
 
     @validate_call
-    async def export_documents(
+    def export_documents(
         self,
         bank_id: StrictStr,
         document_id: Annotated[Optional[List[StrictStr]], Field(description="Document id(s) to export; omit for all")] = None,
@@ -108,11 +108,11 @@ class DocumentTransferApi:
             '200': "object",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        await response_data.read()
+        response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -120,7 +120,7 @@ class DocumentTransferApi:
 
 
     @validate_call
-    async def export_documents_with_http_info(
+    def export_documents_with_http_info(
         self,
         bank_id: StrictStr,
         document_id: Annotated[Optional[List[StrictStr]], Field(description="Document id(s) to export; omit for all")] = None,
@@ -188,11 +188,11 @@ class DocumentTransferApi:
             '200': "object",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        await response_data.read()
+        response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -200,7 +200,7 @@ class DocumentTransferApi:
 
 
     @validate_call
-    async def export_documents_without_preload_content(
+    def export_documents_without_preload_content(
         self,
         bank_id: StrictStr,
         document_id: Annotated[Optional[List[StrictStr]], Field(description="Document id(s) to export; omit for all")] = None,
@@ -268,7 +268,7 @@ class DocumentTransferApi:
             '200': "object",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
@@ -354,7 +354,7 @@ class DocumentTransferApi:
 
 
     @validate_call
-    async def import_documents(
+    def import_documents(
         self,
         bank_id: StrictStr,
         file: Annotated[Union[StrictBytes, StrictStr, Tuple[StrictStr, StrictBytes]], Field(description="Transfer ZIP archive")],
@@ -422,11 +422,11 @@ class DocumentTransferApi:
             '202': "DocumentImportSubmitResponse",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        await response_data.read()
+        response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -434,7 +434,7 @@ class DocumentTransferApi:
 
 
     @validate_call
-    async def import_documents_with_http_info(
+    def import_documents_with_http_info(
         self,
         bank_id: StrictStr,
         file: Annotated[Union[StrictBytes, StrictStr, Tuple[StrictStr, StrictBytes]], Field(description="Transfer ZIP archive")],
@@ -502,11 +502,11 @@ class DocumentTransferApi:
             '202': "DocumentImportSubmitResponse",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        await response_data.read()
+        response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -514,7 +514,7 @@ class DocumentTransferApi:
 
 
     @validate_call
-    async def import_documents_without_preload_content(
+    def import_documents_without_preload_content(
         self,
         bank_id: StrictStr,
         file: Annotated[Union[StrictBytes, StrictStr, Tuple[StrictStr, StrictBytes]], Field(description="Transfer ZIP archive")],
@@ -582,7 +582,7 @@ class DocumentTransferApi:
             '202': "DocumentImportSubmitResponse",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )

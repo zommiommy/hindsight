@@ -45,7 +45,7 @@ class MentalModelsApi:
 
 
     @validate_call
-    async def clear_mental_model(
+    def clear_mental_model(
         self,
         bank_id: StrictStr,
         mental_model_id: StrictStr,
@@ -109,11 +109,11 @@ class MentalModelsApi:
             '200': "MentalModelResponse",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        await response_data.read()
+        response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -121,7 +121,7 @@ class MentalModelsApi:
 
 
     @validate_call
-    async def clear_mental_model_with_http_info(
+    def clear_mental_model_with_http_info(
         self,
         bank_id: StrictStr,
         mental_model_id: StrictStr,
@@ -185,11 +185,11 @@ class MentalModelsApi:
             '200': "MentalModelResponse",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        await response_data.read()
+        response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -197,7 +197,7 @@ class MentalModelsApi:
 
 
     @validate_call
-    async def clear_mental_model_without_preload_content(
+    def clear_mental_model_without_preload_content(
         self,
         bank_id: StrictStr,
         mental_model_id: StrictStr,
@@ -261,7 +261,7 @@ class MentalModelsApi:
             '200': "MentalModelResponse",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
@@ -338,7 +338,7 @@ class MentalModelsApi:
 
 
     @validate_call
-    async def create_mental_model(
+    def create_mental_model(
         self,
         bank_id: StrictStr,
         create_mental_model_request: CreateMentalModelRequest,
@@ -402,11 +402,11 @@ class MentalModelsApi:
             '200': "CreateMentalModelResponse",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        await response_data.read()
+        response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -414,7 +414,7 @@ class MentalModelsApi:
 
 
     @validate_call
-    async def create_mental_model_with_http_info(
+    def create_mental_model_with_http_info(
         self,
         bank_id: StrictStr,
         create_mental_model_request: CreateMentalModelRequest,
@@ -478,11 +478,11 @@ class MentalModelsApi:
             '200': "CreateMentalModelResponse",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        await response_data.read()
+        response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -490,7 +490,7 @@ class MentalModelsApi:
 
 
     @validate_call
-    async def create_mental_model_without_preload_content(
+    def create_mental_model_without_preload_content(
         self,
         bank_id: StrictStr,
         create_mental_model_request: CreateMentalModelRequest,
@@ -554,7 +554,7 @@ class MentalModelsApi:
             '200': "CreateMentalModelResponse",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
@@ -644,7 +644,7 @@ class MentalModelsApi:
 
 
     @validate_call
-    async def delete_mental_model(
+    def delete_mental_model(
         self,
         bank_id: StrictStr,
         mental_model_id: StrictStr,
@@ -708,11 +708,11 @@ class MentalModelsApi:
             '200': "object",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        await response_data.read()
+        response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -720,7 +720,7 @@ class MentalModelsApi:
 
 
     @validate_call
-    async def delete_mental_model_with_http_info(
+    def delete_mental_model_with_http_info(
         self,
         bank_id: StrictStr,
         mental_model_id: StrictStr,
@@ -784,11 +784,11 @@ class MentalModelsApi:
             '200': "object",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        await response_data.read()
+        response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -796,7 +796,7 @@ class MentalModelsApi:
 
 
     @validate_call
-    async def delete_mental_model_without_preload_content(
+    def delete_mental_model_without_preload_content(
         self,
         bank_id: StrictStr,
         mental_model_id: StrictStr,
@@ -860,7 +860,7 @@ class MentalModelsApi:
             '200': "object",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
@@ -937,7 +937,7 @@ class MentalModelsApi:
 
 
     @validate_call
-    async def get_mental_model(
+    def get_mental_model(
         self,
         bank_id: StrictStr,
         mental_model_id: StrictStr,
@@ -1005,11 +1005,11 @@ class MentalModelsApi:
             '200': "MentalModelResponse",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        await response_data.read()
+        response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -1017,7 +1017,7 @@ class MentalModelsApi:
 
 
     @validate_call
-    async def get_mental_model_with_http_info(
+    def get_mental_model_with_http_info(
         self,
         bank_id: StrictStr,
         mental_model_id: StrictStr,
@@ -1085,11 +1085,11 @@ class MentalModelsApi:
             '200': "MentalModelResponse",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        await response_data.read()
+        response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -1097,7 +1097,7 @@ class MentalModelsApi:
 
 
     @validate_call
-    async def get_mental_model_without_preload_content(
+    def get_mental_model_without_preload_content(
         self,
         bank_id: StrictStr,
         mental_model_id: StrictStr,
@@ -1165,7 +1165,7 @@ class MentalModelsApi:
             '200': "MentalModelResponse",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
@@ -1247,7 +1247,7 @@ class MentalModelsApi:
 
 
     @validate_call
-    async def get_mental_model_history(
+    def get_mental_model_history(
         self,
         bank_id: StrictStr,
         mental_model_id: StrictStr,
@@ -1311,11 +1311,11 @@ class MentalModelsApi:
             '200': "object",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        await response_data.read()
+        response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -1323,7 +1323,7 @@ class MentalModelsApi:
 
 
     @validate_call
-    async def get_mental_model_history_with_http_info(
+    def get_mental_model_history_with_http_info(
         self,
         bank_id: StrictStr,
         mental_model_id: StrictStr,
@@ -1387,11 +1387,11 @@ class MentalModelsApi:
             '200': "object",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        await response_data.read()
+        response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -1399,7 +1399,7 @@ class MentalModelsApi:
 
 
     @validate_call
-    async def get_mental_model_history_without_preload_content(
+    def get_mental_model_history_without_preload_content(
         self,
         bank_id: StrictStr,
         mental_model_id: StrictStr,
@@ -1463,7 +1463,7 @@ class MentalModelsApi:
             '200': "object",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
@@ -1540,7 +1540,7 @@ class MentalModelsApi:
 
 
     @validate_call
-    async def list_mental_models(
+    def list_mental_models(
         self,
         bank_id: StrictStr,
         tags: Annotated[Optional[List[StrictStr]], Field(description="Filter by tags")] = None,
@@ -1620,11 +1620,11 @@ class MentalModelsApi:
             '200': "MentalModelListResponse",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        await response_data.read()
+        response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -1632,7 +1632,7 @@ class MentalModelsApi:
 
 
     @validate_call
-    async def list_mental_models_with_http_info(
+    def list_mental_models_with_http_info(
         self,
         bank_id: StrictStr,
         tags: Annotated[Optional[List[StrictStr]], Field(description="Filter by tags")] = None,
@@ -1712,11 +1712,11 @@ class MentalModelsApi:
             '200': "MentalModelListResponse",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        await response_data.read()
+        response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -1724,7 +1724,7 @@ class MentalModelsApi:
 
 
     @validate_call
-    async def list_mental_models_without_preload_content(
+    def list_mental_models_without_preload_content(
         self,
         bank_id: StrictStr,
         tags: Annotated[Optional[List[StrictStr]], Field(description="Filter by tags")] = None,
@@ -1804,7 +1804,7 @@ class MentalModelsApi:
             '200': "MentalModelListResponse",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
@@ -1904,7 +1904,7 @@ class MentalModelsApi:
 
 
     @validate_call
-    async def refresh_mental_model(
+    def refresh_mental_model(
         self,
         bank_id: StrictStr,
         mental_model_id: StrictStr,
@@ -1968,11 +1968,11 @@ class MentalModelsApi:
             '200': "AsyncOperationSubmitResponse",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        await response_data.read()
+        response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -1980,7 +1980,7 @@ class MentalModelsApi:
 
 
     @validate_call
-    async def refresh_mental_model_with_http_info(
+    def refresh_mental_model_with_http_info(
         self,
         bank_id: StrictStr,
         mental_model_id: StrictStr,
@@ -2044,11 +2044,11 @@ class MentalModelsApi:
             '200': "AsyncOperationSubmitResponse",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        await response_data.read()
+        response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -2056,7 +2056,7 @@ class MentalModelsApi:
 
 
     @validate_call
-    async def refresh_mental_model_without_preload_content(
+    def refresh_mental_model_without_preload_content(
         self,
         bank_id: StrictStr,
         mental_model_id: StrictStr,
@@ -2120,7 +2120,7 @@ class MentalModelsApi:
             '200': "AsyncOperationSubmitResponse",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
@@ -2197,7 +2197,7 @@ class MentalModelsApi:
 
 
     @validate_call
-    async def update_mental_model(
+    def update_mental_model(
         self,
         bank_id: StrictStr,
         mental_model_id: StrictStr,
@@ -2265,11 +2265,11 @@ class MentalModelsApi:
             '200': "MentalModelResponse",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        await response_data.read()
+        response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -2277,7 +2277,7 @@ class MentalModelsApi:
 
 
     @validate_call
-    async def update_mental_model_with_http_info(
+    def update_mental_model_with_http_info(
         self,
         bank_id: StrictStr,
         mental_model_id: StrictStr,
@@ -2345,11 +2345,11 @@ class MentalModelsApi:
             '200': "MentalModelResponse",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        await response_data.read()
+        response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -2357,7 +2357,7 @@ class MentalModelsApi:
 
 
     @validate_call
-    async def update_mental_model_without_preload_content(
+    def update_mental_model_without_preload_content(
         self,
         bank_id: StrictStr,
         mental_model_id: StrictStr,
@@ -2425,7 +2425,7 @@ class MentalModelsApi:
             '200': "MentalModelResponse",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )

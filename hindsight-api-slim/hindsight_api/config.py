@@ -458,6 +458,9 @@ ENV_WEBHOOK_SECRET = "HINDSIGHT_API_WEBHOOK_SECRET"
 ENV_WEBHOOK_EVENT_TYPES = "HINDSIGHT_API_WEBHOOK_EVENT_TYPES"
 ENV_WEBHOOK_DELIVERY_POLL_INTERVAL_SECONDS = "HINDSIGHT_API_WEBHOOK_DELIVERY_POLL_INTERVAL_SECONDS"
 
+# Memory Defense configuration (server-level defaults)
+ENV_MEMORY_DEFENSE_ENABLED_DEFAULT = "HINDSIGHT_API_MEMORY_DEFENSE_ENABLED_DEFAULT"
+
 # Built-in llama.cpp configuration (for provider=llamacpp)
 ENV_LLAMACPP_MODEL_PATH = "HINDSIGHT_API_LLAMACPP_MODEL_PATH"
 ENV_LLAMACPP_GPU_LAYERS = "HINDSIGHT_API_LLAMACPP_GPU_LAYERS"
@@ -880,6 +883,9 @@ DEFAULT_CONSOLIDATION_SOURCE_FACTS_MAX_TOKENS_PER_OBSERVATION = (
 )
 DEFAULT_OBSERVATIONS_MISSION = None  # Declarative spec of what observations are for this bank
 DEFAULT_MAX_OBSERVATIONS_PER_SCOPE = -1  # Max observations per tag scope (-1 = unlimited)
+
+# Memory Defense defaults (server-level configuration)
+DEFAULT_MEMORY_DEFENSE_ENABLED_DEFAULT = False  # Default: new banks have memory_defense disabled
 
 # Database migrations
 DEFAULT_RUN_MIGRATIONS_ON_STARTUP = True
@@ -1470,6 +1476,10 @@ class HindsightConfig:
     # When False: only label entities are extracted (or no entities at all if no labels configured)
     entities_allow_free_form: bool
 
+    # Memory Defense policy (dict matching DefensePolicy schema — validated on write)
+    # None = Memory Defense disabled / not configured for this bank
+    memory_defense: dict | None
+
     # Reflect agent settings
     reflect_mission: str | None
     reflect_source_facts_max_tokens: int
@@ -1553,6 +1563,9 @@ class HindsightConfig:
     # Interval for the periodic sweep that re-schedules consolidation for banks with
     # eligible-but-unscheduled facts. 0 = disabled.
     consolidation_reconcile_interval_seconds: int
+
+    # Memory Defense configuration (static - server-level defaults for new banks)
+    memory_defense_enabled_default: bool  # Default: new banks have memory_defense disabled
 
     # Webhook configuration (static - server-level only, not per-bank)
     webhook_url: str | None  # Global webhook URL (None = disabled)
@@ -1664,6 +1677,8 @@ class HindsightConfig:
         "disposition_empathy",
         # Gemini safety settings (controls content filtering for Gemini/VertexAI providers)
         "llm_gemini_safety_settings",
+        # Memory Defense policy (validated against DefensePolicy schema on write)
+        "memory_defense",
     }
 
     @property
@@ -2387,6 +2402,7 @@ class HindsightConfig:
             ),
             entity_labels=None,
             entities_allow_free_form=True,
+            memory_defense=None,
             # Database migrations
             run_migrations_on_startup=os.getenv(ENV_RUN_MIGRATIONS_ON_STARTUP, "true").lower() == "true",
             # Database connection pool
@@ -2496,6 +2512,11 @@ class HindsightConfig:
                     str(DEFAULT_CONSOLIDATION_RECONCILE_INTERVAL_SECONDS),
                 )
             ),
+            # Memory Defense configuration (static, server-level defaults)
+            memory_defense_enabled_default=os.getenv(
+                ENV_MEMORY_DEFENSE_ENABLED_DEFAULT, str(DEFAULT_MEMORY_DEFENSE_ENABLED_DEFAULT)
+            ).lower()
+            == "true",
             # Webhook configuration (static, server-level only)
             webhook_url=os.getenv(ENV_WEBHOOK_URL) or DEFAULT_WEBHOOK_URL,
             webhook_secret=os.getenv(ENV_WEBHOOK_SECRET) or DEFAULT_WEBHOOK_SECRET,

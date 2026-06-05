@@ -43,7 +43,7 @@ class DirectivesApi:
 
 
     @validate_call
-    async def create_directive(
+    def create_directive(
         self,
         bank_id: StrictStr,
         create_directive_request: CreateDirectiveRequest,
@@ -107,11 +107,11 @@ class DirectivesApi:
             '200': "DirectiveResponse",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        await response_data.read()
+        response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -119,7 +119,7 @@ class DirectivesApi:
 
 
     @validate_call
-    async def create_directive_with_http_info(
+    def create_directive_with_http_info(
         self,
         bank_id: StrictStr,
         create_directive_request: CreateDirectiveRequest,
@@ -183,11 +183,11 @@ class DirectivesApi:
             '200': "DirectiveResponse",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        await response_data.read()
+        response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -195,7 +195,7 @@ class DirectivesApi:
 
 
     @validate_call
-    async def create_directive_without_preload_content(
+    def create_directive_without_preload_content(
         self,
         bank_id: StrictStr,
         create_directive_request: CreateDirectiveRequest,
@@ -259,7 +259,7 @@ class DirectivesApi:
             '200': "DirectiveResponse",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
@@ -349,7 +349,7 @@ class DirectivesApi:
 
 
     @validate_call
-    async def delete_directive(
+    def delete_directive(
         self,
         bank_id: StrictStr,
         directive_id: StrictStr,
@@ -413,11 +413,11 @@ class DirectivesApi:
             '200': "object",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        await response_data.read()
+        response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -425,7 +425,7 @@ class DirectivesApi:
 
 
     @validate_call
-    async def delete_directive_with_http_info(
+    def delete_directive_with_http_info(
         self,
         bank_id: StrictStr,
         directive_id: StrictStr,
@@ -489,11 +489,11 @@ class DirectivesApi:
             '200': "object",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        await response_data.read()
+        response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -501,7 +501,7 @@ class DirectivesApi:
 
 
     @validate_call
-    async def delete_directive_without_preload_content(
+    def delete_directive_without_preload_content(
         self,
         bank_id: StrictStr,
         directive_id: StrictStr,
@@ -565,7 +565,7 @@ class DirectivesApi:
             '200': "object",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
@@ -642,7 +642,7 @@ class DirectivesApi:
 
 
     @validate_call
-    async def get_directive(
+    def get_directive(
         self,
         bank_id: StrictStr,
         directive_id: StrictStr,
@@ -706,11 +706,11 @@ class DirectivesApi:
             '200': "DirectiveResponse",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        await response_data.read()
+        response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -718,7 +718,7 @@ class DirectivesApi:
 
 
     @validate_call
-    async def get_directive_with_http_info(
+    def get_directive_with_http_info(
         self,
         bank_id: StrictStr,
         directive_id: StrictStr,
@@ -782,11 +782,11 @@ class DirectivesApi:
             '200': "DirectiveResponse",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        await response_data.read()
+        response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -794,7 +794,7 @@ class DirectivesApi:
 
 
     @validate_call
-    async def get_directive_without_preload_content(
+    def get_directive_without_preload_content(
         self,
         bank_id: StrictStr,
         directive_id: StrictStr,
@@ -858,7 +858,7 @@ class DirectivesApi:
             '200': "DirectiveResponse",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
@@ -935,7 +935,7 @@ class DirectivesApi:
 
 
     @validate_call
-    async def list_directives(
+    def list_directives(
         self,
         bank_id: StrictStr,
         tags: Annotated[Optional[List[StrictStr]], Field(description="Filter by tags")] = None,
@@ -1015,11 +1015,11 @@ class DirectivesApi:
             '200': "DirectiveListResponse",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        await response_data.read()
+        response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -1027,7 +1027,7 @@ class DirectivesApi:
 
 
     @validate_call
-    async def list_directives_with_http_info(
+    def list_directives_with_http_info(
         self,
         bank_id: StrictStr,
         tags: Annotated[Optional[List[StrictStr]], Field(description="Filter by tags")] = None,
@@ -1107,11 +1107,11 @@ class DirectivesApi:
             '200': "DirectiveListResponse",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        await response_data.read()
+        response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -1119,7 +1119,7 @@ class DirectivesApi:
 
 
     @validate_call
-    async def list_directives_without_preload_content(
+    def list_directives_without_preload_content(
         self,
         bank_id: StrictStr,
         tags: Annotated[Optional[List[StrictStr]], Field(description="Filter by tags")] = None,
@@ -1199,7 +1199,7 @@ class DirectivesApi:
             '200': "DirectiveListResponse",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
@@ -1299,7 +1299,7 @@ class DirectivesApi:
 
 
     @validate_call
-    async def update_directive(
+    def update_directive(
         self,
         bank_id: StrictStr,
         directive_id: StrictStr,
@@ -1367,11 +1367,11 @@ class DirectivesApi:
             '200': "DirectiveResponse",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        await response_data.read()
+        response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -1379,7 +1379,7 @@ class DirectivesApi:
 
 
     @validate_call
-    async def update_directive_with_http_info(
+    def update_directive_with_http_info(
         self,
         bank_id: StrictStr,
         directive_id: StrictStr,
@@ -1447,11 +1447,11 @@ class DirectivesApi:
             '200': "DirectiveResponse",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        await response_data.read()
+        response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -1459,7 +1459,7 @@ class DirectivesApi:
 
 
     @validate_call
-    async def update_directive_without_preload_content(
+    def update_directive_without_preload_content(
         self,
         bank_id: StrictStr,
         directive_id: StrictStr,
@@ -1527,7 +1527,7 @@ class DirectivesApi:
             '200': "DirectiveResponse",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )

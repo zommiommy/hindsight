@@ -53,7 +53,7 @@ class BanksApi:
 
 
     @validate_call
-    async def add_bank_background(
+    def add_bank_background(
         self,
         bank_id: StrictStr,
         add_background_request: AddBackgroundRequest,
@@ -118,11 +118,11 @@ class BanksApi:
             '200': "BackgroundResponse",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        await response_data.read()
+        response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -130,7 +130,7 @@ class BanksApi:
 
 
     @validate_call
-    async def add_bank_background_with_http_info(
+    def add_bank_background_with_http_info(
         self,
         bank_id: StrictStr,
         add_background_request: AddBackgroundRequest,
@@ -195,11 +195,11 @@ class BanksApi:
             '200': "BackgroundResponse",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        await response_data.read()
+        response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -207,7 +207,7 @@ class BanksApi:
 
 
     @validate_call
-    async def add_bank_background_without_preload_content(
+    def add_bank_background_without_preload_content(
         self,
         bank_id: StrictStr,
         add_background_request: AddBackgroundRequest,
@@ -272,7 +272,7 @@ class BanksApi:
             '200': "BackgroundResponse",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
@@ -362,7 +362,7 @@ class BanksApi:
 
 
     @validate_call
-    async def clear_observations(
+    def clear_observations(
         self,
         bank_id: StrictStr,
         authorization: Optional[StrictStr] = None,
@@ -422,11 +422,11 @@ class BanksApi:
             '200': "DeleteResponse",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        await response_data.read()
+        response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -434,7 +434,7 @@ class BanksApi:
 
 
     @validate_call
-    async def clear_observations_with_http_info(
+    def clear_observations_with_http_info(
         self,
         bank_id: StrictStr,
         authorization: Optional[StrictStr] = None,
@@ -494,11 +494,11 @@ class BanksApi:
             '200': "DeleteResponse",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        await response_data.read()
+        response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -506,7 +506,7 @@ class BanksApi:
 
 
     @validate_call
-    async def clear_observations_without_preload_content(
+    def clear_observations_without_preload_content(
         self,
         bank_id: StrictStr,
         authorization: Optional[StrictStr] = None,
@@ -566,7 +566,7 @@ class BanksApi:
             '200': "DeleteResponse",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
@@ -640,7 +640,7 @@ class BanksApi:
 
 
     @validate_call
-    async def create_or_update_bank(
+    def create_or_update_bank(
         self,
         bank_id: StrictStr,
         create_bank_request: CreateBankRequest,
@@ -704,11 +704,11 @@ class BanksApi:
             '200': "BankProfileResponse",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        await response_data.read()
+        response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -716,7 +716,7 @@ class BanksApi:
 
 
     @validate_call
-    async def create_or_update_bank_with_http_info(
+    def create_or_update_bank_with_http_info(
         self,
         bank_id: StrictStr,
         create_bank_request: CreateBankRequest,
@@ -780,11 +780,11 @@ class BanksApi:
             '200': "BankProfileResponse",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        await response_data.read()
+        response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -792,7 +792,7 @@ class BanksApi:
 
 
     @validate_call
-    async def create_or_update_bank_without_preload_content(
+    def create_or_update_bank_without_preload_content(
         self,
         bank_id: StrictStr,
         create_bank_request: CreateBankRequest,
@@ -856,7 +856,7 @@ class BanksApi:
             '200': "BankProfileResponse",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
@@ -946,7 +946,7 @@ class BanksApi:
 
 
     @validate_call
-    async def delete_bank(
+    def delete_bank(
         self,
         bank_id: StrictStr,
         authorization: Optional[StrictStr] = None,
@@ -1006,11 +1006,11 @@ class BanksApi:
             '200': "DeleteResponse",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        await response_data.read()
+        response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -1018,7 +1018,7 @@ class BanksApi:
 
 
     @validate_call
-    async def delete_bank_with_http_info(
+    def delete_bank_with_http_info(
         self,
         bank_id: StrictStr,
         authorization: Optional[StrictStr] = None,
@@ -1078,11 +1078,11 @@ class BanksApi:
             '200': "DeleteResponse",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        await response_data.read()
+        response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -1090,7 +1090,7 @@ class BanksApi:
 
 
     @validate_call
-    async def delete_bank_without_preload_content(
+    def delete_bank_without_preload_content(
         self,
         bank_id: StrictStr,
         authorization: Optional[StrictStr] = None,
@@ -1150,7 +1150,7 @@ class BanksApi:
             '200': "DeleteResponse",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
@@ -1224,7 +1224,7 @@ class BanksApi:
 
 
     @validate_call
-    async def get_agent_stats(
+    def get_agent_stats(
         self,
         bank_id: StrictStr,
         authorization: Optional[StrictStr] = None,
@@ -1284,11 +1284,11 @@ class BanksApi:
             '200': "BankStatsResponse",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        await response_data.read()
+        response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -1296,7 +1296,7 @@ class BanksApi:
 
 
     @validate_call
-    async def get_agent_stats_with_http_info(
+    def get_agent_stats_with_http_info(
         self,
         bank_id: StrictStr,
         authorization: Optional[StrictStr] = None,
@@ -1356,11 +1356,11 @@ class BanksApi:
             '200': "BankStatsResponse",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        await response_data.read()
+        response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -1368,7 +1368,7 @@ class BanksApi:
 
 
     @validate_call
-    async def get_agent_stats_without_preload_content(
+    def get_agent_stats_without_preload_content(
         self,
         bank_id: StrictStr,
         authorization: Optional[StrictStr] = None,
@@ -1428,7 +1428,7 @@ class BanksApi:
             '200': "BankStatsResponse",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
@@ -1502,7 +1502,7 @@ class BanksApi:
 
 
     @validate_call
-    async def get_bank_config(
+    def get_bank_config(
         self,
         bank_id: StrictStr,
         authorization: Optional[StrictStr] = None,
@@ -1562,11 +1562,11 @@ class BanksApi:
             '200': "BankConfigResponse",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        await response_data.read()
+        response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -1574,7 +1574,7 @@ class BanksApi:
 
 
     @validate_call
-    async def get_bank_config_with_http_info(
+    def get_bank_config_with_http_info(
         self,
         bank_id: StrictStr,
         authorization: Optional[StrictStr] = None,
@@ -1634,11 +1634,11 @@ class BanksApi:
             '200': "BankConfigResponse",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        await response_data.read()
+        response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -1646,7 +1646,7 @@ class BanksApi:
 
 
     @validate_call
-    async def get_bank_config_without_preload_content(
+    def get_bank_config_without_preload_content(
         self,
         bank_id: StrictStr,
         authorization: Optional[StrictStr] = None,
@@ -1706,7 +1706,7 @@ class BanksApi:
             '200': "BankConfigResponse",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
@@ -1780,7 +1780,7 @@ class BanksApi:
 
 
     @validate_call
-    async def get_bank_profile(
+    def get_bank_profile(
         self,
         bank_id: StrictStr,
         authorization: Optional[StrictStr] = None,
@@ -1841,11 +1841,11 @@ class BanksApi:
             '200': "BankProfileResponse",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        await response_data.read()
+        response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -1853,7 +1853,7 @@ class BanksApi:
 
 
     @validate_call
-    async def get_bank_profile_with_http_info(
+    def get_bank_profile_with_http_info(
         self,
         bank_id: StrictStr,
         authorization: Optional[StrictStr] = None,
@@ -1914,11 +1914,11 @@ class BanksApi:
             '200': "BankProfileResponse",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        await response_data.read()
+        response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -1926,7 +1926,7 @@ class BanksApi:
 
 
     @validate_call
-    async def get_bank_profile_without_preload_content(
+    def get_bank_profile_without_preload_content(
         self,
         bank_id: StrictStr,
         authorization: Optional[StrictStr] = None,
@@ -1987,7 +1987,7 @@ class BanksApi:
             '200': "BankProfileResponse",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
@@ -2061,7 +2061,7 @@ class BanksApi:
 
 
     @validate_call
-    async def get_memories_timeseries(
+    def get_memories_timeseries(
         self,
         bank_id: StrictStr,
         period: Optional[StrictStr] = None,
@@ -2129,11 +2129,11 @@ class BanksApi:
             '200': "MemoriesTimeseriesResponse",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        await response_data.read()
+        response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -2141,7 +2141,7 @@ class BanksApi:
 
 
     @validate_call
-    async def get_memories_timeseries_with_http_info(
+    def get_memories_timeseries_with_http_info(
         self,
         bank_id: StrictStr,
         period: Optional[StrictStr] = None,
@@ -2209,11 +2209,11 @@ class BanksApi:
             '200': "MemoriesTimeseriesResponse",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        await response_data.read()
+        response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -2221,7 +2221,7 @@ class BanksApi:
 
 
     @validate_call
-    async def get_memories_timeseries_without_preload_content(
+    def get_memories_timeseries_without_preload_content(
         self,
         bank_id: StrictStr,
         period: Optional[StrictStr] = None,
@@ -2289,7 +2289,7 @@ class BanksApi:
             '200': "MemoriesTimeseriesResponse",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
@@ -2373,7 +2373,7 @@ class BanksApi:
 
 
     @validate_call
-    async def list_banks(
+    def list_banks(
         self,
         authorization: Optional[StrictStr] = None,
         _request_timeout: Union[
@@ -2429,11 +2429,11 @@ class BanksApi:
             '200': "BankListResponse",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        await response_data.read()
+        response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -2441,7 +2441,7 @@ class BanksApi:
 
 
     @validate_call
-    async def list_banks_with_http_info(
+    def list_banks_with_http_info(
         self,
         authorization: Optional[StrictStr] = None,
         _request_timeout: Union[
@@ -2497,11 +2497,11 @@ class BanksApi:
             '200': "BankListResponse",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        await response_data.read()
+        response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -2509,7 +2509,7 @@ class BanksApi:
 
 
     @validate_call
-    async def list_banks_without_preload_content(
+    def list_banks_without_preload_content(
         self,
         authorization: Optional[StrictStr] = None,
         _request_timeout: Union[
@@ -2565,7 +2565,7 @@ class BanksApi:
             '200': "BankListResponse",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
@@ -2636,7 +2636,7 @@ class BanksApi:
 
 
     @validate_call
-    async def recover_consolidation(
+    def recover_consolidation(
         self,
         bank_id: StrictStr,
         authorization: Optional[StrictStr] = None,
@@ -2696,11 +2696,11 @@ class BanksApi:
             '200': "RecoverConsolidationResponse",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        await response_data.read()
+        response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -2708,7 +2708,7 @@ class BanksApi:
 
 
     @validate_call
-    async def recover_consolidation_with_http_info(
+    def recover_consolidation_with_http_info(
         self,
         bank_id: StrictStr,
         authorization: Optional[StrictStr] = None,
@@ -2768,11 +2768,11 @@ class BanksApi:
             '200': "RecoverConsolidationResponse",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        await response_data.read()
+        response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -2780,7 +2780,7 @@ class BanksApi:
 
 
     @validate_call
-    async def recover_consolidation_without_preload_content(
+    def recover_consolidation_without_preload_content(
         self,
         bank_id: StrictStr,
         authorization: Optional[StrictStr] = None,
@@ -2840,7 +2840,7 @@ class BanksApi:
             '200': "RecoverConsolidationResponse",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
@@ -2914,7 +2914,7 @@ class BanksApi:
 
 
     @validate_call
-    async def reset_bank_config(
+    def reset_bank_config(
         self,
         bank_id: StrictStr,
         authorization: Optional[StrictStr] = None,
@@ -2974,11 +2974,11 @@ class BanksApi:
             '200': "BankConfigResponse",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        await response_data.read()
+        response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -2986,7 +2986,7 @@ class BanksApi:
 
 
     @validate_call
-    async def reset_bank_config_with_http_info(
+    def reset_bank_config_with_http_info(
         self,
         bank_id: StrictStr,
         authorization: Optional[StrictStr] = None,
@@ -3046,11 +3046,11 @@ class BanksApi:
             '200': "BankConfigResponse",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        await response_data.read()
+        response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -3058,7 +3058,7 @@ class BanksApi:
 
 
     @validate_call
-    async def reset_bank_config_without_preload_content(
+    def reset_bank_config_without_preload_content(
         self,
         bank_id: StrictStr,
         authorization: Optional[StrictStr] = None,
@@ -3118,7 +3118,7 @@ class BanksApi:
             '200': "BankConfigResponse",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
@@ -3192,7 +3192,7 @@ class BanksApi:
 
 
     @validate_call
-    async def trigger_consolidation(
+    def trigger_consolidation(
         self,
         bank_id: StrictStr,
         authorization: Optional[StrictStr] = None,
@@ -3256,11 +3256,11 @@ class BanksApi:
             '200': "ConsolidationResponse",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        await response_data.read()
+        response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -3268,7 +3268,7 @@ class BanksApi:
 
 
     @validate_call
-    async def trigger_consolidation_with_http_info(
+    def trigger_consolidation_with_http_info(
         self,
         bank_id: StrictStr,
         authorization: Optional[StrictStr] = None,
@@ -3332,11 +3332,11 @@ class BanksApi:
             '200': "ConsolidationResponse",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        await response_data.read()
+        response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -3344,7 +3344,7 @@ class BanksApi:
 
 
     @validate_call
-    async def trigger_consolidation_without_preload_content(
+    def trigger_consolidation_without_preload_content(
         self,
         bank_id: StrictStr,
         authorization: Optional[StrictStr] = None,
@@ -3408,7 +3408,7 @@ class BanksApi:
             '200': "ConsolidationResponse",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
@@ -3498,7 +3498,7 @@ class BanksApi:
 
 
     @validate_call
-    async def update_bank(
+    def update_bank(
         self,
         bank_id: StrictStr,
         create_bank_request: CreateBankRequest,
@@ -3562,11 +3562,11 @@ class BanksApi:
             '200': "BankProfileResponse",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        await response_data.read()
+        response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -3574,7 +3574,7 @@ class BanksApi:
 
 
     @validate_call
-    async def update_bank_with_http_info(
+    def update_bank_with_http_info(
         self,
         bank_id: StrictStr,
         create_bank_request: CreateBankRequest,
@@ -3638,11 +3638,11 @@ class BanksApi:
             '200': "BankProfileResponse",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        await response_data.read()
+        response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -3650,7 +3650,7 @@ class BanksApi:
 
 
     @validate_call
-    async def update_bank_without_preload_content(
+    def update_bank_without_preload_content(
         self,
         bank_id: StrictStr,
         create_bank_request: CreateBankRequest,
@@ -3714,7 +3714,7 @@ class BanksApi:
             '200': "BankProfileResponse",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
@@ -3804,7 +3804,7 @@ class BanksApi:
 
 
     @validate_call
-    async def update_bank_config(
+    def update_bank_config(
         self,
         bank_id: StrictStr,
         bank_config_update: BankConfigUpdate,
@@ -3868,11 +3868,11 @@ class BanksApi:
             '200': "BankConfigResponse",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        await response_data.read()
+        response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -3880,7 +3880,7 @@ class BanksApi:
 
 
     @validate_call
-    async def update_bank_config_with_http_info(
+    def update_bank_config_with_http_info(
         self,
         bank_id: StrictStr,
         bank_config_update: BankConfigUpdate,
@@ -3944,11 +3944,11 @@ class BanksApi:
             '200': "BankConfigResponse",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        await response_data.read()
+        response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -3956,7 +3956,7 @@ class BanksApi:
 
 
     @validate_call
-    async def update_bank_config_without_preload_content(
+    def update_bank_config_without_preload_content(
         self,
         bank_id: StrictStr,
         bank_config_update: BankConfigUpdate,
@@ -4020,7 +4020,7 @@ class BanksApi:
             '200': "BankConfigResponse",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
@@ -4110,7 +4110,7 @@ class BanksApi:
 
 
     @validate_call
-    async def update_bank_disposition(
+    def update_bank_disposition(
         self,
         bank_id: StrictStr,
         update_disposition_request: UpdateDispositionRequest,
@@ -4175,11 +4175,11 @@ class BanksApi:
             '200': "BankProfileResponse",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        await response_data.read()
+        response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -4187,7 +4187,7 @@ class BanksApi:
 
 
     @validate_call
-    async def update_bank_disposition_with_http_info(
+    def update_bank_disposition_with_http_info(
         self,
         bank_id: StrictStr,
         update_disposition_request: UpdateDispositionRequest,
@@ -4252,11 +4252,11 @@ class BanksApi:
             '200': "BankProfileResponse",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        await response_data.read()
+        response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -4264,7 +4264,7 @@ class BanksApi:
 
 
     @validate_call
-    async def update_bank_disposition_without_preload_content(
+    def update_bank_disposition_without_preload_content(
         self,
         bank_id: StrictStr,
         update_disposition_request: UpdateDispositionRequest,
@@ -4329,7 +4329,7 @@ class BanksApi:
             '200': "BankProfileResponse",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )

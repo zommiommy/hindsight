@@ -40,7 +40,7 @@ class FilesApi:
 
 
     @validate_call
-    async def file_retain(
+    def file_retain(
         self,
         bank_id: StrictStr,
         files: Annotated[List[Union[StrictBytes, StrictStr, Tuple[StrictStr, StrictBytes]]], Field(description="Files to upload and convert")],
@@ -108,11 +108,11 @@ class FilesApi:
             '200': "FileRetainResponse",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        await response_data.read()
+        response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -120,7 +120,7 @@ class FilesApi:
 
 
     @validate_call
-    async def file_retain_with_http_info(
+    def file_retain_with_http_info(
         self,
         bank_id: StrictStr,
         files: Annotated[List[Union[StrictBytes, StrictStr, Tuple[StrictStr, StrictBytes]]], Field(description="Files to upload and convert")],
@@ -188,11 +188,11 @@ class FilesApi:
             '200': "FileRetainResponse",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        await response_data.read()
+        response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -200,7 +200,7 @@ class FilesApi:
 
 
     @validate_call
-    async def file_retain_without_preload_content(
+    def file_retain_without_preload_content(
         self,
         bank_id: StrictStr,
         files: Annotated[List[Union[StrictBytes, StrictStr, Tuple[StrictStr, StrictBytes]]], Field(description="Files to upload and convert")],
@@ -268,7 +268,7 @@ class FilesApi:
             '200': "FileRetainResponse",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )

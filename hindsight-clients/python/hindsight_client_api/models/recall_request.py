@@ -39,7 +39,8 @@ class RecallRequest(BaseModel):
     tags: Optional[List[StrictStr]] = None
     tags_match: Optional[StrictStr] = Field(default='any', description="How to match tags: 'any' (OR, includes untagged), 'all' (AND, includes untagged), 'any_strict' (OR, excludes untagged), 'all_strict' (AND, excludes untagged).")
     tag_groups: Optional[List[MentalModelTriggerInputTagGroupsInner]] = None
-    __properties: ClassVar[List[str]] = ["query", "types", "budget", "max_tokens", "trace", "query_timestamp", "include", "tags", "tags_match", "tag_groups"]
+    include_quarantined: Optional[StrictBool] = Field(default=False, description="When True, recall also surfaces rows whose status != 'active' (Memory Defense quarantine).")
+    __properties: ClassVar[List[str]] = ["query", "types", "budget", "max_tokens", "trace", "query_timestamp", "include", "tags", "tags_match", "tag_groups", "include_quarantined"]
 
     @field_validator('tags_match')
     def tags_match_validate_enum(cls, value):
@@ -141,7 +142,8 @@ class RecallRequest(BaseModel):
             "include": IncludeOptions.from_dict(obj["include"]) if obj.get("include") is not None else None,
             "tags": obj.get("tags"),
             "tags_match": obj.get("tags_match") if obj.get("tags_match") is not None else 'any',
-            "tag_groups": [MentalModelTriggerInputTagGroupsInner.from_dict(_item) for _item in obj["tag_groups"]] if obj.get("tag_groups") is not None else None
+            "tag_groups": [MentalModelTriggerInputTagGroupsInner.from_dict(_item) for _item in obj["tag_groups"]] if obj.get("tag_groups") is not None else None,
+            "include_quarantined": obj.get("include_quarantined") if obj.get("include_quarantined") is not None else False
         })
         return _obj
 

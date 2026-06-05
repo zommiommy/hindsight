@@ -42,7 +42,7 @@ class EntitiesApi:
 
 
     @validate_call
-    async def get_entity(
+    def get_entity(
         self,
         bank_id: StrictStr,
         entity_id: StrictStr,
@@ -106,11 +106,11 @@ class EntitiesApi:
             '200': "EntityDetailResponse",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        await response_data.read()
+        response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -118,7 +118,7 @@ class EntitiesApi:
 
 
     @validate_call
-    async def get_entity_with_http_info(
+    def get_entity_with_http_info(
         self,
         bank_id: StrictStr,
         entity_id: StrictStr,
@@ -182,11 +182,11 @@ class EntitiesApi:
             '200': "EntityDetailResponse",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        await response_data.read()
+        response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -194,7 +194,7 @@ class EntitiesApi:
 
 
     @validate_call
-    async def get_entity_without_preload_content(
+    def get_entity_without_preload_content(
         self,
         bank_id: StrictStr,
         entity_id: StrictStr,
@@ -258,7 +258,7 @@ class EntitiesApi:
             '200': "EntityDetailResponse",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
@@ -335,7 +335,7 @@ class EntitiesApi:
 
 
     @validate_call
-    async def get_entity_graph(
+    def get_entity_graph(
         self,
         bank_id: StrictStr,
         limit: Annotated[Optional[StrictInt], Field(description="Maximum number of co-occurrence edges to return")] = None,
@@ -403,11 +403,11 @@ class EntitiesApi:
             '200': "EntityGraphResponse",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        await response_data.read()
+        response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -415,7 +415,7 @@ class EntitiesApi:
 
 
     @validate_call
-    async def get_entity_graph_with_http_info(
+    def get_entity_graph_with_http_info(
         self,
         bank_id: StrictStr,
         limit: Annotated[Optional[StrictInt], Field(description="Maximum number of co-occurrence edges to return")] = None,
@@ -483,11 +483,11 @@ class EntitiesApi:
             '200': "EntityGraphResponse",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        await response_data.read()
+        response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -495,7 +495,7 @@ class EntitiesApi:
 
 
     @validate_call
-    async def get_entity_graph_without_preload_content(
+    def get_entity_graph_without_preload_content(
         self,
         bank_id: StrictStr,
         limit: Annotated[Optional[StrictInt], Field(description="Maximum number of co-occurrence edges to return")] = None,
@@ -563,7 +563,7 @@ class EntitiesApi:
             '200': "EntityGraphResponse",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
@@ -647,7 +647,7 @@ class EntitiesApi:
 
 
     @validate_call
-    async def list_entities(
+    def list_entities(
         self,
         bank_id: StrictStr,
         limit: Annotated[Optional[StrictInt], Field(description="Maximum number of entities to return")] = None,
@@ -715,11 +715,11 @@ class EntitiesApi:
             '200': "EntityListResponse",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        await response_data.read()
+        response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -727,7 +727,7 @@ class EntitiesApi:
 
 
     @validate_call
-    async def list_entities_with_http_info(
+    def list_entities_with_http_info(
         self,
         bank_id: StrictStr,
         limit: Annotated[Optional[StrictInt], Field(description="Maximum number of entities to return")] = None,
@@ -795,11 +795,11 @@ class EntitiesApi:
             '200': "EntityListResponse",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        await response_data.read()
+        response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -807,7 +807,7 @@ class EntitiesApi:
 
 
     @validate_call
-    async def list_entities_without_preload_content(
+    def list_entities_without_preload_content(
         self,
         bank_id: StrictStr,
         limit: Annotated[Optional[StrictInt], Field(description="Maximum number of entities to return")] = None,
@@ -875,7 +875,7 @@ class EntitiesApi:
             '200': "EntityListResponse",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
@@ -959,7 +959,7 @@ class EntitiesApi:
 
 
     @validate_call
-    async def regenerate_entity_observations(
+    def regenerate_entity_observations(
         self,
         bank_id: StrictStr,
         entity_id: StrictStr,
@@ -1024,11 +1024,11 @@ class EntitiesApi:
             '200': "EntityDetailResponse",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        await response_data.read()
+        response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -1036,7 +1036,7 @@ class EntitiesApi:
 
 
     @validate_call
-    async def regenerate_entity_observations_with_http_info(
+    def regenerate_entity_observations_with_http_info(
         self,
         bank_id: StrictStr,
         entity_id: StrictStr,
@@ -1101,11 +1101,11 @@ class EntitiesApi:
             '200': "EntityDetailResponse",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        await response_data.read()
+        response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -1113,7 +1113,7 @@ class EntitiesApi:
 
 
     @validate_call
-    async def regenerate_entity_observations_without_preload_content(
+    def regenerate_entity_observations_without_preload_content(
         self,
         bank_id: StrictStr,
         entity_id: StrictStr,
@@ -1178,7 +1178,7 @@ class EntitiesApi:
             '200': "EntityDetailResponse",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )

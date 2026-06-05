@@ -41,7 +41,7 @@ class AuditApi:
 
 
     @validate_call
-    async def audit_log_stats(
+    def audit_log_stats(
         self,
         bank_id: StrictStr,
         action: Annotated[Optional[StrictStr], Field(description="Filter by action type")] = None,
@@ -109,11 +109,11 @@ class AuditApi:
             '200': "AuditLogStatsResponse",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        await response_data.read()
+        response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -121,7 +121,7 @@ class AuditApi:
 
 
     @validate_call
-    async def audit_log_stats_with_http_info(
+    def audit_log_stats_with_http_info(
         self,
         bank_id: StrictStr,
         action: Annotated[Optional[StrictStr], Field(description="Filter by action type")] = None,
@@ -189,11 +189,11 @@ class AuditApi:
             '200': "AuditLogStatsResponse",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        await response_data.read()
+        response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -201,7 +201,7 @@ class AuditApi:
 
 
     @validate_call
-    async def audit_log_stats_without_preload_content(
+    def audit_log_stats_without_preload_content(
         self,
         bank_id: StrictStr,
         action: Annotated[Optional[StrictStr], Field(description="Filter by action type")] = None,
@@ -269,7 +269,7 @@ class AuditApi:
             '200': "AuditLogStatsResponse",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
@@ -353,7 +353,7 @@ class AuditApi:
 
 
     @validate_call
-    async def list_audit_logs(
+    def list_audit_logs(
         self,
         bank_id: StrictStr,
         action: Annotated[Optional[StrictStr], Field(description="Filter by action type")] = None,
@@ -437,11 +437,11 @@ class AuditApi:
             '200': "AuditLogListResponse",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        await response_data.read()
+        response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -449,7 +449,7 @@ class AuditApi:
 
 
     @validate_call
-    async def list_audit_logs_with_http_info(
+    def list_audit_logs_with_http_info(
         self,
         bank_id: StrictStr,
         action: Annotated[Optional[StrictStr], Field(description="Filter by action type")] = None,
@@ -533,11 +533,11 @@ class AuditApi:
             '200': "AuditLogListResponse",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        await response_data.read()
+        response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -545,7 +545,7 @@ class AuditApi:
 
 
     @validate_call
-    async def list_audit_logs_without_preload_content(
+    def list_audit_logs_without_preload_content(
         self,
         bank_id: StrictStr,
         action: Annotated[Optional[StrictStr], Field(description="Filter by action type")] = None,
@@ -629,7 +629,7 @@ class AuditApi:
             '200': "AuditLogListResponse",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )

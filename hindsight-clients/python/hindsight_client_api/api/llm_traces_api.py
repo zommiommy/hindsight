@@ -41,7 +41,7 @@ class LLMTracesApi:
 
 
     @validate_call
-    async def list_llm_requests(
+    def list_llm_requests(
         self,
         bank_id: StrictStr,
         status: Annotated[Optional[StrictStr], Field(description="Filter by status (success, error)")] = None,
@@ -149,11 +149,11 @@ class LLMTracesApi:
             '200': "LLMRequestListResponse",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        await response_data.read()
+        response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -161,7 +161,7 @@ class LLMTracesApi:
 
 
     @validate_call
-    async def list_llm_requests_with_http_info(
+    def list_llm_requests_with_http_info(
         self,
         bank_id: StrictStr,
         status: Annotated[Optional[StrictStr], Field(description="Filter by status (success, error)")] = None,
@@ -269,11 +269,11 @@ class LLMTracesApi:
             '200': "LLMRequestListResponse",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        await response_data.read()
+        response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -281,7 +281,7 @@ class LLMTracesApi:
 
 
     @validate_call
-    async def list_llm_requests_without_preload_content(
+    def list_llm_requests_without_preload_content(
         self,
         bank_id: StrictStr,
         status: Annotated[Optional[StrictStr], Field(description="Filter by status (success, error)")] = None,
@@ -389,7 +389,7 @@ class LLMTracesApi:
             '200': "LLMRequestListResponse",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
@@ -523,7 +523,7 @@ class LLMTracesApi:
 
 
     @validate_call
-    async def llm_request_stats(
+    def llm_request_stats(
         self,
         bank_id: StrictStr,
         operation: Annotated[Optional[StrictStr], Field(description="Filter by operation")] = None,
@@ -591,11 +591,11 @@ class LLMTracesApi:
             '200': "LLMRequestStatsResponse",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        await response_data.read()
+        response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -603,7 +603,7 @@ class LLMTracesApi:
 
 
     @validate_call
-    async def llm_request_stats_with_http_info(
+    def llm_request_stats_with_http_info(
         self,
         bank_id: StrictStr,
         operation: Annotated[Optional[StrictStr], Field(description="Filter by operation")] = None,
@@ -671,11 +671,11 @@ class LLMTracesApi:
             '200': "LLMRequestStatsResponse",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        await response_data.read()
+        response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -683,7 +683,7 @@ class LLMTracesApi:
 
 
     @validate_call
-    async def llm_request_stats_without_preload_content(
+    def llm_request_stats_without_preload_content(
         self,
         bank_id: StrictStr,
         operation: Annotated[Optional[StrictStr], Field(description="Filter by operation")] = None,
@@ -751,7 +751,7 @@ class LLMTracesApi:
             '200': "LLMRequestStatsResponse",
             '422': "HTTPValidationError",
         }
-        response_data = await self.api_client.call_api(
+        response_data = self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
