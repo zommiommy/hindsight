@@ -14,6 +14,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from hindsight_api.engine.reflect.agent import (
+    _all_mental_models_are_usable_and_fresh,
     _clean_answer_text,
     _clean_done_answer,
     _count_messages_tokens,
@@ -195,6 +196,43 @@ class TestToolNameNormalization:
         assert _is_done_tool("recall<|channel|>done") is False
 
 
+class TestMentalModelFreshnessHelper:
+    """Deterministic freshness/usability guard for short-circuiting forced retrieval."""
+
+    def test_all_fresh_and_non_empty_is_usable(self):
+        output = {
+            "mental_models": [
+                {"id": "mm-1", "content": "Fresh content.", "is_stale": False},
+                {"id": "mm-2", "content": "More fresh content.", "is_stale": False},
+            ]
+        }
+        assert _all_mental_models_are_usable_and_fresh(output) is True
+
+    def test_any_stale_model_is_not_usable(self):
+        output = {
+            "mental_models": [
+                {"id": "mm-1", "content": "Fresh content.", "is_stale": False},
+                {"id": "mm-2", "content": "Old content.", "is_stale": True},
+            ]
+        }
+        assert _all_mental_models_are_usable_and_fresh(output) is False
+
+    def test_missing_staleness_flag_is_not_usable(self):
+        # An unknown/missing staleness flag must be treated as unsafe.
+        output = {"mental_models": [{"id": "mm-1", "content": "Fresh content."}]}
+        assert _all_mental_models_are_usable_and_fresh(output) is False
+
+    def test_blank_content_is_not_usable(self):
+        output = {"mental_models": [{"id": "mm-1", "content": "   ", "is_stale": False}]}
+        assert _all_mental_models_are_usable_and_fresh(output) is False
+
+    def test_empty_list_is_vacuously_usable(self):
+        # The caller gates on a non-empty list separately; the helper itself is
+        # only responsible for freshness/content of the models it is given.
+        assert _all_mental_models_are_usable_and_fresh({"mental_models": []}) is True
+        assert _all_mental_models_are_usable_and_fresh({}) is True
+
+
 class TestReflectAgentMocked:
     """Test reflect agent with mocked LLM outputs."""
 
@@ -218,6 +256,242 @@ class TestReflectAgentMocked:
             "recall_fn": AsyncMock(return_value={"memories": [{"id": "mem-1", "content": "test memory"}]}),
             "expand_fn": AsyncMock(return_value={"memories": []}),
         }
+
+    @staticmethod
+    def _mm_call(call_id: str = "1", query: str = "test query") -> LLMToolCallResult:
+        return LLMToolCallResult(
+            tool_calls=[
+                LLMToolCall(id=call_id, name="search_mental_models", arguments={"reason": "curated", "query": query})
+            ],
+            finish_reason="tool_calls",
+        )
+
+    @pytest.mark.asyncio
+    async def test_fresh_mental_model_releases_forced_retrieval(self, mock_llm, mock_functions):
+        """A fresh, usable mental model stops forced lower-level retrieval — with no extra LLM call.
+
+        The agent answers on the very next (auto) iteration, so search_observations
+        and recall are never invoked.
+        """
+        mock_functions["search_mental_models_fn"].return_value = {
+            "query": "test query",
+            "mental_models": [
+                {"id": "mm-1", "name": "User prefs", "content": "The user prefers concise answers.", "is_stale": False}
+            ],
+        }
+        mock_llm.call_with_tools.side_effect = [
+            self._mm_call(),
+            LLMToolCallResult(
+                tool_calls=[
+                    LLMToolCall(
+                        id="2", name="done", arguments={"answer": "Be concise.", "mental_model_ids": ["mm-1"]}
+                    )
+                ],
+                finish_reason="tool_calls",
+            ),
+        ]
+
+        result = await run_reflect_agent(
+            llm_config=mock_llm,
+            bank_id="test-bank",
+            query="test query",
+            bank_profile={"name": "Test", "mission": "Testing"},
+            has_mental_models=True,
+            budget="low",
+            max_iterations=5,
+            **mock_functions,
+        )
+
+        assert result.text == "Be concise."
+        # The fix's whole point: no extra LLM round-trip to decide sufficiency.
+        mock_llm.call.assert_not_called()
+        mock_functions["search_observations_fn"].assert_not_called()
+        mock_functions["recall_fn"].assert_not_called()
+        # First iteration forced mental models; second was released to auto.
+        first_choice = mock_llm.call_with_tools.await_args_list[0].kwargs["tool_choice"]
+        assert first_choice == {"type": "function", "function": {"name": "search_mental_models"}}
+        assert mock_llm.call_with_tools.await_args_list[1].kwargs["tool_choice"] == "auto"
+
+    @pytest.mark.asyncio
+    async def test_short_circuited_agent_may_still_retrieve_under_auto(self, mock_llm, mock_functions):
+        """After release, the agent can still choose to retrieve deeper itself (its own query)."""
+        mock_functions["search_mental_models_fn"].return_value = {
+            "query": "test query",
+            "mental_models": [
+                {"id": "mm-1", "name": "Status", "content": "Launch was planned for Friday.", "is_stale": False}
+            ],
+        }
+        mock_llm.call_with_tools.side_effect = [
+            self._mm_call(),
+            LLMToolCallResult(
+                tool_calls=[
+                    LLMToolCall(id="2", name="recall", arguments={"reason": "verify", "query": "launch completion proof"})
+                ],
+                finish_reason="tool_calls",
+            ),
+            LLMToolCallResult(
+                tool_calls=[
+                    LLMToolCall(id="3", name="done", arguments={"answer": "Confirmed.", "memory_ids": ["mem-1"]})
+                ],
+                finish_reason="tool_calls",
+            ),
+        ]
+
+        result = await run_reflect_agent(
+            llm_config=mock_llm,
+            bank_id="test-bank",
+            query="test query",
+            bank_profile={"name": "Test", "mission": "Testing"},
+            has_mental_models=True,
+            budget="low",
+            max_iterations=5,
+            **mock_functions,
+        )
+
+        assert result.text == "Confirmed."
+        # recall ran because the model chose it under auto, not because it was forced,
+        # and it used the model's own targeted query (not a forced override).
+        assert mock_llm.call_with_tools.await_args_list[1].kwargs["tool_choice"] == "auto"
+        mock_functions["recall_fn"].assert_called_once()
+        assert mock_functions["recall_fn"].await_args.args[0] == "launch completion proof"
+        mock_functions["search_observations_fn"].assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_stale_mental_model_keeps_forced_retrieval(self, mock_llm, mock_functions):
+        """A stale mental model must not short-circuit; the full forced path continues."""
+        mock_functions["search_mental_models_fn"].return_value = {
+            "query": "test query",
+            "mental_models": [
+                {
+                    "id": "mm-1",
+                    "name": "Old status",
+                    "content": "Old summary.",
+                    "is_stale": True,
+                    "staleness_reason": "newer facts exist",
+                }
+            ],
+        }
+        mock_llm.call_with_tools.side_effect = [
+            self._mm_call(),
+            LLMToolCallResult(
+                tool_calls=[LLMToolCall(id="2", name="search_observations", arguments={"query": "q"})],
+                finish_reason="tool_calls",
+            ),
+            LLMToolCallResult(
+                tool_calls=[LLMToolCall(id="3", name="recall", arguments={"query": "q"})],
+                finish_reason="tool_calls",
+            ),
+            LLMToolCallResult(
+                tool_calls=[
+                    LLMToolCall(id="4", name="done", arguments={"answer": "Verified.", "memory_ids": ["mem-1"]})
+                ],
+                finish_reason="tool_calls",
+            ),
+        ]
+
+        result = await run_reflect_agent(
+            llm_config=mock_llm,
+            bank_id="test-bank",
+            query="test query",
+            bank_profile={"name": "Test", "mission": "Testing"},
+            has_mental_models=True,
+            budget="low",
+            max_iterations=5,
+            **mock_functions,
+        )
+
+        assert result.text == "Verified."
+        mock_functions["search_observations_fn"].assert_called_once()
+        mock_functions["recall_fn"].assert_called_once()
+        choices = [c.kwargs["tool_choice"] for c in mock_llm.call_with_tools.await_args_list[:3]]
+        assert choices == [
+            {"type": "function", "function": {"name": "search_mental_models"}},
+            {"type": "function", "function": {"name": "search_observations"}},
+            {"type": "function", "function": {"name": "recall"}},
+        ]
+
+    @pytest.mark.asyncio
+    async def test_high_budget_keeps_forced_path_for_fresh_mental_model(self, mock_llm, mock_functions):
+        """High budget preserves the full verification path even for fresh mental models."""
+        mock_functions["search_mental_models_fn"].return_value = {
+            "query": "test query",
+            "mental_models": [
+                {"id": "mm-1", "name": "Prefs", "content": "Fresh and directly relevant.", "is_stale": False}
+            ],
+        }
+        mock_llm.call_with_tools.side_effect = [
+            self._mm_call(),
+            LLMToolCallResult(
+                tool_calls=[LLMToolCall(id="2", name="search_observations", arguments={"query": "q"})],
+                finish_reason="tool_calls",
+            ),
+            LLMToolCallResult(
+                tool_calls=[LLMToolCall(id="3", name="recall", arguments={"query": "q"})],
+                finish_reason="tool_calls",
+            ),
+            LLMToolCallResult(
+                tool_calls=[
+                    LLMToolCall(id="4", name="done", arguments={"answer": "Verified.", "memory_ids": ["mem-1"]})
+                ],
+                finish_reason="tool_calls",
+            ),
+        ]
+
+        result = await run_reflect_agent(
+            llm_config=mock_llm,
+            bank_id="test-bank",
+            query="test query",
+            bank_profile={"name": "Test", "mission": "Testing"},
+            has_mental_models=True,
+            budget="high",
+            max_iterations=5,
+            **mock_functions,
+        )
+
+        assert result.text == "Verified."
+        mock_functions["search_observations_fn"].assert_called_once()
+        mock_functions["recall_fn"].assert_called_once()
+        assert mock_llm.call_with_tools.await_args_list[1].kwargs["tool_choice"] == {
+            "type": "function",
+            "function": {"name": "search_observations"},
+        }
+
+    @pytest.mark.asyncio
+    async def test_no_mental_models_keeps_forced_retrieval(self, mock_llm, mock_functions):
+        """An empty mental-model result must not short-circuit the forced path."""
+        mock_functions["search_mental_models_fn"].return_value = {"query": "test query", "mental_models": []}
+        mock_llm.call_with_tools.side_effect = [
+            self._mm_call(),
+            LLMToolCallResult(
+                tool_calls=[LLMToolCall(id="2", name="search_observations", arguments={"query": "q"})],
+                finish_reason="tool_calls",
+            ),
+            LLMToolCallResult(
+                tool_calls=[LLMToolCall(id="3", name="recall", arguments={"query": "q"})],
+                finish_reason="tool_calls",
+            ),
+            LLMToolCallResult(
+                tool_calls=[
+                    LLMToolCall(id="4", name="done", arguments={"answer": "Done.", "memory_ids": ["mem-1"]})
+                ],
+                finish_reason="tool_calls",
+            ),
+        ]
+
+        result = await run_reflect_agent(
+            llm_config=mock_llm,
+            bank_id="test-bank",
+            query="test query",
+            bank_profile={"name": "Test", "mission": "Testing"},
+            has_mental_models=True,
+            budget="low",
+            max_iterations=5,
+            **mock_functions,
+        )
+
+        assert result.text == "Done."
+        mock_functions["search_observations_fn"].assert_called_once()
+        mock_functions["recall_fn"].assert_called_once()
 
     @pytest.mark.asyncio
     async def test_handles_functions_prefix_in_done(self, mock_llm, mock_functions):
