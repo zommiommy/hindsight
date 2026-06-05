@@ -4,11 +4,8 @@ description: Cursor resets its memory every session. Learn how to add persistent
 authors: [DK09876]
 date: 2026-04-03T12:00
 tags: [cursor, integrations, memory, plugin, coding-agents]
-image: /img/blog/cursor-persistent-memory.png
 hide_table_of_contents: true
 ---
-
-![Giving Cursor a Long-Term Memory](/img/blog/cursor-persistent-memory.png)
 
 Cursor 3 introduced a plugin system with hooks, skills, and rules. It's a powerful architecture for extending what the agent can do. But one thing Cursor still doesn't have out of the box is persistent memory across sessions. Every new chat starts from scratch.
 
