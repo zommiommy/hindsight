@@ -105,3 +105,4 @@ tools = create_hindsight_tools(bank_id="user-123")
 
 - [Integration docs](https://docs.hindsight.vectorize.io/docs/sdks/integrations/haystack)
 - [Hindsight API docs](https://docs.hindsight.vectorize.io)
+
