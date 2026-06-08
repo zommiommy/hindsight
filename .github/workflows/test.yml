@@ -929,6 +929,12 @@ jobs:
         cache: 'npm'
         cache-dependency-path: package-lock.json
 
+    # Fail fast before the (slow) build: every integrations.json entry must have a
+    # doc page, and every released integration tag must be in integrations.json.
+    # Needs no npm install (pure Node) and uses the tags fetched above.
+    - name: Check integrations (single source of truth)
+      run: node hindsight-docs/scripts/check-integrations.mjs
+
     - name: Install dependencies
       run: npm ci --workspace=hindsight-docs
 
