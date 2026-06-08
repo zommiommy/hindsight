@@ -101,6 +101,9 @@ jobs:
           docs:
             - 'hindsight-docs/**'
             - '*.md'
+            # Integration changes can add/rename integrations, which the docs
+            # build's integrations check validates against integrations.json.
+            - 'hindsight-integrations/**'
           embed:
             - 'hindsight-embed/**'
           all-npm:
