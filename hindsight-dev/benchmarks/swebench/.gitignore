@@ -1,0 +1,7 @@
+.venv/
+.env
+results/
+datasets/
+*.traj.json
+__pycache__/
+*.pyc

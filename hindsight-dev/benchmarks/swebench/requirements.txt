@@ -1,0 +1,13 @@
+# Study deps live in a dedicated venv (.venv) to keep heavy SWE-bench/agent deps out of
+# the main hindsight-dev project.
+#
+#   uv venv --python 3.11 .venv
+#   uv pip install --python .venv/bin/python -r requirements.txt
+#   uv pip install --python .venv/bin/python -e ../../../hindsight-clients/python
+#
+mini-swe-agent==2.3.0
+swebench==4.1.0
+pyyaml
+# hindsight-client is installed from the local path (../../../hindsight-clients/python).
+google-auth
+google-cloud-aiplatform

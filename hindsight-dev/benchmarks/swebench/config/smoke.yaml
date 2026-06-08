@@ -1,0 +1,48 @@
+# Smoke configuration: validate the whole pipeline cheaply on a few django tasks.
+# Purpose is pipeline validation (agent loop + Docker scoring + memory glue + metrics),
+# NOT headline numbers. Tokens/steps stay valid even under x86 emulation; treat
+# wall-clock as indicative only on non-native Docker.
+
+run_id_prefix: smoke-django
+seed: 0
+
+dataset:
+  subset: verified              # princeton-nlp/SWE-bench_Verified
+  split: test
+  repo_prefix: "django__django-"
+  repo_label: "django"
+  max_tasks: 10                 # consecutive, chronologically ordered
+
+memory:
+  bank_prefix: "swebench-study"
+  # Cheap model for distilling trajectories into durable codebase facts (Groq via litellm).
+  summary_model: "groq/openai/gpt-oss-20b"
+  recall_max_tokens: 1024
+  recall_budget: low
+
+scoring:
+  max_workers: 2                # 16GB RAM under emulation — keep low
+  timeout: 1800
+
+# Base template family from mini-swe-agent. Text-based (```mswea_bash_command```) parsing is
+# far more robust for open models than native tool-calling (Groq gpt-oss emits tool-call JSON
+# that the API itself rejects). Frontier models can use the default "swebench.yaml" instead.
+mini_base_config: "swebench_backticks.yaml"
+
+# Overrides merged onto that base config (agent/model/environment).
+mini_overrides:
+  model:
+    # Cheap agent model for the smoke (Groq via litellm). Swap to a frontier model
+    # (e.g. anthropic/claude-sonnet-4-5 with mini_base_config swebench.yaml) for real runs.
+    model_name: "groq/openai/gpt-oss-120b"
+    model_class: "litellm_textbased"   # parse bash from ``` blocks, not native tool calls
+    # Groq gpt-oss models have no litellm pricing; without this the model raises on every
+    # query when it can't compute a cost. (Frontier models with pricing don't need it.)
+    cost_tracking: ignore_errors
+    model_kwargs:
+      drop_params: true
+      temperature: 0.0
+  agent:
+    step_limit: 40              # bound smoke spend (stock default is 250)
+    cost_limit: 1.0             # stop a task after $1 (stock default is 3.0)
+    wall_time_limit_seconds: 900  # hard stop so no single task can hang the run

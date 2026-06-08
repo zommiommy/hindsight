@@ -1,0 +1,74 @@
+# Pilot configuration: gemini-3.1-flash-lite (cheap + fast). The committed agent model below is
+# gemini-flash-latest; swap as needed.
+#
+# Agent model runs on Vertex AI via gcloud ADC. Requires in the study .env (gitignored):
+#   VERTEXAI_PROJECT=<your-gcp-project>
+#   VERTEXAI_LOCATION=global            # gemini-3.1 models are served from "global"
+#   HINDSIGHT_API_URL / HINDSIGHT_API_TOKEN
+# (litellm reads VERTEXAI_PROJECT/LOCATION from env for both the agent and the summariser.)
+#
+# Best on an x86_64 Linux box (native SWE-bench images → valid wall-clock). On Apple Silicon
+# the agent still runs correctly under emulation; just treat wall-clock as indicative.
+
+run_id_prefix: pilot-django
+seed: 0
+
+dataset:
+  subset: verified
+  split: test
+  repo_prefix: "django__django-"
+  repo_label: "django"
+  max_tasks: 12                 # consecutive (disk-limited to ~12 images on the Mac)
+  # Cluster related tasks so a solution to one transfers to the next — the key resolve-rate
+  # lever. django/db/models (the ORM) is the densest cluster: 77 related tasks in Verified.
+  cluster_by_patch: true
+  cluster_depth: 3
+  cluster_key: "django/db/models"
+
+memory:
+  bank_prefix: "swebench-study"
+  # Cheap, fast distillation of trajectories into durable codebase facts.
+  summary_model: "vertex_ai/gemini-3.1-flash-lite"
+  # How the agent gets context each task:
+  #   reflect — Hindsight synthesises a focused answer to the task from its memories (one LLM
+  #             pass server-side). Higher signal-to-noise than raw recall; the query is the
+  #             task's own problem statement (no hand-authored prompt). Fixes the raw-recall
+  #             over-injection that derailed easy tasks in the recall run.
+  #   recall  — raw retrieved facts, merged/deduped (orientation + task).
+  context_mode: reflect
+  # For reflect: max_tokens caps the synthesised answer length; budget = how hard reflect
+  # reasons. (Same knobs are reused for recall.)
+  recall_max_tokens: 1536
+  recall_budget: mid
+  # null = recall all memory types (world/experience surface immediately; observations lag
+  # async consolidation). Keep null so memory is available on the very next task.
+  recall_types: null
+  # Always-on broad recall so every task benefits from repo-orientation facts, not just
+  # tasks that share a subsystem with an earlier one.
+  orientation_enabled: true
+
+scoring:
+  max_workers: 4                # bump on a big Linux box
+  timeout: 1800
+
+# Native tool-calling base config (gemini-3.1-pro handles tool calls well — no need for the
+# text-based backticks mode the open smoke model required).
+mini_base_config: "swebench.yaml"
+
+mini_overrides:
+  model:
+    # Non-lite flash (gemini-flash-latest = the current GA flash, smarter than flash-lite, far
+    # cheaper/faster than pro). On our Vertex project the explicit 3-series id is
+    # "gemini-3-flash-preview"; the -latest alias tracks GA and is stable.
+    model_name: "vertex_ai/gemini-flash-latest"
+    cost_tracking: ignore_errors
+    model_kwargs:
+      drop_params: true
+      temperature: 0.0
+      timeout: 180          # hard per-call timeout — prevents a single call from hanging the run
+  agent:
+    # mini-swe-agent's stock SWE-bench defaults (run at conventional settings). flash-lite is
+    # cheap enough that the full 250-step budget is fine.
+    step_limit: 250
+    cost_limit: 3.0
+    wall_time_limit_seconds: 1800
