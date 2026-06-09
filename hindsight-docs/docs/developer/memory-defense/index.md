@@ -18,7 +18,12 @@ A policy only affects future retain calls on the bank where it is set. Existing 
 
 Memory Defense is configured per bank via the bank's `memory_defense` config field. You can set the policy at bank creation time or update it later via `PATCH /v1/{tenant}/banks/{bank_id}/config`.
 
-The only rule the open-source version implements is `sensitive_data` with action `redact`. A minimal policy:
+The open-source version implements the `sensitive_data` rule with two possible actions:
+
+- **`redact`** — replace each matched secret with a `[REDACTED:type]` marker and store the scrubbed memory.
+- **`block`** — drop any item that contains a match. If every item in a retain request is blocked, the call returns `422`.
+
+A minimal policy:
 
 ```json
 {
@@ -31,7 +36,7 @@ The only rule the open-source version implements is `sensitive_data` with action
 }
 ```
 
-Once that policy is on a bank, every retain to that bank is scrubbed with the 44 redaction patterns documented below.
+Once that policy is on a bank, every retain to that bank is screened with the 44 redaction patterns documented below.
 
 :::note Existing memories are not retroactively scanned
 Enabling Memory Defense on a bank only affects future retain calls. Memories already in the bank are not re-scanned or modified when you add or change a policy. If you need to scrub a bank that already contains unredacted content, you have to re-ingest the affected memories or remove them manually.
@@ -40,6 +45,10 @@ Enabling Memory Defense on a bank only affects future retain calls. Memories alr
 ### Disabled by default
 
 Memory Defense is off on every bank until you set a policy. A bank with no `memory_defense` field, with `enabled: false`, or with no `sensitive_data` rule is treated identically: the extension returns ALLOW and content passes through unchanged. To stop redacting on a bank that has it on, set `enabled: false` or remove the policy.
+
+## Notifications
+
+When an item is redacted or blocked, Hindsight fires a [`memory_defense.triggered` webhook](../api/webhooks.mdx#memory_defensetriggered) if a webhook on the bank is subscribed to that event type. The payload reports the action taken, the document ID, and which redaction patterns matched — useful for routing security alerts to a SIEM or Slack. Clean items fire no event.
 
 ## Patterns covered
 
