@@ -14,6 +14,7 @@ import pytest
 
 from hindsight_api import config as config_module
 from hindsight_api.engine.memory_engine import Budget
+from hindsight_api.engine.reflect.tools_schema import get_reflect_tools
 
 LONG_CONTENT = """
 Alice Johnson is a senior software engineer at Acme Corp. She specializes in
@@ -115,3 +116,39 @@ async def test_default_mode_stores_text(memory, request_context):
         assert any(chunk["chunk_text"] for chunk in chunks["items"]), "Chunk text should be stored by default"
     finally:
         await memory.delete_bank(bank_id, request_context=request_context)
+
+
+@pytest.mark.asyncio
+async def test_append_mode_rejected_in_privacy_mode(memory, request_context, store_document_text_disabled):
+    """update_mode='append' must be rejected when document text storage is disabled.
+
+    Append rebuilds the document by reading back the stored original_text; with
+    storage off there is nothing to read, so appending would silently drop the
+    prior content. The pipeline rejects it instead of losing data.
+    """
+    bank_id = f"test_append_privacy_{datetime.now(timezone.utc).timestamp()}"
+
+    with pytest.raises(ValueError, match="update_mode='append' is not supported"):
+        await memory.retain_batch_async(
+            bank_id=bank_id,
+            contents=[
+                {
+                    "content": "Some content",
+                    "document_id": "doc-append-privacy",
+                    "update_mode": "append",
+                }
+            ],
+            request_context=request_context,
+        )
+
+
+def test_reflect_excludes_expand_tool_when_text_disabled():
+    """The reflect 'expand' tool (get chunk/document source text) is dropped in privacy mode."""
+    with_text = {t["function"]["name"] for t in get_reflect_tools(include_expand=True)}
+    without_text = {t["function"]["name"] for t in get_reflect_tools(include_expand=False)}
+
+    assert "expand" in with_text, "expand should be available by default"
+    assert "expand" not in without_text, "expand must be excluded when document text is not stored"
+    # Other reflect tools are unaffected.
+    assert "recall" in without_text
+    assert "done" in without_text
