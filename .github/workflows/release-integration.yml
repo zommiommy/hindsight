@@ -145,12 +145,16 @@ jobs:
         git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
         # The runner authenticates github.com pushes as the default GITHUB_TOKEN
-        # (github-actions[bot]) via an actions/checkout extraheader AND a git
-        # credential helper — neither has access to the dedicated repo (→ 403).
-        # Override the Authorization header with OBSIDIAN_DIST_TOKEN via `git -c`
-        # (an explicit header beats both the checkout header and the helper).
-        # `git -c` propagates to subtree's internal `git push` via
-        # GIT_CONFIG_PARAMETERS, so the mirror push uses the dist token.
+        # (github-actions[bot]), which has no access to the dedicated repo (→ 403).
+        # Two steps are needed:
+        #   1. Unset actions/checkout's bot extraheader. `http.extraheader` is
+        #      multi-valued, so if left in place our header would be ADDED to it
+        #      → two Authorization headers → GitHub 400.
+        #   2. Supply our own Authorization header (OBSIDIAN_DIST_TOKEN) via
+        #      `git -c`. An explicit header bypasses the credential helper that
+        #      would otherwise re-supply the bot token, and `git -c` propagates
+        #      to subtree's internal `git push` via GIT_CONFIG_PARAMETERS.
+        git config --local --unset-all http.https://github.com/.extraheader || true
         AUTH_B64="$(printf 'x-access-token:%s' "$DIST_TOKEN" | base64 | tr -d '\n')"
 
         # Mirror the subdir to the dedicated repo's root (one-way; the dedicated
