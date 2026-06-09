@@ -2419,6 +2419,9 @@ class FeaturesInfo(BaseModel):
     document_import_api: bool = Field(description="Whether the document import endpoint is enabled")
     audit_log: bool = Field(description="Whether audit logging is enabled")
     llm_trace: bool = Field(description="Whether per-bank LLM request tracing is enabled")
+    store_document_text: bool = Field(
+        description="Whether raw source text is persisted. When false, document/chunk source text is not stored."
+    )
 
 
 class VersionResponse(BaseModel):
@@ -3086,6 +3089,7 @@ def _register_routes(app: FastAPI):
                 document_import_api=config.enable_document_import_api,
                 audit_log=config.audit_log_enabled,
                 llm_trace=config.llm_trace_enabled,
+                store_document_text=config.store_document_text,
             ),
         )
 

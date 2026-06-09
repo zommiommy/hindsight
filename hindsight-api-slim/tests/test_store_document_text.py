@@ -191,6 +191,14 @@ async def test_get_document_endpoint_returns_null_text(
         await memory.delete_bank(bank_id, request_context=request_context)
 
 
+@pytest.mark.asyncio
+async def test_version_endpoint_reports_store_document_text(api_client, store_document_text_disabled):
+    """The /version feature flags expose store_document_text so the UI can warn."""
+    resp = await api_client.get("/version")
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["features"]["store_document_text"] is False
+
+
 def test_reflect_excludes_expand_tool_when_text_disabled():
     """The reflect 'expand' tool (get chunk/document source text) is dropped in privacy mode."""
     with_text = {t["function"]["name"] for t in get_reflect_tools(include_expand=True)}
