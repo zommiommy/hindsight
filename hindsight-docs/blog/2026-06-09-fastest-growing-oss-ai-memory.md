@@ -4,14 +4,19 @@ description: "Hindsight — the agent memory that learns — is the fastest-grow
 slug: "2026/06/09/fastest-growing-oss-ai-memory"
 date: 2026-06-09T12:00
 authors: [cdbartholomew]
+image: "/img/blog/fastest-growing-oss-ai-memory.png"
 tags: [release]
 ---
+
+![Hindsight is the fastest-growing open-source AI memory project ever](/img/blog/fastest-growing-oss-ai-memory.png)
 
 # Hindsight Is the Fastest-Growing Open-Source AI Memory Project Ever
 
 Hindsight — the agent memory that learns — is the fastest-growing open-source agent-memory project ever. This post lays out the evidence: our own analysis of GitHub's per-star data, and independent confirmation from two third parties who have no stake in the claim.
 
 First, a word about why "fastest-growing" is harder to prove than it sounds — because the most obvious way to measure it is also the most misleading.
+
+<!-- truncate -->
 
 Go looking for AI memory projects on GitHub and you'll find one that *appears* to tower over everything else: north of 50,000 stars, accumulated in roughly two months. Case closed? Not quite. GitHub records a timestamp on every star, and when you pull them, that project's story falls apart. The bulk of its stars — tens of thousands of them — arrived within a few days of the repository being created, including **more than 16,000 in a single day**, before it had any audience at all. Real projects don't grow like that. Stars, it turns out, can be purchased, and a vertical wall of them on a brand-new repo is exactly what a purchase looks like.
 
@@ -141,6 +146,6 @@ API at `http://localhost:8888`, web UI at `http://localhost:9999`. Connect it to
 
 - **Star [the repo](https://github.com/vectorize-io/hindsight)** — the real kind — and help us find out how fast the *next* milestone arrives
 - **Try [Hindsight Cloud](https://ui.hindsight.vectorize.io/signup)** — managed, scaled, usage-based pricing
-- **Join the conversation** — [GitHub Discussions](https://github.com/vectorize-io/hindsight/discussions) or [Slack](https://hindsight-space.slack.com)
+- **Join the conversation** — [GitHub Discussions](https://github.com/vectorize-io/hindsight/discussions) or [Slack](https://join.slack.com/t/hindsight-space/shared_invite/zt-3nhbm4w29-LeSJ5Ixi6j8PdiYOCPlOgg)
 
 Seven months, two stars to sixteen thousand — every one of them earned, for the agent memory that learns. Thanks for building with us — let's see where the curve goes next.
