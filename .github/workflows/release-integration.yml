@@ -144,26 +144,17 @@ jobs:
         git config user.name "github-actions[bot]"
         git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-        # DIAGNOSTIC: the runner kept sending a second Authorization header (the
-        # default GITHUB_TOKEN) regardless of unsetting the local extraheader or
-        # the credential helper. Print where every auth source is defined so we
-        # know the scope (local / global / system) that's injecting the bot.
-        echo "::group::git auth config (extraheader + credential.helper)"
-        git config --show-origin --get-all "http.https://github.com/.extraheader" || echo "(no extraheader)"
-        git config --show-origin --get-all credential.helper || echo "(no credential.helper)"
-        echo "::endgroup::"
-
-        # Mirror the subdir to the dedicated repo's root. Split locally, then push
-        # from a fully isolated git context so the ONLY Authorization is the
-        # dist-token in the push URL:
-        #   - GIT_CONFIG_GLOBAL/SYSTEM=/dev/null drops any global/system extraheader;
-        #   - --unset-all drops the local (checkout) extraheader;
-        #   - -c credential.helper= disables every credential helper;
-        #   - the token is supplied via the push URL → a single Authorization.
-        git config --local --unset-all "http.https://github.com/.extraheader" || true
+        # The runner injects the default GITHUB_TOKEN as an http.extraheader via
+        # an *included* config file (/home/runner/work/_temp/git-credentials-*.config),
+        # so `git config --local --unset-all` can't remove it and it authenticates
+        # the push as github-actions[bot] (no access to the dedicated repo → 403).
+        # The documented way to drop an inherited extraheader is to RESET the list
+        # with an empty value: since command-line `-c` is read last, the empty
+        # value clears the accumulated headers (including the included one) at
+        # request-build time. The dist token then comes from the push URL → a
+        # single Authorization header.
         git subtree split --prefix="$OBS_DIR" -b _obs_dist
-        GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null \
-          git -c credential.helper= \
+        git -c "http.https://github.com/.extraheader=" \
           push "https://x-access-token:${DIST_TOKEN}@github.com/${DIST_REPO}.git" _obs_dist:main
 
         # Cut the BRAT / community-store release. Bare version tag (e.g. 0.1.0)
