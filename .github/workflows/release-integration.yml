@@ -144,16 +144,19 @@ jobs:
         git config user.name "github-actions[bot]"
         git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-        # actions/checkout injects an auth header for the default GITHUB_TOKEN
-        # (github-actions[bot]) that overrides URL-embedded credentials — so the
-        # push below would use the bot, which has no access to the dedicated repo.
-        # Drop it so the OBSIDIAN_DIST_TOKEN in the push URL is used instead.
-        git config --local --unset-all http.https://github.com/.extraheader || true
+        # The runner authenticates github.com pushes as the default GITHUB_TOKEN
+        # (github-actions[bot]) via an actions/checkout extraheader AND a git
+        # credential helper — neither has access to the dedicated repo (→ 403).
+        # Override the Authorization header with OBSIDIAN_DIST_TOKEN via `git -c`
+        # (an explicit header beats both the checkout header and the helper).
+        # `git -c` propagates to subtree's internal `git push` via
+        # GIT_CONFIG_PARAMETERS, so the mirror push uses the dist token.
+        AUTH_B64="$(printf 'x-access-token:%s' "$DIST_TOKEN" | base64 | tr -d '\n')"
 
         # Mirror the subdir to the dedicated repo's root (one-way; the dedicated
         # repo is only ever written here, so the split fast-forwards each time).
-        git subtree push --prefix="$OBS_DIR" \
-          "https://x-access-token:${DIST_TOKEN}@github.com/${DIST_REPO}.git" main
+        git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic ${AUTH_B64}" \
+          subtree push --prefix="$OBS_DIR" "https://github.com/${DIST_REPO}.git" main
 
         # Cut the BRAT / community-store release. Bare version tag (e.g. 0.1.0)
         # to match manifest.json — idempotent so re-runs just refresh the assets.
