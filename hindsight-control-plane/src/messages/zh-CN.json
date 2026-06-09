@@ -1451,6 +1451,19 @@
     "selectBank": "请从上方下拉菜单选择一个记忆库开始使用。",
     "sidebarHint": "选择记忆库后，侧边栏会出现。"
   },
+  "admin": {
+    "title": "管理",
+    "backToApp": "返回应用",
+    "configHeading": "配置",
+    "configDescription": "为此部署解析的服务器级配置。凭据已被隐去。",
+    "searchPlaceholder": "筛选设置...",
+    "loading": "正在加载配置...",
+    "loadError": "加载配置失败。",
+    "empty": "没有与筛选条件匹配的设置。",
+    "redactedHint": "凭据值已被屏蔽；“***”表示已设置值。",
+    "notEnabledTitle": "管理 API 未启用",
+    "notEnabledDescription": "在 API 服务器上设置 {envVar} 以启用管理部分。"
+  },
   "login": {
     "title": "Hindsight 控制面板",
     "description": "输入访问密钥以继续",
@@ -1590,6 +1603,11 @@
       },
       "version": {
         "fetch": "获取版本失败"
+      },
+      "admin": {
+        "config": {
+          "fetch": "获取管理配置失败"
+        }
       },
       "webhooks": {
         "list": "列出 Webhook 失败",

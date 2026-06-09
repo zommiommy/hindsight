@@ -1451,6 +1451,19 @@
     "selectBank": "위의 드롭다운에서 메모리 뱅크를 선택하여 시작하세요.",
     "sidebarHint": "메모리 뱅크를 선택하면 사이드바가 나타납니다."
   },
+  "admin": {
+    "title": "관리",
+    "backToApp": "앱으로 돌아가기",
+    "configHeading": "구성",
+    "configDescription": "이 배포에 대해 확인된 서버 수준 구성입니다. 자격 증명은 가려져 있습니다.",
+    "searchPlaceholder": "설정 필터링...",
+    "loading": "구성을 불러오는 중...",
+    "loadError": "구성을 불러오지 못했습니다.",
+    "empty": "필터와 일치하는 설정이 없습니다.",
+    "redactedHint": "자격 증명 값은 가려져 있습니다. \"***\"는 값이 설정되어 있음을 의미합니다.",
+    "notEnabledTitle": "관리 API가 활성화되지 않음",
+    "notEnabledDescription": "API 서버에서 {envVar}을(를) 설정하여 관리 섹션을 활성화하세요."
+  },
   "login": {
     "title": "Hindsight 제어 플레인",
     "description": "계속하려면 액세스 키를 입력하세요",
@@ -1590,6 +1603,11 @@
       },
       "version": {
         "fetch": "버전을 가져오지 못했습니다"
+      },
+      "admin": {
+        "config": {
+          "fetch": "관리 구성을 가져오지 못했습니다"
+        }
       },
       "webhooks": {
         "list": "Webhook 목록을 가져오지 못했습니다",

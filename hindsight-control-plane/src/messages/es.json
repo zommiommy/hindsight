@@ -1451,6 +1451,19 @@
     "selectBank": "Selecciona un banco de memoria del menú superior para comenzar.",
     "sidebarHint": "La barra lateral aparecerá una vez que selecciones un banco de memoria."
   },
+  "admin": {
+    "title": "Administración",
+    "backToApp": "Volver a la app",
+    "configHeading": "Configuración",
+    "configDescription": "Configuración a nivel de servidor resuelta para esta implementación. Las credenciales están ocultas.",
+    "searchPlaceholder": "Filtrar ajustes...",
+    "loading": "Cargando configuración...",
+    "loadError": "No se pudo cargar la configuración.",
+    "empty": "Ningún ajuste coincide con el filtro.",
+    "redactedHint": "Los valores de las credenciales están ocultos; \"***\" indica que hay un valor configurado.",
+    "notEnabledTitle": "API de administración no habilitada",
+    "notEnabledDescription": "Habilita la sección de administración configurando {envVar} en el servidor de la API."
+  },
   "login": {
     "title": "Plano de Control de Hindsight",
     "description": "Introduce tu clave de acceso para continuar",
@@ -1590,6 +1603,11 @@
       },
       "version": {
         "fetch": "No se pudo obtener la versión"
+      },
+      "admin": {
+        "config": {
+          "fetch": "No se pudo obtener la configuración de administración"
+        }
       },
       "webhooks": {
         "list": "No se pudieron listar los webhooks",

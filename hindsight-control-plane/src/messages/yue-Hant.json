@@ -1451,6 +1451,19 @@
     "selectBank": "請先在上方下拉選單選擇一個記憶庫。",
     "sidebarHint": "選擇記憶庫後，側邊欄會出現。"
   },
+  "admin": {
+    "title": "管理",
+    "backToApp": "返回應用程式",
+    "configHeading": "設定",
+    "configDescription": "為呢個部署解析嘅伺服器層級設定。憑證已經隱去。",
+    "searchPlaceholder": "篩選設定...",
+    "loading": "正在載入設定...",
+    "loadError": "載入設定失敗。",
+    "empty": "冇符合篩選條件嘅設定。",
+    "redactedHint": "憑證值已經遮蔽；「***」表示已經設定咗值。",
+    "notEnabledTitle": "管理 API 未啟用",
+    "notEnabledDescription": "喺 API 伺服器設定 {envVar} 嚟啟用管理區段。"
+  },
   "login": {
     "title": "Hindsight 控制面板",
     "description": "輸入存取金鑰以繼續",
@@ -1590,6 +1603,11 @@
       },
       "version": {
         "fetch": "未能載入版本"
+      },
+      "admin": {
+        "config": {
+          "fetch": "取得管理設定失敗"
+        }
       },
       "webhooks": {
         "list": "未能列出 Webhook",

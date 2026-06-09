@@ -1451,6 +1451,19 @@
     "selectBank": "Select a memory bank from the dropdown above to get started.",
     "sidebarHint": "The sidebar will appear once you select a memory bank."
   },
+  "admin": {
+    "title": "Admin",
+    "backToApp": "Back to app",
+    "configHeading": "Configuration",
+    "configDescription": "Resolved server-level configuration for this deployment. Credentials are redacted.",
+    "searchPlaceholder": "Filter settings...",
+    "loading": "Loading configuration...",
+    "loadError": "Failed to load configuration.",
+    "empty": "No settings match your filter.",
+    "redactedHint": "Credential values are masked; \"***\" means a value is set.",
+    "notEnabledTitle": "Admin API Not Enabled",
+    "notEnabledDescription": "Enable the admin surface by setting {envVar} on the API server."
+  },
   "login": {
     "title": "Hindsight Control Plane",
     "description": "Enter your access key to continue",
@@ -1590,6 +1603,11 @@
       },
       "version": {
         "fetch": "Failed to get version"
+      },
+      "admin": {
+        "config": {
+          "fetch": "Failed to get admin configuration"
+        }
       },
       "webhooks": {
         "list": "Failed to list webhooks",

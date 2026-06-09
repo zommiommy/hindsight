@@ -13,6 +13,7 @@ import {
 
 export const DATAPLANE_URL = process.env.HINDSIGHT_CP_DATAPLANE_API_URL || "http://localhost:8888";
 const DATAPLANE_API_KEY = process.env.HINDSIGHT_CP_DATAPLANE_API_KEY || "";
+const ADMIN_TOKEN = process.env.HINDSIGHT_CP_ADMIN_TOKEN || "";
 
 /**
  * Auth headers for direct fetch calls to the dataplane API.
@@ -21,6 +22,21 @@ export function getDataplaneHeaders(extra?: Record<string, string>): Record<stri
   const headers: Record<string, string> = { ...extra };
   if (DATAPLANE_API_KEY) {
     headers["Authorization"] = `Bearer ${DATAPLANE_API_KEY}`;
+  }
+  return headers;
+}
+
+/**
+ * Auth headers for the dataplane admin endpoints (`/admin/*`).
+ *
+ * The admin surface uses its own independent token (HINDSIGHT_CP_ADMIN_TOKEN ->
+ * HINDSIGHT_API_ADMIN_TOKEN), distinct from the tenant API key. When unset, no auth
+ * header is sent and the dataplane decides whether the admin API is open.
+ */
+export function getAdminHeaders(extra?: Record<string, string>): Record<string, string> {
+  const headers: Record<string, string> = { ...extra };
+  if (ADMIN_TOKEN) {
+    headers["Authorization"] = `Bearer ${ADMIN_TOKEN}`;
   }
   return headers;
 }

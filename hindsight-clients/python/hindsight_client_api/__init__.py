@@ -17,6 +17,7 @@
 __version__ = "0.0.7"
 
 # import apis into sdk package
+from hindsight_client_api.api.admin_api import AdminApi
 from hindsight_client_api.api.audit_api import AuditApi
 from hindsight_client_api.api.bank_templates_api import BankTemplatesApi
 from hindsight_client_api.api.banks_api import BanksApi
@@ -45,6 +46,7 @@ from hindsight_client_api.exceptions import ApiException
 
 # import models into sdk package
 from hindsight_client_api.models.add_background_request import AddBackgroundRequest
+from hindsight_client_api.models.admin_config_response import AdminConfigResponse
 from hindsight_client_api.models.async_operation_submit_response import AsyncOperationSubmitResponse
 from hindsight_client_api.models.audit_log_entry import AuditLogEntry
 from hindsight_client_api.models.audit_log_list_response import AuditLogListResponse

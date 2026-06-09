@@ -1,6 +1,7 @@
 # flake8: noqa
 
 # import apis into api package
+from hindsight_client_api.api.admin_api import AdminApi
 from hindsight_client_api.api.audit_api import AuditApi
 from hindsight_client_api.api.bank_templates_api import BankTemplatesApi
 from hindsight_client_api.api.banks_api import BanksApi

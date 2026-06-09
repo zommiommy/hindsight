@@ -1451,6 +1451,19 @@
     "selectBank": "Wählen Sie eine Speicherbank aus dem Dropdown oben, um loszulegen.",
     "sidebarHint": "Die Seitenleiste erscheint, sobald Sie eine Speicherbank ausgewählt haben."
   },
+  "admin": {
+    "title": "Administration",
+    "backToApp": "Zurück zur App",
+    "configHeading": "Konfiguration",
+    "configDescription": "Aufgelöste Konfiguration auf Serverebene für diese Bereitstellung. Anmeldedaten sind ausgeblendet.",
+    "searchPlaceholder": "Einstellungen filtern...",
+    "loading": "Konfiguration wird geladen...",
+    "loadError": "Konfiguration konnte nicht geladen werden.",
+    "empty": "Keine Einstellungen entsprechen dem Filter.",
+    "redactedHint": "Anmeldedaten-Werte sind maskiert; „***“ bedeutet, dass ein Wert gesetzt ist.",
+    "notEnabledTitle": "Administrations-API nicht aktiviert",
+    "notEnabledDescription": "Aktivieren Sie den Administrationsbereich, indem Sie {envVar} auf dem API-Server setzen."
+  },
   "login": {
     "title": "Hindsight Control Plane",
     "description": "Geben Sie Ihren Zugangsschlüssel ein, um fortzufahren",
@@ -1590,6 +1603,11 @@
       },
       "version": {
         "fetch": "Version konnte nicht abgerufen werden"
+      },
+      "admin": {
+        "config": {
+          "fetch": "Administrationskonfiguration konnte nicht abgerufen werden"
+        }
       },
       "webhooks": {
         "list": "Webhooks konnten nicht aufgelistet werden",

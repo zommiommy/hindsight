@@ -25,6 +25,27 @@ export type AddBackgroundRequest = {
 };
 
 /**
+ * AdminConfigResponse
+ *
+ * Response model for the server-level (admin) configuration view.
+ *
+ * Returns the resolved ``HindsightConfig`` as a flat dict keyed by Python field
+ * name. Credential fields (API keys, tokens, service-account keys, base URLs) are
+ * masked: present as ``"***"`` when set and ``None`` when unset, so an operator can
+ * see which credentials are configured without ever seeing their values.
+ */
+export type AdminConfigResponse = {
+  /**
+   * Config
+   *
+   * Resolved server-level configuration (Python field names); credentials are redacted
+   */
+  config: {
+    [key: string]: unknown;
+  };
+};
+
+/**
  * AsyncOperationSubmitResponse
  *
  * Response model for submitting an async operation.
@@ -1658,6 +1679,12 @@ export type FeaturesInfo = {
    * Whether per-bank configuration API is enabled
    */
   bank_config_api: boolean;
+  /**
+   * Admin Api
+   *
+   * Whether the admin API (/admin) is enabled
+   */
+  admin_api: boolean;
   /**
    * File Upload Api
    *
@@ -3782,6 +3809,37 @@ export type GetVersionResponses = {
 };
 
 export type GetVersionResponse = GetVersionResponses[keyof GetVersionResponses];
+
+export type GetAdminConfigData = {
+  body?: never;
+  headers?: {
+    /**
+     * Authorization
+     */
+    authorization?: string | null;
+  };
+  path?: never;
+  query?: never;
+  url: "/admin/config";
+};
+
+export type GetAdminConfigErrors = {
+  /**
+   * Validation Error
+   */
+  422: HttpValidationError;
+};
+
+export type GetAdminConfigError = GetAdminConfigErrors[keyof GetAdminConfigErrors];
+
+export type GetAdminConfigResponses = {
+  /**
+   * Successful Response
+   */
+  200: AdminConfigResponse;
+};
+
+export type GetAdminConfigResponse = GetAdminConfigResponses[keyof GetAdminConfigResponses];
 
 export type MetricsEndpointMetricsGetData = {
   body?: never;

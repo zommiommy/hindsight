@@ -1451,6 +1451,19 @@
     "selectBank": "Sélectionnez une banque de mémoire dans le menu ci-dessus pour commencer.",
     "sidebarHint": "La barre latérale apparaîtra une fois que vous aurez sélectionné une banque de mémoire."
   },
+  "admin": {
+    "title": "Administration",
+    "backToApp": "Retour à l'application",
+    "configHeading": "Configuration",
+    "configDescription": "Configuration au niveau du serveur résolue pour ce déploiement. Les identifiants sont masqués.",
+    "searchPlaceholder": "Filtrer les paramètres...",
+    "loading": "Chargement de la configuration...",
+    "loadError": "Échec du chargement de la configuration.",
+    "empty": "Aucun paramètre ne correspond au filtre.",
+    "redactedHint": "Les valeurs des identifiants sont masquées ; « *** » signifie qu'une valeur est définie.",
+    "notEnabledTitle": "API d'administration non activée",
+    "notEnabledDescription": "Activez la section d'administration en définissant {envVar} sur le serveur API."
+  },
   "login": {
     "title": "Plan de contrôle Hindsight",
     "description": "Entrez votre clé d'accès pour continuer",
@@ -1590,6 +1603,11 @@
       },
       "version": {
         "fetch": "Impossible de récupérer la version"
+      },
+      "admin": {
+        "config": {
+          "fetch": "Échec de la récupération de la configuration d'administration"
+        }
       },
       "webhooks": {
         "list": "Impossible de lister les webhooks",

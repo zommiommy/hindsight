@@ -17,26 +17,17 @@ import pprint
 import re  # noqa: F401
 import json
 
-from pydantic import BaseModel, ConfigDict, Field, StrictBool
+from pydantic import BaseModel, ConfigDict, Field
 from typing import Any, ClassVar, Dict, List
 from typing import Optional, Set
 from typing_extensions import Self
 
-class FeaturesInfo(BaseModel):
+class AdminConfigResponse(BaseModel):
     """
-    Feature flags indicating which capabilities are enabled.
+    Response model for the server-level (admin) configuration view.  Returns the resolved ``HindsightConfig`` as a flat dict keyed by Python field name. Credential fields (API keys, tokens, service-account keys, base URLs) are masked: present as ``\"***\"`` when set and ``None`` when unset, so an operator can see which credentials are configured without ever seeing their values.
     """ # noqa: E501
-    observations: StrictBool = Field(description="Whether observations (auto-consolidation) are enabled")
-    mcp: StrictBool = Field(description="Whether MCP (Model Context Protocol) server is enabled")
-    worker: StrictBool = Field(description="Whether the background worker is enabled")
-    bank_config_api: StrictBool = Field(description="Whether per-bank configuration API is enabled")
-    admin_api: StrictBool = Field(description="Whether the admin API (/admin) is enabled")
-    file_upload_api: StrictBool = Field(description="Whether file upload/conversion API is enabled")
-    document_export_api: StrictBool = Field(description="Whether the document export endpoint is enabled")
-    document_import_api: StrictBool = Field(description="Whether the document import endpoint is enabled")
-    audit_log: StrictBool = Field(description="Whether audit logging is enabled")
-    llm_trace: StrictBool = Field(description="Whether per-bank LLM request tracing is enabled")
-    __properties: ClassVar[List[str]] = ["observations", "mcp", "worker", "bank_config_api", "admin_api", "file_upload_api", "document_export_api", "document_import_api", "audit_log", "llm_trace"]
+    config: Dict[str, Any] = Field(description="Resolved server-level configuration (Python field names); credentials are redacted")
+    __properties: ClassVar[List[str]] = ["config"]
 
     model_config = ConfigDict(
         populate_by_name=True,
@@ -56,7 +47,7 @@ class FeaturesInfo(BaseModel):
 
     @classmethod
     def from_json(cls, json_str: str) -> Optional[Self]:
-        """Create an instance of FeaturesInfo from a JSON string"""
+        """Create an instance of AdminConfigResponse from a JSON string"""
         return cls.from_dict(json.loads(json_str))
 
     def to_dict(self) -> Dict[str, Any]:
@@ -81,7 +72,7 @@ class FeaturesInfo(BaseModel):
 
     @classmethod
     def from_dict(cls, obj: Optional[Dict[str, Any]]) -> Optional[Self]:
-        """Create an instance of FeaturesInfo from a dict"""
+        """Create an instance of AdminConfigResponse from a dict"""
         if obj is None:
             return None
 
@@ -89,16 +80,7 @@ class FeaturesInfo(BaseModel):
             return cls.model_validate(obj)
 
         _obj = cls.model_validate({
-            "observations": obj.get("observations"),
-            "mcp": obj.get("mcp"),
-            "worker": obj.get("worker"),
-            "bank_config_api": obj.get("bank_config_api"),
-            "admin_api": obj.get("admin_api"),
-            "file_upload_api": obj.get("file_upload_api"),
-            "document_export_api": obj.get("document_export_api"),
-            "document_import_api": obj.get("document_import_api"),
-            "audit_log": obj.get("audit_log"),
-            "llm_trace": obj.get("llm_trace")
+            "config": obj.get("config")
         })
         return _obj
 

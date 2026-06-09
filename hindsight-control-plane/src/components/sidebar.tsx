@@ -2,46 +2,41 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { useBank } from "@/lib/bank-context";
-import { bankRoute } from "@/lib/bank-url";
-import {
-  Search,
-  Sparkles,
-  Database,
-  FileText,
-  Users,
-  ChevronLeft,
-  ChevronRight,
-  Settings,
-} from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 
-type NavItem = "recall" | "reflect" | "data" | "documents" | "entities" | "profile";
-
-interface SidebarProps {
-  currentTab: NavItem;
-  onTabChange: (tab: NavItem) => void;
+export interface SidebarItem {
+  /** Stable id compared against `currentTab` to mark the active entry. */
+  id: string;
+  label: string;
+  icon: LucideIcon;
+  /** Destination href (Next.js applies basePath automatically). */
+  href: string;
 }
 
-export function Sidebar({ currentTab, onTabChange }: SidebarProps) {
+interface SidebarProps {
+  /** Navigation entries to render, top to bottom. */
+  items: SidebarItem[];
+  /** Id of the active entry. */
+  currentTab: string;
+  /**
+   * Optional in-app navigation handler. When provided, a plain left-click is
+   * intercepted and routed via the callback (middle-click / Cmd+click still open
+   * the href in a new tab). When omitted, the entry behaves as a normal link.
+   */
+  onTabChange?: (id: string) => void;
+}
+
+/**
+ * Collapsible left navigation, shared across the app (bank workspace, admin, …).
+ * It is purely presentational: callers provide the items, the active id, and an
+ * optional click handler.
+ */
+export function Sidebar({ items, currentTab, onTabChange }: SidebarProps) {
   const t = useTranslations("bank.sidebar");
-  const tBank = useTranslations("bank");
-  const { currentBank } = useBank();
   const [isCollapsed, setIsCollapsed] = useState(true);
-
-  if (!currentBank) {
-    return null;
-  }
-
-  const navItems = [
-    { id: "data" as NavItem, label: t("memories"), icon: Database },
-    { id: "recall" as NavItem, label: t("recall"), icon: Search },
-    { id: "reflect" as NavItem, label: t("reflect"), icon: Sparkles },
-    { id: "documents" as NavItem, label: t("documents"), icon: FileText },
-    { id: "entities" as NavItem, label: t("entities"), icon: Users },
-    { id: "profile" as NavItem, label: tBank("bankConfiguration"), icon: Settings },
-  ];
 
   return (
     <aside
@@ -52,23 +47,22 @@ export function Sidebar({ currentTab, onTabChange }: SidebarProps) {
     >
       <nav className="flex-1 p-3 pt-4">
         <ul className="space-y-1">
-          {navItems.map((item) => {
+          {items.map((item) => {
             const Icon = item.icon;
             const isActive = currentTab === item.id;
-            const href = bankRoute(currentBank, `?view=${item.id}`);
 
             return (
               <li key={item.id}>
                 <Link
-                  href={href}
+                  href={item.href}
                   onClick={(e) => {
-                    // For left-click, prevent default and use the callback
-                    // This allows the parent to handle navigation without full page reload
-                    if (e.button === 0 && !e.ctrlKey && !e.metaKey) {
+                    // For left-click, prevent default and use the callback so the
+                    // parent can navigate without a full page reload. Middle-click
+                    // or Ctrl/Cmd+click open in a new tab naturally.
+                    if (onTabChange && e.button === 0 && !e.ctrlKey && !e.metaKey) {
                       e.preventDefault();
                       onTabChange(item.id);
                     }
-                    // Middle-click or Ctrl/Cmd+click will naturally open in new tab
                   }}
                   className={cn(
                     "w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all",

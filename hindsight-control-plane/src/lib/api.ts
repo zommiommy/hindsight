@@ -1302,6 +1302,7 @@ export class ControlPlaneClient {
         mcp: boolean;
         worker: boolean;
         bank_config_api: boolean;
+        admin_api: boolean;
         file_upload_api: boolean;
         document_export_api: boolean;
         document_import_api: boolean;
@@ -1309,6 +1310,15 @@ export class ControlPlaneClient {
         llm_trace: boolean;
       };
     }>("/api/version");
+  }
+
+  /**
+   * Fetch the resolved server-level configuration for the admin surface.
+   * Credentials are redacted by the dataplane. Requires the admin API to be enabled
+   * (and, if configured, the admin token to be present on the server-side proxy).
+   */
+  async getAdminConfig() {
+    return this.fetchApi<{ config: Record<string, unknown> }>("/api/admin/config");
   }
 
   /**

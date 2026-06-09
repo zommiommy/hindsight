@@ -55,6 +55,56 @@
         }
       }
     },
+    "/admin/config": {
+      "get": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Get resolved server-level configuration",
+        "description": "Returns the resolved server-level configuration with credentials redacted. Gated by HINDSIGHT_API_ENABLE_ADMIN_API and, when set, HINDSIGHT_API_ADMIN_TOKEN.",
+        "operationId": "get_admin_config",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminConfigResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/metrics": {
       "get": {
         "tags": [
@@ -5554,6 +5604,22 @@
           "update_disposition": true
         }
       },
+      "AdminConfigResponse": {
+        "properties": {
+          "config": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Config",
+            "description": "Resolved server-level configuration (Python field names); credentials are redacted"
+          }
+        },
+        "type": "object",
+        "required": [
+          "config"
+        ],
+        "title": "AdminConfigResponse",
+        "description": "Response model for the server-level (admin) configuration view.\n\nReturns the resolved ``HindsightConfig`` as a flat dict keyed by Python field\nname. Credential fields (API keys, tokens, service-account keys, base URLs) are\nmasked: present as ``\"***\"`` when set and ``None`` when unset, so an operator can\nsee which credentials are configured without ever seeing their values."
+      },
       "AsyncOperationSubmitResponse": {
         "properties": {
           "operation_id": {
@@ -8215,6 +8281,11 @@
             "title": "Bank Config Api",
             "description": "Whether per-bank configuration API is enabled"
           },
+          "admin_api": {
+            "type": "boolean",
+            "title": "Admin Api",
+            "description": "Whether the admin API (/admin) is enabled"
+          },
           "file_upload_api": {
             "type": "boolean",
             "title": "File Upload Api",
@@ -8247,6 +8318,7 @@
           "mcp",
           "worker",
           "bank_config_api",
+          "admin_api",
           "file_upload_api",
           "document_export_api",
           "document_import_api",

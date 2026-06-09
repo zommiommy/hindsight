@@ -1747,6 +1747,8 @@ Configuration fields are categorized for security:
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `HINDSIGHT_API_ENABLE_BANK_CONFIG_API` | Enable per-bank config API | `true` |
+| `HINDSIGHT_API_ENABLE_ADMIN_API` | Enable the admin API (`GET /admin/config`) and the Control Plane `/admin` page. Off by default — the surface returns `404` until enabled. Server-level (static). | `false` |
+| `HINDSIGHT_API_ADMIN_TOKEN` | Optional bearer token required by the admin API. When unset, the admin API is open (once enabled); when set, callers must send `Authorization: Bearer <token>`. Independent of the tenant API key. Server-level (static). | _(unset)_ |
 | `HINDSIGHT_API_DEFAULT_BANK_TEMPLATE` | Bank template manifest (JSON) applied automatically to every newly-created bank. See below. | _(unset)_ |
 
 ##### `HINDSIGHT_API_DEFAULT_BANK_TEMPLATE`

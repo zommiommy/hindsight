@@ -15,6 +15,7 @@
 
 # import models into model package
 from hindsight_client_api.models.add_background_request import AddBackgroundRequest
+from hindsight_client_api.models.admin_config_response import AdminConfigResponse
 from hindsight_client_api.models.async_operation_submit_response import AsyncOperationSubmitResponse
 from hindsight_client_api.models.audit_log_entry import AuditLogEntry
 from hindsight_client_api.models.audit_log_list_response import AuditLogListResponse

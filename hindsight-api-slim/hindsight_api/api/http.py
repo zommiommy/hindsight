@@ -6,6 +6,8 @@ the FastAPI application with all API endpoints.
 """
 
 import asyncio
+import dataclasses
+import hmac
 import json
 import logging
 import re
@@ -79,7 +81,7 @@ def FieldWithDefault(default_factory: Callable, **kwargs) -> Any:
     return Field(default_factory=default_factory, json_schema_extra=json_extra, **kwargs)
 
 
-from hindsight_api.config import get_config
+from hindsight_api.config import _get_raw_config, get_config
 from hindsight_api.engine.memory_engine import Budget, _current_schema, _get_tiktoken_encoding, fq_table
 from hindsight_api.engine.providers.none_llm import LLMNotAvailableError
 from hindsight_api.engine.response_models import VALID_RECALL_FACT_TYPES, MemoryFact, TokenUsage
@@ -1204,6 +1206,33 @@ class BankConfigResponse(BaseModel):
         description="Fully resolved configuration with all hierarchical overrides applied (Python field names)"
     )
     overrides: dict[str, Any] = Field(description="Bank-specific configuration overrides only (Python field names)")
+
+
+class AdminConfigResponse(BaseModel):
+    """Response model for the server-level (admin) configuration view.
+
+    Returns the resolved ``HindsightConfig`` as a flat dict keyed by Python field
+    name. Credential fields (API keys, tokens, service-account keys, base URLs) are
+    masked: present as ``"***"`` when set and ``None`` when unset, so an operator can
+    see which credentials are configured without ever seeing their values.
+    """
+
+    config: dict[str, Any] = Field(
+        description="Resolved server-level configuration (Python field names); credentials are redacted"
+    )
+
+
+# Name suffixes that mark a config field as secret-bearing. Used in addition to
+# HindsightConfig._CREDENTIAL_FIELDS so the admin config view never leaks a provider
+# credential even if the (denylist) credential set misses a field. Suffixes are
+# singular on purpose — "_token" must not also match value-bearing "_tokens" fields
+# like recall_max_tokens.
+_SENSITIVE_FIELD_SUFFIXES = ("_api_key", "_token", "_secret", "_access_key", "_account_key", "_password")
+
+
+def _is_sensitive_config_field(field_name: str, credential_fields: set[str]) -> bool:
+    """Whether a config field must be redacted in the admin view."""
+    return field_name in credential_fields or field_name.endswith(_SENSITIVE_FIELD_SUFFIXES)
 
 
 class GraphDataResponse(BaseModel):
@@ -2413,6 +2442,7 @@ class FeaturesInfo(BaseModel):
     mcp: bool = Field(description="Whether MCP (Model Context Protocol) server is enabled")
     worker: bool = Field(description="Whether the background worker is enabled")
     bank_config_api: bool = Field(description="Whether per-bank configuration API is enabled")
+    admin_api: bool = Field(description="Whether the admin API (/admin) is enabled")
     file_upload_api: bool = Field(description="Whether file upload/conversion API is enabled")
     document_export_api: bool = Field(description="Whether the document export endpoint is enabled")
     document_import_api: bool = Field(description="Whether the document import endpoint is enabled")
@@ -2971,6 +3001,31 @@ def _register_routes(app: FastAPI):
                 api_key = authorization.strip()
         return RequestContext(api_key=api_key)
 
+    def require_admin(authorization: str | None = Header(default=None)) -> None:
+        """Guard for the admin surface.
+
+        - 404 when the admin API is disabled (so the surface is invisible by default).
+        - When ``HINDSIGHT_API_ADMIN_TOKEN`` is set, require it as a bearer token
+          (or a bare token) and reject with 401 otherwise. When unset, the admin API
+          is open (auth is optional) — consistent with the rest of the deployment.
+        """
+        config = _get_raw_config()
+        if not config.enable_admin_api:
+            raise HTTPException(
+                status_code=404,
+                detail="Admin API is disabled. Set HINDSIGHT_API_ENABLE_ADMIN_API=true to enable.",
+            )
+        expected = config.admin_api_token
+        if expected:
+            token = None
+            if authorization:
+                if authorization.lower().startswith("bearer "):
+                    token = authorization[7:].strip()
+                else:
+                    token = authorization.strip()
+            if not token or not hmac.compare_digest(token, expected):
+                raise HTTPException(status_code=401, detail="Invalid or missing admin token")
+
     def precheck_for(operation: str):
         """
         Build a FastAPI dependency that runs ``OperationValidator.precheck``.
@@ -3080,6 +3135,7 @@ def _register_routes(app: FastAPI):
                 mcp=config.mcp_enabled,
                 worker=config.worker_enabled,
                 bank_config_api=config.enable_bank_config_api,
+                admin_api=config.enable_admin_api,
                 file_upload_api=config.enable_file_upload_api,
                 document_export_api=config.enable_document_export_api,
                 document_import_api=config.enable_document_import_api,
@@ -3087,6 +3143,33 @@ def _register_routes(app: FastAPI):
                 llm_trace=config.llm_trace_enabled,
             ),
         )
+
+    @app.get(
+        "/admin/config",
+        response_model=AdminConfigResponse,
+        summary="Get resolved server-level configuration",
+        description="Returns the resolved server-level configuration with credentials redacted. "
+        "Gated by HINDSIGHT_API_ENABLE_ADMIN_API and, when set, HINDSIGHT_API_ADMIN_TOKEN.",
+        tags=["Admin"],
+        operation_id="get_admin_config",
+        dependencies=[Depends(require_admin)],
+    )
+    async def admin_config_endpoint() -> AdminConfigResponse:
+        """Expose the resolved ``HindsightConfig`` for operator inspection.
+
+        Sensitive fields (the credential denylist plus any field whose name ends in a
+        secret-bearing suffix — see ``_is_sensitive_config_field``) are masked so values
+        never leave the server: ``"***"`` when set, ``None`` when unset. All other fields
+        are returned as-is.
+        """
+        config = _get_raw_config()
+        credential_fields = type(config).get_credential_fields()
+        raw = dataclasses.asdict(config)
+        redacted = {
+            key: ("***" if value is not None else None) if _is_sensitive_config_field(key, credential_fields) else value
+            for key, value in raw.items()
+        }
+        return AdminConfigResponse(config=redacted)
 
     @app.get(
         "/metrics",

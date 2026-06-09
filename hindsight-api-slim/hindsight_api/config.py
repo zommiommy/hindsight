@@ -351,6 +351,8 @@ ENV_MCP_ENABLED = "HINDSIGHT_API_MCP_ENABLED"
 ENV_MCP_ENABLED_TOOLS = "HINDSIGHT_API_MCP_ENABLED_TOOLS"
 ENV_MCP_STATELESS = "HINDSIGHT_API_MCP_STATELESS"
 ENV_ENABLE_BANK_CONFIG_API = "HINDSIGHT_API_ENABLE_BANK_CONFIG_API"
+ENV_ENABLE_ADMIN_API = "HINDSIGHT_API_ENABLE_ADMIN_API"
+ENV_ADMIN_API_TOKEN = "HINDSIGHT_API_ADMIN_TOKEN"
 ENV_DEFAULT_BANK_TEMPLATE = "HINDSIGHT_API_DEFAULT_BANK_TEMPLATE"
 ENV_GRAPH_RETRIEVER = "HINDSIGHT_API_GRAPH_RETRIEVER"
 ENV_RECALL_MAX_CONCURRENT = "HINDSIGHT_API_RECALL_MAX_CONCURRENT"
@@ -792,6 +794,8 @@ DEFAULT_MCP_ENABLED = True
 DEFAULT_MCP_ENABLED_TOOLS: list[str] | None = None  # None = all tools enabled
 DEFAULT_MCP_STATELESS = False  # False = stateful (supports SSE/GET); True = stateless (POST-only)
 DEFAULT_ENABLE_BANK_CONFIG_API = True
+DEFAULT_ENABLE_ADMIN_API = False  # Admin surface (server config view) is off unless explicitly enabled
+DEFAULT_ADMIN_API_TOKEN: str | None = None  # None = admin API open (when enabled); set = required bearer token
 DEFAULT_DEFAULT_BANK_TEMPLATE: dict | None = None  # BankTemplateManifest dict applied to newly-created banks
 DEFAULT_GRAPH_RETRIEVER = "link_expansion"
 DEFAULT_RECALL_MAX_CONCURRENT = 32  # Max concurrent recall operations per worker
@@ -1387,6 +1391,10 @@ class HindsightConfig:
     mcp_enabled_tools: list[str] | None  # None = all tools; explicit list = allowlist
     mcp_stateless: bool  # True = stateless HTTP (POST-only); False = stateful (supports GET/SSE)
     enable_bank_config_api: bool
+    # Admin surface (static, server-level only). enable_admin_api gates the /admin API +
+    # control-plane page; admin_api_token (when set) is the required bearer token.
+    enable_admin_api: bool
+    admin_api_token: str | None
     # Default bank template (static, server-level only). When set, the manifest is applied
     # to every newly-created bank, overriding the env/config defaults for any fields it sets.
     default_bank_template: dict | None
@@ -1612,6 +1620,8 @@ class HindsightConfig:
         # File parser credentials
         "file_parser_iris_token",
         "file_parser_llama_parse_api_key",
+        # Admin surface token (never exposed via the admin config view itself)
+        "admin_api_token",
     }
 
     # CONFIGURABLE_FIELDS: Safe behavioral settings that can be customized per-tenant/bank
@@ -2218,6 +2228,8 @@ class HindsightConfig:
             mcp_stateless=os.getenv(ENV_MCP_STATELESS, str(DEFAULT_MCP_STATELESS)).lower() == "true",
             enable_bank_config_api=os.getenv(ENV_ENABLE_BANK_CONFIG_API, str(DEFAULT_ENABLE_BANK_CONFIG_API)).lower()
             == "true",
+            enable_admin_api=os.getenv(ENV_ENABLE_ADMIN_API, str(DEFAULT_ENABLE_ADMIN_API)).lower() == "true",
+            admin_api_token=os.getenv(ENV_ADMIN_API_TOKEN) or DEFAULT_ADMIN_API_TOKEN,
             default_bank_template=_parse_default_bank_template(os.getenv(ENV_DEFAULT_BANK_TEMPLATE)),
             # Recall
             graph_retriever=os.getenv(ENV_GRAPH_RETRIEVER, DEFAULT_GRAPH_RETRIEVER),

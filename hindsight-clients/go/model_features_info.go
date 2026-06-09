@@ -29,6 +29,8 @@ type FeaturesInfo struct {
 	Worker bool `json:"worker"`
 	// Whether per-bank configuration API is enabled
 	BankConfigApi bool `json:"bank_config_api"`
+	// Whether the admin API (/admin) is enabled
+	AdminApi bool `json:"admin_api"`
 	// Whether file upload/conversion API is enabled
 	FileUploadApi bool `json:"file_upload_api"`
 	// Whether the document export endpoint is enabled
@@ -47,12 +49,13 @@ type _FeaturesInfo FeaturesInfo
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewFeaturesInfo(observations bool, mcp bool, worker bool, bankConfigApi bool, fileUploadApi bool, documentExportApi bool, documentImportApi bool, auditLog bool, llmTrace bool) *FeaturesInfo {
+func NewFeaturesInfo(observations bool, mcp bool, worker bool, bankConfigApi bool, adminApi bool, fileUploadApi bool, documentExportApi bool, documentImportApi bool, auditLog bool, llmTrace bool) *FeaturesInfo {
 	this := FeaturesInfo{}
 	this.Observations = observations
 	this.Mcp = mcp
 	this.Worker = worker
 	this.BankConfigApi = bankConfigApi
+	this.AdminApi = adminApi
 	this.FileUploadApi = fileUploadApi
 	this.DocumentExportApi = documentExportApi
 	this.DocumentImportApi = documentImportApi
@@ -163,6 +166,30 @@ func (o *FeaturesInfo) GetBankConfigApiOk() (*bool, bool) {
 // SetBankConfigApi sets field value
 func (o *FeaturesInfo) SetBankConfigApi(v bool) {
 	o.BankConfigApi = v
+}
+
+// GetAdminApi returns the AdminApi field value
+func (o *FeaturesInfo) GetAdminApi() bool {
+	if o == nil {
+		var ret bool
+		return ret
+	}
+
+	return o.AdminApi
+}
+
+// GetAdminApiOk returns a tuple with the AdminApi field value
+// and a boolean to check if the value has been set.
+func (o *FeaturesInfo) GetAdminApiOk() (*bool, bool) {
+	if o == nil {
+		return nil, false
+	}
+	return &o.AdminApi, true
+}
+
+// SetAdminApi sets field value
+func (o *FeaturesInfo) SetAdminApi(v bool) {
+	o.AdminApi = v
 }
 
 // GetFileUploadApi returns the FileUploadApi field value
@@ -299,6 +326,7 @@ func (o FeaturesInfo) ToMap() (map[string]interface{}, error) {
 	toSerialize["mcp"] = o.Mcp
 	toSerialize["worker"] = o.Worker
 	toSerialize["bank_config_api"] = o.BankConfigApi
+	toSerialize["admin_api"] = o.AdminApi
 	toSerialize["file_upload_api"] = o.FileUploadApi
 	toSerialize["document_export_api"] = o.DocumentExportApi
 	toSerialize["document_import_api"] = o.DocumentImportApi
@@ -316,6 +344,7 @@ func (o *FeaturesInfo) UnmarshalJSON(data []byte) (err error) {
 		"mcp",
 		"worker",
 		"bank_config_api",
+		"admin_api",
 		"file_upload_api",
 		"document_export_api",
 		"document_import_api",

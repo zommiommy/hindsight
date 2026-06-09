@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { BankSelector } from "@/components/bank-selector";
 import { Sidebar } from "@/components/sidebar";
+import type { SidebarItem } from "@/components/sidebar";
 import { DataView } from "@/components/data-view";
 import { DocumentsView } from "@/components/documents-view";
 import { EntitiesView } from "@/components/entities-view";
@@ -42,7 +43,21 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Brain, Download, Trash2, Loader2, MoreVertical, Pencil, RotateCcw } from "lucide-react";
+import {
+  Brain,
+  Download,
+  Trash2,
+  Loader2,
+  MoreVertical,
+  Pencil,
+  RotateCcw,
+  Database,
+  Search,
+  Sparkles,
+  FileText,
+  Users,
+  Settings,
+} from "lucide-react";
 
 type NavItem = "recall" | "reflect" | "data" | "documents" | "entities" | "profile";
 type DataSubTab = "world" | "experience" | "observations" | "mental-models";
@@ -53,6 +68,7 @@ export default function BankPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const t = useTranslations("bank");
+  const tSidebar = useTranslations("bank.sidebar");
   const tCommon = useTranslations("common");
   const { features } = useFeatures();
   const { currentBank: bankId, setCurrentBank, loadBanks } = useBank();
@@ -79,6 +95,47 @@ export default function BankPage() {
     if (!bankId) return;
     router.push(bankRoute(bankId, `?view=${tab}`));
   };
+
+  const sidebarItems: SidebarItem[] = bankId
+    ? [
+        {
+          id: "data",
+          label: tSidebar("memories"),
+          icon: Database,
+          href: bankRoute(bankId, "?view=data"),
+        },
+        {
+          id: "recall",
+          label: tSidebar("recall"),
+          icon: Search,
+          href: bankRoute(bankId, "?view=recall"),
+        },
+        {
+          id: "reflect",
+          label: tSidebar("reflect"),
+          icon: Sparkles,
+          href: bankRoute(bankId, "?view=reflect"),
+        },
+        {
+          id: "documents",
+          label: tSidebar("documents"),
+          icon: FileText,
+          href: bankRoute(bankId, "?view=documents"),
+        },
+        {
+          id: "entities",
+          label: tSidebar("entities"),
+          icon: Users,
+          href: bankRoute(bankId, "?view=entities"),
+        },
+        {
+          id: "profile",
+          label: t("bankConfiguration"),
+          icon: Settings,
+          href: bankRoute(bankId, "?view=profile"),
+        },
+      ]
+    : [];
 
   const handleDataSubTabChange = (newSubTab: DataSubTab) => {
     if (!bankId) return;
@@ -169,7 +226,13 @@ export default function BankPage() {
       <BankSelector />
 
       <div className="flex flex-1 overflow-hidden">
-        <Sidebar currentTab={view} onTabChange={handleTabChange} />
+        {bankId && (
+          <Sidebar
+            items={sidebarItems}
+            currentTab={view}
+            onTabChange={(id) => handleTabChange(id as NavItem)}
+          />
+        )}
 
         <main className="flex-1 overflow-y-auto">
           <div className="p-6">

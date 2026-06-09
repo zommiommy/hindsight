@@ -39,6 +39,36 @@ paths:
       summary: Get API version and feature flags
       tags:
       - Monitoring
+  /admin/config:
+    get:
+      description: "Returns the resolved server-level configuration with credentials\
+        \ redacted. Gated by HINDSIGHT_API_ENABLE_ADMIN_API and, when set, HINDSIGHT_API_ADMIN_TOKEN."
+      operationId: get_admin_config
+      parameters:
+      - explode: false
+        in: header
+        name: authorization
+        required: false
+        schema:
+          nullable: true
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminConfigResponse'
+          description: Successful Response
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Get resolved server-level configuration
+      tags:
+      - Admin
   /metrics:
     get:
       description: Exports metrics in Prometheus format for scraping
@@ -3796,6 +3826,26 @@ components:
       required:
       - content
       title: AddBackgroundRequest
+    AdminConfigResponse:
+      description: |-
+        Response model for the server-level (admin) configuration view.
+
+        Returns the resolved ``HindsightConfig`` as a flat dict keyed by Python field
+        name. Credential fields (API keys, tokens, service-account keys, base URLs) are
+        masked: present as ``"***"`` when set and ``None`` when unset, so an operator can
+        see which credentials are configured without ever seeing their values.
+      example:
+        config:
+          key: ""
+      properties:
+        config:
+          additionalProperties: {}
+          description: Resolved server-level configuration (Python field names); credentials
+            are redacted
+          title: Config
+      required:
+      - config
+      title: AdminConfigResponse
     AsyncOperationSubmitResponse:
       description: Response model for submitting an async operation.
       example:
@@ -5406,6 +5456,10 @@ components:
           description: Whether per-bank configuration API is enabled
           title: Bank Config Api
           type: boolean
+        admin_api:
+          description: Whether the admin API (/admin) is enabled
+          title: Admin Api
+          type: boolean
         file_upload_api:
           description: Whether file upload/conversion API is enabled
           title: File Upload Api
@@ -5427,6 +5481,7 @@ components:
           title: Llm Trace
           type: boolean
       required:
+      - admin_api
       - audit_log
       - bank_config_api
       - document_export_api

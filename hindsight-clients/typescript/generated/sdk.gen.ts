@@ -65,6 +65,9 @@ import type {
   FileRetainData,
   FileRetainErrors,
   FileRetainResponses,
+  GetAdminConfigData,
+  GetAdminConfigErrors,
+  GetAdminConfigResponses,
   GetAgentStatsData,
   GetAgentStatsErrors,
   GetAgentStatsResponses,
@@ -259,6 +262,19 @@ export const getVersion = <ThrowOnError extends boolean = false>(
 ) =>
   (options?.client ?? client).get<GetVersionResponses, unknown, ThrowOnError>({
     url: "/version",
+    ...options,
+  });
+
+/**
+ * Get resolved server-level configuration
+ *
+ * Returns the resolved server-level configuration with credentials redacted. Gated by HINDSIGHT_API_ENABLE_ADMIN_API and, when set, HINDSIGHT_API_ADMIN_TOKEN.
+ */
+export const getAdminConfig = <ThrowOnError extends boolean = false>(
+  options?: Options<GetAdminConfigData, ThrowOnError>
+) =>
+  (options?.client ?? client).get<GetAdminConfigResponses, GetAdminConfigErrors, ThrowOnError>({
+    url: "/admin/config",
     ...options,
   });
 
