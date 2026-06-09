@@ -50,7 +50,7 @@ class MemoryApi:
 
 
     @validate_call
-    def clear_bank_memories(
+    async def clear_bank_memories(
         self,
         bank_id: StrictStr,
         type: Annotated[Optional[StrictStr], Field(description="Optional fact type filter (world, experience, opinion)")] = None,
@@ -114,11 +114,11 @@ class MemoryApi:
             '200': "DeleteResponse",
             '422': "HTTPValidationError",
         }
-        response_data = self.api_client.call_api(
+        response_data = await self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        response_data.read()
+        await response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -126,7 +126,7 @@ class MemoryApi:
 
 
     @validate_call
-    def clear_bank_memories_with_http_info(
+    async def clear_bank_memories_with_http_info(
         self,
         bank_id: StrictStr,
         type: Annotated[Optional[StrictStr], Field(description="Optional fact type filter (world, experience, opinion)")] = None,
@@ -190,11 +190,11 @@ class MemoryApi:
             '200': "DeleteResponse",
             '422': "HTTPValidationError",
         }
-        response_data = self.api_client.call_api(
+        response_data = await self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        response_data.read()
+        await response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -202,7 +202,7 @@ class MemoryApi:
 
 
     @validate_call
-    def clear_bank_memories_without_preload_content(
+    async def clear_bank_memories_without_preload_content(
         self,
         bank_id: StrictStr,
         type: Annotated[Optional[StrictStr], Field(description="Optional fact type filter (world, experience, opinion)")] = None,
@@ -266,7 +266,7 @@ class MemoryApi:
             '200': "DeleteResponse",
             '422': "HTTPValidationError",
         }
-        response_data = self.api_client.call_api(
+        response_data = await self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
@@ -345,7 +345,7 @@ class MemoryApi:
 
 
     @validate_call
-    def clear_memory_observations(
+    async def clear_memory_observations(
         self,
         bank_id: StrictStr,
         memory_id: StrictStr,
@@ -409,11 +409,11 @@ class MemoryApi:
             '200': "ClearMemoryObservationsResponse",
             '422': "HTTPValidationError",
         }
-        response_data = self.api_client.call_api(
+        response_data = await self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        response_data.read()
+        await response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -421,7 +421,7 @@ class MemoryApi:
 
 
     @validate_call
-    def clear_memory_observations_with_http_info(
+    async def clear_memory_observations_with_http_info(
         self,
         bank_id: StrictStr,
         memory_id: StrictStr,
@@ -485,11 +485,11 @@ class MemoryApi:
             '200': "ClearMemoryObservationsResponse",
             '422': "HTTPValidationError",
         }
-        response_data = self.api_client.call_api(
+        response_data = await self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        response_data.read()
+        await response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -497,7 +497,7 @@ class MemoryApi:
 
 
     @validate_call
-    def clear_memory_observations_without_preload_content(
+    async def clear_memory_observations_without_preload_content(
         self,
         bank_id: StrictStr,
         memory_id: StrictStr,
@@ -561,7 +561,7 @@ class MemoryApi:
             '200': "ClearMemoryObservationsResponse",
             '422': "HTTPValidationError",
         }
-        response_data = self.api_client.call_api(
+        response_data = await self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
@@ -638,7 +638,7 @@ class MemoryApi:
 
 
     @validate_call
-    def get_graph(
+    async def get_graph(
         self,
         bank_id: StrictStr,
         type: Optional[StrictStr] = None,
@@ -726,11 +726,11 @@ class MemoryApi:
             '200': "GraphDataResponse",
             '422': "HTTPValidationError",
         }
-        response_data = self.api_client.call_api(
+        response_data = await self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        response_data.read()
+        await response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -738,7 +738,7 @@ class MemoryApi:
 
 
     @validate_call
-    def get_graph_with_http_info(
+    async def get_graph_with_http_info(
         self,
         bank_id: StrictStr,
         type: Optional[StrictStr] = None,
@@ -826,11 +826,11 @@ class MemoryApi:
             '200': "GraphDataResponse",
             '422': "HTTPValidationError",
         }
-        response_data = self.api_client.call_api(
+        response_data = await self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        response_data.read()
+        await response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -838,7 +838,7 @@ class MemoryApi:
 
 
     @validate_call
-    def get_graph_without_preload_content(
+    async def get_graph_without_preload_content(
         self,
         bank_id: StrictStr,
         type: Optional[StrictStr] = None,
@@ -926,7 +926,7 @@ class MemoryApi:
             '200': "GraphDataResponse",
             '422': "HTTPValidationError",
         }
-        response_data = self.api_client.call_api(
+        response_data = await self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
@@ -1036,7 +1036,7 @@ class MemoryApi:
 
 
     @validate_call
-    def get_memory(
+    async def get_memory(
         self,
         bank_id: StrictStr,
         memory_id: StrictStr,
@@ -1100,11 +1100,11 @@ class MemoryApi:
             '200': "object",
             '422': "HTTPValidationError",
         }
-        response_data = self.api_client.call_api(
+        response_data = await self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        response_data.read()
+        await response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -1112,7 +1112,7 @@ class MemoryApi:
 
 
     @validate_call
-    def get_memory_with_http_info(
+    async def get_memory_with_http_info(
         self,
         bank_id: StrictStr,
         memory_id: StrictStr,
@@ -1176,11 +1176,11 @@ class MemoryApi:
             '200': "object",
             '422': "HTTPValidationError",
         }
-        response_data = self.api_client.call_api(
+        response_data = await self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        response_data.read()
+        await response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -1188,7 +1188,7 @@ class MemoryApi:
 
 
     @validate_call
-    def get_memory_without_preload_content(
+    async def get_memory_without_preload_content(
         self,
         bank_id: StrictStr,
         memory_id: StrictStr,
@@ -1252,7 +1252,7 @@ class MemoryApi:
             '200': "object",
             '422': "HTTPValidationError",
         }
-        response_data = self.api_client.call_api(
+        response_data = await self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
@@ -1329,7 +1329,7 @@ class MemoryApi:
 
 
     @validate_call
-    def get_observation_history(
+    async def get_observation_history(
         self,
         bank_id: StrictStr,
         memory_id: StrictStr,
@@ -1393,11 +1393,11 @@ class MemoryApi:
             '200': "object",
             '422': "HTTPValidationError",
         }
-        response_data = self.api_client.call_api(
+        response_data = await self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        response_data.read()
+        await response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -1405,7 +1405,7 @@ class MemoryApi:
 
 
     @validate_call
-    def get_observation_history_with_http_info(
+    async def get_observation_history_with_http_info(
         self,
         bank_id: StrictStr,
         memory_id: StrictStr,
@@ -1469,11 +1469,11 @@ class MemoryApi:
             '200': "object",
             '422': "HTTPValidationError",
         }
-        response_data = self.api_client.call_api(
+        response_data = await self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        response_data.read()
+        await response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -1481,7 +1481,7 @@ class MemoryApi:
 
 
     @validate_call
-    def get_observation_history_without_preload_content(
+    async def get_observation_history_without_preload_content(
         self,
         bank_id: StrictStr,
         memory_id: StrictStr,
@@ -1545,7 +1545,7 @@ class MemoryApi:
             '200': "object",
             '422': "HTTPValidationError",
         }
-        response_data = self.api_client.call_api(
+        response_data = await self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
@@ -1622,7 +1622,7 @@ class MemoryApi:
 
 
     @validate_call
-    def list_memories(
+    async def list_memories(
         self,
         bank_id: StrictStr,
         type: Optional[StrictStr] = None,
@@ -1702,11 +1702,11 @@ class MemoryApi:
             '200': "ListMemoryUnitsResponse",
             '422': "HTTPValidationError",
         }
-        response_data = self.api_client.call_api(
+        response_data = await self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        response_data.read()
+        await response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -1714,7 +1714,7 @@ class MemoryApi:
 
 
     @validate_call
-    def list_memories_with_http_info(
+    async def list_memories_with_http_info(
         self,
         bank_id: StrictStr,
         type: Optional[StrictStr] = None,
@@ -1794,11 +1794,11 @@ class MemoryApi:
             '200': "ListMemoryUnitsResponse",
             '422': "HTTPValidationError",
         }
-        response_data = self.api_client.call_api(
+        response_data = await self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        response_data.read()
+        await response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -1806,7 +1806,7 @@ class MemoryApi:
 
 
     @validate_call
-    def list_memories_without_preload_content(
+    async def list_memories_without_preload_content(
         self,
         bank_id: StrictStr,
         type: Optional[StrictStr] = None,
@@ -1886,7 +1886,7 @@ class MemoryApi:
             '200': "ListMemoryUnitsResponse",
             '422': "HTTPValidationError",
         }
-        response_data = self.api_client.call_api(
+        response_data = await self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
@@ -1985,7 +1985,7 @@ class MemoryApi:
 
 
     @validate_call
-    def list_tags(
+    async def list_tags(
         self,
         bank_id: StrictStr,
         q: Annotated[Optional[StrictStr], Field(description="Wildcard pattern to filter tags (e.g., 'user:*' for user:alice, '*-admin' for role-admin). Use '*' as wildcard. Case-insensitive.")] = None,
@@ -2061,11 +2061,11 @@ class MemoryApi:
             '200': "ListTagsResponse",
             '422': "HTTPValidationError",
         }
-        response_data = self.api_client.call_api(
+        response_data = await self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        response_data.read()
+        await response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -2073,7 +2073,7 @@ class MemoryApi:
 
 
     @validate_call
-    def list_tags_with_http_info(
+    async def list_tags_with_http_info(
         self,
         bank_id: StrictStr,
         q: Annotated[Optional[StrictStr], Field(description="Wildcard pattern to filter tags (e.g., 'user:*' for user:alice, '*-admin' for role-admin). Use '*' as wildcard. Case-insensitive.")] = None,
@@ -2149,11 +2149,11 @@ class MemoryApi:
             '200': "ListTagsResponse",
             '422': "HTTPValidationError",
         }
-        response_data = self.api_client.call_api(
+        response_data = await self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        response_data.read()
+        await response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -2161,7 +2161,7 @@ class MemoryApi:
 
 
     @validate_call
-    def list_tags_without_preload_content(
+    async def list_tags_without_preload_content(
         self,
         bank_id: StrictStr,
         q: Annotated[Optional[StrictStr], Field(description="Wildcard pattern to filter tags (e.g., 'user:*' for user:alice, '*-admin' for role-admin). Use '*' as wildcard. Case-insensitive.")] = None,
@@ -2237,7 +2237,7 @@ class MemoryApi:
             '200': "ListTagsResponse",
             '422': "HTTPValidationError",
         }
-        response_data = self.api_client.call_api(
+        response_data = await self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
@@ -2331,7 +2331,7 @@ class MemoryApi:
 
 
     @validate_call
-    def recall_memories(
+    async def recall_memories(
         self,
         bank_id: StrictStr,
         recall_request: RecallRequest,
@@ -2395,11 +2395,11 @@ class MemoryApi:
             '200': "RecallResponse",
             '422': "HTTPValidationError",
         }
-        response_data = self.api_client.call_api(
+        response_data = await self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        response_data.read()
+        await response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -2407,7 +2407,7 @@ class MemoryApi:
 
 
     @validate_call
-    def recall_memories_with_http_info(
+    async def recall_memories_with_http_info(
         self,
         bank_id: StrictStr,
         recall_request: RecallRequest,
@@ -2471,11 +2471,11 @@ class MemoryApi:
             '200': "RecallResponse",
             '422': "HTTPValidationError",
         }
-        response_data = self.api_client.call_api(
+        response_data = await self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        response_data.read()
+        await response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -2483,7 +2483,7 @@ class MemoryApi:
 
 
     @validate_call
-    def recall_memories_without_preload_content(
+    async def recall_memories_without_preload_content(
         self,
         bank_id: StrictStr,
         recall_request: RecallRequest,
@@ -2547,7 +2547,7 @@ class MemoryApi:
             '200': "RecallResponse",
             '422': "HTTPValidationError",
         }
-        response_data = self.api_client.call_api(
+        response_data = await self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
@@ -2637,7 +2637,7 @@ class MemoryApi:
 
 
     @validate_call
-    def reflect(
+    async def reflect(
         self,
         bank_id: StrictStr,
         reflect_request: ReflectRequest,
@@ -2701,11 +2701,11 @@ class MemoryApi:
             '200': "ReflectResponse",
             '422': "HTTPValidationError",
         }
-        response_data = self.api_client.call_api(
+        response_data = await self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        response_data.read()
+        await response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -2713,7 +2713,7 @@ class MemoryApi:
 
 
     @validate_call
-    def reflect_with_http_info(
+    async def reflect_with_http_info(
         self,
         bank_id: StrictStr,
         reflect_request: ReflectRequest,
@@ -2777,11 +2777,11 @@ class MemoryApi:
             '200': "ReflectResponse",
             '422': "HTTPValidationError",
         }
-        response_data = self.api_client.call_api(
+        response_data = await self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        response_data.read()
+        await response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -2789,7 +2789,7 @@ class MemoryApi:
 
 
     @validate_call
-    def reflect_without_preload_content(
+    async def reflect_without_preload_content(
         self,
         bank_id: StrictStr,
         reflect_request: ReflectRequest,
@@ -2853,7 +2853,7 @@ class MemoryApi:
             '200': "ReflectResponse",
             '422': "HTTPValidationError",
         }
-        response_data = self.api_client.call_api(
+        response_data = await self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
@@ -2943,7 +2943,7 @@ class MemoryApi:
 
 
     @validate_call
-    def retain_memories(
+    async def retain_memories(
         self,
         bank_id: StrictStr,
         retain_request: RetainRequest,
@@ -3007,11 +3007,11 @@ class MemoryApi:
             '200': "RetainResponse",
             '422': "HTTPValidationError",
         }
-        response_data = self.api_client.call_api(
+        response_data = await self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        response_data.read()
+        await response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -3019,7 +3019,7 @@ class MemoryApi:
 
 
     @validate_call
-    def retain_memories_with_http_info(
+    async def retain_memories_with_http_info(
         self,
         bank_id: StrictStr,
         retain_request: RetainRequest,
@@ -3083,11 +3083,11 @@ class MemoryApi:
             '200': "RetainResponse",
             '422': "HTTPValidationError",
         }
-        response_data = self.api_client.call_api(
+        response_data = await self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        response_data.read()
+        await response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -3095,7 +3095,7 @@ class MemoryApi:
 
 
     @validate_call
-    def retain_memories_without_preload_content(
+    async def retain_memories_without_preload_content(
         self,
         bank_id: StrictStr,
         retain_request: RetainRequest,
@@ -3159,7 +3159,7 @@ class MemoryApi:
             '200': "RetainResponse",
             '422': "HTTPValidationError",
         }
-        response_data = self.api_client.call_api(
+        response_data = await self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )

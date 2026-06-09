@@ -47,7 +47,7 @@ class DocumentsApi:
 
 
     @validate_call
-    def delete_document(
+    async def delete_document(
         self,
         bank_id: StrictStr,
         document_id: StrictStr,
@@ -111,11 +111,11 @@ class DocumentsApi:
             '200': "DeleteDocumentResponse",
             '422': "HTTPValidationError",
         }
-        response_data = self.api_client.call_api(
+        response_data = await self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        response_data.read()
+        await response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -123,7 +123,7 @@ class DocumentsApi:
 
 
     @validate_call
-    def delete_document_with_http_info(
+    async def delete_document_with_http_info(
         self,
         bank_id: StrictStr,
         document_id: StrictStr,
@@ -187,11 +187,11 @@ class DocumentsApi:
             '200': "DeleteDocumentResponse",
             '422': "HTTPValidationError",
         }
-        response_data = self.api_client.call_api(
+        response_data = await self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        response_data.read()
+        await response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -199,7 +199,7 @@ class DocumentsApi:
 
 
     @validate_call
-    def delete_document_without_preload_content(
+    async def delete_document_without_preload_content(
         self,
         bank_id: StrictStr,
         document_id: StrictStr,
@@ -263,7 +263,7 @@ class DocumentsApi:
             '200': "DeleteDocumentResponse",
             '422': "HTTPValidationError",
         }
-        response_data = self.api_client.call_api(
+        response_data = await self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
@@ -340,7 +340,7 @@ class DocumentsApi:
 
 
     @validate_call
-    def get_chunk(
+    async def get_chunk(
         self,
         chunk_id: StrictStr,
         authorization: Optional[StrictStr] = None,
@@ -400,11 +400,11 @@ class DocumentsApi:
             '200': "ChunkResponse",
             '422': "HTTPValidationError",
         }
-        response_data = self.api_client.call_api(
+        response_data = await self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        response_data.read()
+        await response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -412,7 +412,7 @@ class DocumentsApi:
 
 
     @validate_call
-    def get_chunk_with_http_info(
+    async def get_chunk_with_http_info(
         self,
         chunk_id: StrictStr,
         authorization: Optional[StrictStr] = None,
@@ -472,11 +472,11 @@ class DocumentsApi:
             '200': "ChunkResponse",
             '422': "HTTPValidationError",
         }
-        response_data = self.api_client.call_api(
+        response_data = await self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        response_data.read()
+        await response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -484,7 +484,7 @@ class DocumentsApi:
 
 
     @validate_call
-    def get_chunk_without_preload_content(
+    async def get_chunk_without_preload_content(
         self,
         chunk_id: StrictStr,
         authorization: Optional[StrictStr] = None,
@@ -544,7 +544,7 @@ class DocumentsApi:
             '200': "ChunkResponse",
             '422': "HTTPValidationError",
         }
-        response_data = self.api_client.call_api(
+        response_data = await self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
@@ -618,7 +618,7 @@ class DocumentsApi:
 
 
     @validate_call
-    def get_document(
+    async def get_document(
         self,
         bank_id: StrictStr,
         document_id: StrictStr,
@@ -682,11 +682,11 @@ class DocumentsApi:
             '200': "DocumentResponse",
             '422': "HTTPValidationError",
         }
-        response_data = self.api_client.call_api(
+        response_data = await self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        response_data.read()
+        await response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -694,7 +694,7 @@ class DocumentsApi:
 
 
     @validate_call
-    def get_document_with_http_info(
+    async def get_document_with_http_info(
         self,
         bank_id: StrictStr,
         document_id: StrictStr,
@@ -758,11 +758,11 @@ class DocumentsApi:
             '200': "DocumentResponse",
             '422': "HTTPValidationError",
         }
-        response_data = self.api_client.call_api(
+        response_data = await self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        response_data.read()
+        await response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -770,7 +770,7 @@ class DocumentsApi:
 
 
     @validate_call
-    def get_document_without_preload_content(
+    async def get_document_without_preload_content(
         self,
         bank_id: StrictStr,
         document_id: StrictStr,
@@ -834,7 +834,7 @@ class DocumentsApi:
             '200': "DocumentResponse",
             '422': "HTTPValidationError",
         }
-        response_data = self.api_client.call_api(
+        response_data = await self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
@@ -911,7 +911,7 @@ class DocumentsApi:
 
 
     @validate_call
-    def list_document_chunks(
+    async def list_document_chunks(
         self,
         bank_id: StrictStr,
         document_id: StrictStr,
@@ -983,11 +983,11 @@ class DocumentsApi:
             '200': "ListChunksResponse",
             '422': "HTTPValidationError",
         }
-        response_data = self.api_client.call_api(
+        response_data = await self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        response_data.read()
+        await response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -995,7 +995,7 @@ class DocumentsApi:
 
 
     @validate_call
-    def list_document_chunks_with_http_info(
+    async def list_document_chunks_with_http_info(
         self,
         bank_id: StrictStr,
         document_id: StrictStr,
@@ -1067,11 +1067,11 @@ class DocumentsApi:
             '200': "ListChunksResponse",
             '422': "HTTPValidationError",
         }
-        response_data = self.api_client.call_api(
+        response_data = await self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        response_data.read()
+        await response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -1079,7 +1079,7 @@ class DocumentsApi:
 
 
     @validate_call
-    def list_document_chunks_without_preload_content(
+    async def list_document_chunks_without_preload_content(
         self,
         bank_id: StrictStr,
         document_id: StrictStr,
@@ -1151,7 +1151,7 @@ class DocumentsApi:
             '200': "ListChunksResponse",
             '422': "HTTPValidationError",
         }
-        response_data = self.api_client.call_api(
+        response_data = await self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
@@ -1238,7 +1238,7 @@ class DocumentsApi:
 
 
     @validate_call
-    def list_documents(
+    async def list_documents(
         self,
         bank_id: StrictStr,
         q: Annotated[Optional[StrictStr], Field(description="Case-insensitive substring filter on document ID (e.g. 'report' matches 'report-2024')")] = None,
@@ -1318,11 +1318,11 @@ class DocumentsApi:
             '200': "ListDocumentsResponse",
             '422': "HTTPValidationError",
         }
-        response_data = self.api_client.call_api(
+        response_data = await self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        response_data.read()
+        await response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -1330,7 +1330,7 @@ class DocumentsApi:
 
 
     @validate_call
-    def list_documents_with_http_info(
+    async def list_documents_with_http_info(
         self,
         bank_id: StrictStr,
         q: Annotated[Optional[StrictStr], Field(description="Case-insensitive substring filter on document ID (e.g. 'report' matches 'report-2024')")] = None,
@@ -1410,11 +1410,11 @@ class DocumentsApi:
             '200': "ListDocumentsResponse",
             '422': "HTTPValidationError",
         }
-        response_data = self.api_client.call_api(
+        response_data = await self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        response_data.read()
+        await response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -1422,7 +1422,7 @@ class DocumentsApi:
 
 
     @validate_call
-    def list_documents_without_preload_content(
+    async def list_documents_without_preload_content(
         self,
         bank_id: StrictStr,
         q: Annotated[Optional[StrictStr], Field(description="Case-insensitive substring filter on document ID (e.g. 'report' matches 'report-2024')")] = None,
@@ -1502,7 +1502,7 @@ class DocumentsApi:
             '200': "ListDocumentsResponse",
             '422': "HTTPValidationError",
         }
-        response_data = self.api_client.call_api(
+        response_data = await self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
@@ -1602,7 +1602,7 @@ class DocumentsApi:
 
 
     @validate_call
-    def reprocess_document(
+    async def reprocess_document(
         self,
         bank_id: StrictStr,
         document_id: StrictStr,
@@ -1666,11 +1666,11 @@ class DocumentsApi:
             '200': "ReprocessDocumentResponse",
             '422': "HTTPValidationError",
         }
-        response_data = self.api_client.call_api(
+        response_data = await self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        response_data.read()
+        await response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -1678,7 +1678,7 @@ class DocumentsApi:
 
 
     @validate_call
-    def reprocess_document_with_http_info(
+    async def reprocess_document_with_http_info(
         self,
         bank_id: StrictStr,
         document_id: StrictStr,
@@ -1742,11 +1742,11 @@ class DocumentsApi:
             '200': "ReprocessDocumentResponse",
             '422': "HTTPValidationError",
         }
-        response_data = self.api_client.call_api(
+        response_data = await self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        response_data.read()
+        await response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -1754,7 +1754,7 @@ class DocumentsApi:
 
 
     @validate_call
-    def reprocess_document_without_preload_content(
+    async def reprocess_document_without_preload_content(
         self,
         bank_id: StrictStr,
         document_id: StrictStr,
@@ -1818,7 +1818,7 @@ class DocumentsApi:
             '200': "ReprocessDocumentResponse",
             '422': "HTTPValidationError",
         }
-        response_data = self.api_client.call_api(
+        response_data = await self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
@@ -1895,7 +1895,7 @@ class DocumentsApi:
 
 
     @validate_call
-    def update_document(
+    async def update_document(
         self,
         bank_id: StrictStr,
         document_id: StrictStr,
@@ -1963,11 +1963,11 @@ class DocumentsApi:
             '200': "UpdateDocumentResponse",
             '422': "HTTPValidationError",
         }
-        response_data = self.api_client.call_api(
+        response_data = await self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        response_data.read()
+        await response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -1975,7 +1975,7 @@ class DocumentsApi:
 
 
     @validate_call
-    def update_document_with_http_info(
+    async def update_document_with_http_info(
         self,
         bank_id: StrictStr,
         document_id: StrictStr,
@@ -2043,11 +2043,11 @@ class DocumentsApi:
             '200': "UpdateDocumentResponse",
             '422': "HTTPValidationError",
         }
-        response_data = self.api_client.call_api(
+        response_data = await self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        response_data.read()
+        await response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -2055,7 +2055,7 @@ class DocumentsApi:
 
 
     @validate_call
-    def update_document_without_preload_content(
+    async def update_document_without_preload_content(
         self,
         bank_id: StrictStr,
         document_id: StrictStr,
@@ -2123,7 +2123,7 @@ class DocumentsApi:
             '200': "UpdateDocumentResponse",
             '422': "HTTPValidationError",
         }
-        response_data = self.api_client.call_api(
+        response_data = await self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )

@@ -10435,17 +10435,6 @@
               }
             ],
             "title": "Source Fact Ids"
-          },
-          "status": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Status"
           }
         },
         "type": "object",

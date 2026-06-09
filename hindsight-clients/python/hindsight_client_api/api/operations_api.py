@@ -43,7 +43,7 @@ class OperationsApi:
 
 
     @validate_call
-    def cancel_operation(
+    async def cancel_operation(
         self,
         bank_id: StrictStr,
         operation_id: StrictStr,
@@ -107,11 +107,11 @@ class OperationsApi:
             '200': "CancelOperationResponse",
             '422': "HTTPValidationError",
         }
-        response_data = self.api_client.call_api(
+        response_data = await self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        response_data.read()
+        await response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -119,7 +119,7 @@ class OperationsApi:
 
 
     @validate_call
-    def cancel_operation_with_http_info(
+    async def cancel_operation_with_http_info(
         self,
         bank_id: StrictStr,
         operation_id: StrictStr,
@@ -183,11 +183,11 @@ class OperationsApi:
             '200': "CancelOperationResponse",
             '422': "HTTPValidationError",
         }
-        response_data = self.api_client.call_api(
+        response_data = await self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        response_data.read()
+        await response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -195,7 +195,7 @@ class OperationsApi:
 
 
     @validate_call
-    def cancel_operation_without_preload_content(
+    async def cancel_operation_without_preload_content(
         self,
         bank_id: StrictStr,
         operation_id: StrictStr,
@@ -259,7 +259,7 @@ class OperationsApi:
             '200': "CancelOperationResponse",
             '422': "HTTPValidationError",
         }
-        response_data = self.api_client.call_api(
+        response_data = await self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
@@ -336,7 +336,7 @@ class OperationsApi:
 
 
     @validate_call
-    def get_operation_status(
+    async def get_operation_status(
         self,
         bank_id: StrictStr,
         operation_id: StrictStr,
@@ -404,11 +404,11 @@ class OperationsApi:
             '200': "OperationStatusResponse",
             '422': "HTTPValidationError",
         }
-        response_data = self.api_client.call_api(
+        response_data = await self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        response_data.read()
+        await response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -416,7 +416,7 @@ class OperationsApi:
 
 
     @validate_call
-    def get_operation_status_with_http_info(
+    async def get_operation_status_with_http_info(
         self,
         bank_id: StrictStr,
         operation_id: StrictStr,
@@ -484,11 +484,11 @@ class OperationsApi:
             '200': "OperationStatusResponse",
             '422': "HTTPValidationError",
         }
-        response_data = self.api_client.call_api(
+        response_data = await self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        response_data.read()
+        await response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -496,7 +496,7 @@ class OperationsApi:
 
 
     @validate_call
-    def get_operation_status_without_preload_content(
+    async def get_operation_status_without_preload_content(
         self,
         bank_id: StrictStr,
         operation_id: StrictStr,
@@ -564,7 +564,7 @@ class OperationsApi:
             '200': "OperationStatusResponse",
             '422': "HTTPValidationError",
         }
-        response_data = self.api_client.call_api(
+        response_data = await self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
@@ -646,7 +646,7 @@ class OperationsApi:
 
 
     @validate_call
-    def list_operations(
+    async def list_operations(
         self,
         bank_id: StrictStr,
         status: Annotated[Optional[StrictStr], Field(description="Filter by status: pending, processing, completed, failed, or cancelled")] = None,
@@ -726,11 +726,11 @@ class OperationsApi:
             '200': "OperationsListResponse",
             '422': "HTTPValidationError",
         }
-        response_data = self.api_client.call_api(
+        response_data = await self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        response_data.read()
+        await response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -738,7 +738,7 @@ class OperationsApi:
 
 
     @validate_call
-    def list_operations_with_http_info(
+    async def list_operations_with_http_info(
         self,
         bank_id: StrictStr,
         status: Annotated[Optional[StrictStr], Field(description="Filter by status: pending, processing, completed, failed, or cancelled")] = None,
@@ -818,11 +818,11 @@ class OperationsApi:
             '200': "OperationsListResponse",
             '422': "HTTPValidationError",
         }
-        response_data = self.api_client.call_api(
+        response_data = await self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        response_data.read()
+        await response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -830,7 +830,7 @@ class OperationsApi:
 
 
     @validate_call
-    def list_operations_without_preload_content(
+    async def list_operations_without_preload_content(
         self,
         bank_id: StrictStr,
         status: Annotated[Optional[StrictStr], Field(description="Filter by status: pending, processing, completed, failed, or cancelled")] = None,
@@ -910,7 +910,7 @@ class OperationsApi:
             '200': "OperationsListResponse",
             '422': "HTTPValidationError",
         }
-        response_data = self.api_client.call_api(
+        response_data = await self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
@@ -1009,7 +1009,7 @@ class OperationsApi:
 
 
     @validate_call
-    def retry_operation(
+    async def retry_operation(
         self,
         bank_id: StrictStr,
         operation_id: StrictStr,
@@ -1073,11 +1073,11 @@ class OperationsApi:
             '200': "RetryOperationResponse",
             '422': "HTTPValidationError",
         }
-        response_data = self.api_client.call_api(
+        response_data = await self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        response_data.read()
+        await response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -1085,7 +1085,7 @@ class OperationsApi:
 
 
     @validate_call
-    def retry_operation_with_http_info(
+    async def retry_operation_with_http_info(
         self,
         bank_id: StrictStr,
         operation_id: StrictStr,
@@ -1149,11 +1149,11 @@ class OperationsApi:
             '200': "RetryOperationResponse",
             '422': "HTTPValidationError",
         }
-        response_data = self.api_client.call_api(
+        response_data = await self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        response_data.read()
+        await response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -1161,7 +1161,7 @@ class OperationsApi:
 
 
     @validate_call
-    def retry_operation_without_preload_content(
+    async def retry_operation_without_preload_content(
         self,
         bank_id: StrictStr,
         operation_id: StrictStr,
@@ -1225,7 +1225,7 @@ class OperationsApi:
             '200': "RetryOperationResponse",
             '422': "HTTPValidationError",
         }
-        response_data = self.api_client.call_api(
+        response_data = await self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )

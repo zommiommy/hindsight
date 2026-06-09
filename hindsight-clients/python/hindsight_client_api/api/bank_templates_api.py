@@ -41,7 +41,7 @@ class BankTemplatesApi:
 
 
     @validate_call
-    def export_bank_template(
+    async def export_bank_template(
         self,
         bank_id: StrictStr,
         authorization: Optional[StrictStr] = None,
@@ -101,11 +101,11 @@ class BankTemplatesApi:
             '200': "BankTemplateManifest",
             '422': "HTTPValidationError",
         }
-        response_data = self.api_client.call_api(
+        response_data = await self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        response_data.read()
+        await response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -113,7 +113,7 @@ class BankTemplatesApi:
 
 
     @validate_call
-    def export_bank_template_with_http_info(
+    async def export_bank_template_with_http_info(
         self,
         bank_id: StrictStr,
         authorization: Optional[StrictStr] = None,
@@ -173,11 +173,11 @@ class BankTemplatesApi:
             '200': "BankTemplateManifest",
             '422': "HTTPValidationError",
         }
-        response_data = self.api_client.call_api(
+        response_data = await self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        response_data.read()
+        await response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -185,7 +185,7 @@ class BankTemplatesApi:
 
 
     @validate_call
-    def export_bank_template_without_preload_content(
+    async def export_bank_template_without_preload_content(
         self,
         bank_id: StrictStr,
         authorization: Optional[StrictStr] = None,
@@ -245,7 +245,7 @@ class BankTemplatesApi:
             '200': "BankTemplateManifest",
             '422': "HTTPValidationError",
         }
-        response_data = self.api_client.call_api(
+        response_data = await self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
@@ -319,7 +319,7 @@ class BankTemplatesApi:
 
 
     @validate_call
-    def get_bank_template_schema(
+    async def get_bank_template_schema(
         self,
         _request_timeout: Union[
             None,
@@ -370,11 +370,11 @@ class BankTemplatesApi:
         _response_types_map: Dict[str, Optional[str]] = {
             '200': "object",
         }
-        response_data = self.api_client.call_api(
+        response_data = await self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        response_data.read()
+        await response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -382,7 +382,7 @@ class BankTemplatesApi:
 
 
     @validate_call
-    def get_bank_template_schema_with_http_info(
+    async def get_bank_template_schema_with_http_info(
         self,
         _request_timeout: Union[
             None,
@@ -433,11 +433,11 @@ class BankTemplatesApi:
         _response_types_map: Dict[str, Optional[str]] = {
             '200': "object",
         }
-        response_data = self.api_client.call_api(
+        response_data = await self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        response_data.read()
+        await response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -445,7 +445,7 @@ class BankTemplatesApi:
 
 
     @validate_call
-    def get_bank_template_schema_without_preload_content(
+    async def get_bank_template_schema_without_preload_content(
         self,
         _request_timeout: Union[
             None,
@@ -496,7 +496,7 @@ class BankTemplatesApi:
         _response_types_map: Dict[str, Optional[str]] = {
             '200': "object",
         }
-        response_data = self.api_client.call_api(
+        response_data = await self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
@@ -564,7 +564,7 @@ class BankTemplatesApi:
 
 
     @validate_call
-    def import_bank_template(
+    async def import_bank_template(
         self,
         bank_id: StrictStr,
         dry_run: Annotated[Optional[StrictBool], Field(description="Validate only, do not apply changes")] = None,
@@ -628,11 +628,11 @@ class BankTemplatesApi:
             '200': "BankTemplateImportResponse",
             '422': "HTTPValidationError",
         }
-        response_data = self.api_client.call_api(
+        response_data = await self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        response_data.read()
+        await response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -640,7 +640,7 @@ class BankTemplatesApi:
 
 
     @validate_call
-    def import_bank_template_with_http_info(
+    async def import_bank_template_with_http_info(
         self,
         bank_id: StrictStr,
         dry_run: Annotated[Optional[StrictBool], Field(description="Validate only, do not apply changes")] = None,
@@ -704,11 +704,11 @@ class BankTemplatesApi:
             '200': "BankTemplateImportResponse",
             '422': "HTTPValidationError",
         }
-        response_data = self.api_client.call_api(
+        response_data = await self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        response_data.read()
+        await response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -716,7 +716,7 @@ class BankTemplatesApi:
 
 
     @validate_call
-    def import_bank_template_without_preload_content(
+    async def import_bank_template_without_preload_content(
         self,
         bank_id: StrictStr,
         dry_run: Annotated[Optional[StrictBool], Field(description="Validate only, do not apply changes")] = None,
@@ -780,7 +780,7 @@ class BankTemplatesApi:
             '200': "BankTemplateImportResponse",
             '422': "HTTPValidationError",
         }
-        response_data = self.api_client.call_api(
+        response_data = await self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )

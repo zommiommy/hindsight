@@ -45,7 +45,7 @@ class WebhooksApi:
 
 
     @validate_call
-    def create_webhook(
+    async def create_webhook(
         self,
         bank_id: StrictStr,
         create_webhook_request: CreateWebhookRequest,
@@ -109,11 +109,11 @@ class WebhooksApi:
             '201': "WebhookResponse",
             '422': "HTTPValidationError",
         }
-        response_data = self.api_client.call_api(
+        response_data = await self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        response_data.read()
+        await response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -121,7 +121,7 @@ class WebhooksApi:
 
 
     @validate_call
-    def create_webhook_with_http_info(
+    async def create_webhook_with_http_info(
         self,
         bank_id: StrictStr,
         create_webhook_request: CreateWebhookRequest,
@@ -185,11 +185,11 @@ class WebhooksApi:
             '201': "WebhookResponse",
             '422': "HTTPValidationError",
         }
-        response_data = self.api_client.call_api(
+        response_data = await self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        response_data.read()
+        await response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -197,7 +197,7 @@ class WebhooksApi:
 
 
     @validate_call
-    def create_webhook_without_preload_content(
+    async def create_webhook_without_preload_content(
         self,
         bank_id: StrictStr,
         create_webhook_request: CreateWebhookRequest,
@@ -261,7 +261,7 @@ class WebhooksApi:
             '201': "WebhookResponse",
             '422': "HTTPValidationError",
         }
-        response_data = self.api_client.call_api(
+        response_data = await self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
@@ -351,7 +351,7 @@ class WebhooksApi:
 
 
     @validate_call
-    def delete_webhook(
+    async def delete_webhook(
         self,
         bank_id: StrictStr,
         webhook_id: StrictStr,
@@ -415,11 +415,11 @@ class WebhooksApi:
             '200': "DeleteResponse",
             '422': "HTTPValidationError",
         }
-        response_data = self.api_client.call_api(
+        response_data = await self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        response_data.read()
+        await response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -427,7 +427,7 @@ class WebhooksApi:
 
 
     @validate_call
-    def delete_webhook_with_http_info(
+    async def delete_webhook_with_http_info(
         self,
         bank_id: StrictStr,
         webhook_id: StrictStr,
@@ -491,11 +491,11 @@ class WebhooksApi:
             '200': "DeleteResponse",
             '422': "HTTPValidationError",
         }
-        response_data = self.api_client.call_api(
+        response_data = await self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        response_data.read()
+        await response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -503,7 +503,7 @@ class WebhooksApi:
 
 
     @validate_call
-    def delete_webhook_without_preload_content(
+    async def delete_webhook_without_preload_content(
         self,
         bank_id: StrictStr,
         webhook_id: StrictStr,
@@ -567,7 +567,7 @@ class WebhooksApi:
             '200': "DeleteResponse",
             '422': "HTTPValidationError",
         }
-        response_data = self.api_client.call_api(
+        response_data = await self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
@@ -644,7 +644,7 @@ class WebhooksApi:
 
 
     @validate_call
-    def list_webhook_deliveries(
+    async def list_webhook_deliveries(
         self,
         bank_id: StrictStr,
         webhook_id: StrictStr,
@@ -716,11 +716,11 @@ class WebhooksApi:
             '200': "WebhookDeliveryListResponse",
             '422': "HTTPValidationError",
         }
-        response_data = self.api_client.call_api(
+        response_data = await self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        response_data.read()
+        await response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -728,7 +728,7 @@ class WebhooksApi:
 
 
     @validate_call
-    def list_webhook_deliveries_with_http_info(
+    async def list_webhook_deliveries_with_http_info(
         self,
         bank_id: StrictStr,
         webhook_id: StrictStr,
@@ -800,11 +800,11 @@ class WebhooksApi:
             '200': "WebhookDeliveryListResponse",
             '422': "HTTPValidationError",
         }
-        response_data = self.api_client.call_api(
+        response_data = await self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        response_data.read()
+        await response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -812,7 +812,7 @@ class WebhooksApi:
 
 
     @validate_call
-    def list_webhook_deliveries_without_preload_content(
+    async def list_webhook_deliveries_without_preload_content(
         self,
         bank_id: StrictStr,
         webhook_id: StrictStr,
@@ -884,7 +884,7 @@ class WebhooksApi:
             '200': "WebhookDeliveryListResponse",
             '422': "HTTPValidationError",
         }
-        response_data = self.api_client.call_api(
+        response_data = await self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
@@ -971,7 +971,7 @@ class WebhooksApi:
 
 
     @validate_call
-    def list_webhooks(
+    async def list_webhooks(
         self,
         bank_id: StrictStr,
         authorization: Optional[StrictStr] = None,
@@ -1031,11 +1031,11 @@ class WebhooksApi:
             '200': "WebhookListResponse",
             '422': "HTTPValidationError",
         }
-        response_data = self.api_client.call_api(
+        response_data = await self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        response_data.read()
+        await response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -1043,7 +1043,7 @@ class WebhooksApi:
 
 
     @validate_call
-    def list_webhooks_with_http_info(
+    async def list_webhooks_with_http_info(
         self,
         bank_id: StrictStr,
         authorization: Optional[StrictStr] = None,
@@ -1103,11 +1103,11 @@ class WebhooksApi:
             '200': "WebhookListResponse",
             '422': "HTTPValidationError",
         }
-        response_data = self.api_client.call_api(
+        response_data = await self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        response_data.read()
+        await response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -1115,7 +1115,7 @@ class WebhooksApi:
 
 
     @validate_call
-    def list_webhooks_without_preload_content(
+    async def list_webhooks_without_preload_content(
         self,
         bank_id: StrictStr,
         authorization: Optional[StrictStr] = None,
@@ -1175,7 +1175,7 @@ class WebhooksApi:
             '200': "WebhookListResponse",
             '422': "HTTPValidationError",
         }
-        response_data = self.api_client.call_api(
+        response_data = await self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
@@ -1249,7 +1249,7 @@ class WebhooksApi:
 
 
     @validate_call
-    def update_webhook(
+    async def update_webhook(
         self,
         bank_id: StrictStr,
         webhook_id: StrictStr,
@@ -1317,11 +1317,11 @@ class WebhooksApi:
             '200': "WebhookResponse",
             '422': "HTTPValidationError",
         }
-        response_data = self.api_client.call_api(
+        response_data = await self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        response_data.read()
+        await response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -1329,7 +1329,7 @@ class WebhooksApi:
 
 
     @validate_call
-    def update_webhook_with_http_info(
+    async def update_webhook_with_http_info(
         self,
         bank_id: StrictStr,
         webhook_id: StrictStr,
@@ -1397,11 +1397,11 @@ class WebhooksApi:
             '200': "WebhookResponse",
             '422': "HTTPValidationError",
         }
-        response_data = self.api_client.call_api(
+        response_data = await self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        response_data.read()
+        await response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -1409,7 +1409,7 @@ class WebhooksApi:
 
 
     @validate_call
-    def update_webhook_without_preload_content(
+    async def update_webhook_without_preload_content(
         self,
         bank_id: StrictStr,
         webhook_id: StrictStr,
@@ -1477,7 +1477,7 @@ class WebhooksApi:
             '200': "WebhookResponse",
             '422': "HTTPValidationError",
         }
-        response_data = self.api_client.call_api(
+        response_data = await self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )

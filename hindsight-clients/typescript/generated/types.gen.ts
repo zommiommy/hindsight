@@ -2679,12 +2679,6 @@ export type RecallRequest = {
    * Compound tag filter using boolean groups. Groups in the list are AND-ed. Each group is a leaf {tags, match} or compound {and: [...]}, {or: [...]}, {not: ...}.
    */
   tag_groups?: Array<TagGroupLeaf | TagGroupAndInput | TagGroupOrInput | TagGroupNotInput> | null;
-  /**
-   * Include Quarantined
-   *
-   * When True, recall also surfaces rows whose status != 'active' (Memory Defense quarantine).
-   */
-  include_quarantined?: boolean;
 };
 
 /**
@@ -2789,10 +2783,6 @@ export type RecallResult = {
    * Source Fact Ids
    */
   source_fact_ids?: Array<string> | null;
-  /**
-   * Status
-   */
-  status?: string | null;
 };
 
 /**
