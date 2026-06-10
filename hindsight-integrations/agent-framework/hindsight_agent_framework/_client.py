@@ -14,10 +14,10 @@ except metadata.PackageNotFoundError:
     _VERSION = "0.0.0"
 _USER_AGENT = f"hindsight-agent-framework/{_VERSION}"
 
-# Per-operation timeouts (seconds)
-TIMEOUT_RETAIN = 15.0
-TIMEOUT_RECALL = 10.0
-TIMEOUT_BANK = 15.0
+# Request timeout (seconds). The hindsight-client SDK takes a single timeout at
+# construction and exposes no per-call timeout, so this one bound applies to
+# every recall/retain/bank operation. The provider guards all calls and degrades
+# gracefully, so this is a backstop, not a tight per-op budget.
 TIMEOUT_DEFAULT = 30.0
 
 
