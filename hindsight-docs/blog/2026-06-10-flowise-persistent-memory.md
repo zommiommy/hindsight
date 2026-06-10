@@ -136,7 +136,7 @@ That's the whole connection step. From here the credential is reusable across ev
 
 ## Installation
 
-A note on how the nodes get into your Flowise instance. Flowise distributes node packages from inside its own monorepo (`FlowiseAI/Flowise` under `packages/components/`), not from npm. The eventual distribution path for the Hindsight nodes is an upstream contribution to the Flowise repo; until those nodes ship in a Flowise release, you can use them today by running a local Flowise build with the source files copied in:
+A note on how the nodes get into your Flowise instance. Flowise distributes node packages from inside its own monorepo (`FlowiseAI/Flowise` under `packages/components/`), not from npm. The shortest path today is to run a local Flowise build with the Hindsight source files copied in:
 
 ```bash
 git clone https://github.com/FlowiseAI/Flowise.git
