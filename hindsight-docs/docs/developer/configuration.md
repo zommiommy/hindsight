@@ -175,6 +175,7 @@ For non-English banks (especially CJK) and the language/extraction-language trad
 | `HINDSIGHT_API_LLM_REASONING_EFFORT` | Reasoning effort for providers/models that support it (for example `low`, `medium`, `high`, `xhigh`) | `low` |
 | `HINDSIGHT_API_LLM_GROQ_SERVICE_TIER` | Groq service tier: `on_demand`, `flex`, `auto` | `auto` |
 | `HINDSIGHT_API_LLM_OPENAI_SERVICE_TIER` | OpenAI service tier: `flex` for 50% cost savings (OpenAI Flex Processing) | None (default) |
+| `HINDSIGHT_API_LLM_BEDROCK_SERVICE_TIER` | Bedrock service tier: `flex` for 50% cost savings (best-effort inference), `priority` (guaranteed throughput), or `reserved` (provisioned capacity) | Unset (default tier) |
 | `HINDSIGHT_API_LLM_EXTRA_BODY` | JSON dict of extra request-body params (e.g. `temperature`, `top_p`, `max_tokens`) merged into every LLM call. Applied across the OpenAI-compatible, Fireworks, Anthropic, Gemini/VertexAI and LiteLLM (incl. Bedrock/Router) providers. Each provider merges them in its own native parameter space, so use that provider's field names (e.g. `max_tokens` for OpenAI/Anthropic vs `max_output_tokens` for Gemini). Also useful for custom model servers (e.g. vLLM `chat_template_kwargs`). | `null` |
 | `HINDSIGHT_API_LLM_DEFAULT_HEADERS` | JSON dict passed as `default_headers` to provider SDK clients. Used by operators routing through proxies / request-tracing middleware (e.g. Cloudflare AI Gateway, Helicone, corporate proxies). Currently wired into the Anthropic provider; other providers can opt in. | `null` |
 | `HINDSIGHT_API_LLM_STRICT_SCHEMA` | Grammar-enforce structured output via `json_schema` `strict: true` instead of the soft "schema-in-prompt + `json_object`" path. Use it with weaker self-hosted models that return prose preambles, markdown ` ```json ` fences, or invalid JSON — which otherwise fail to parse and wedge retain/consolidation. Applies to OpenAI-compatible backends (OpenAI, llama.cpp, vLLM) and LiteLLM; Gemini already enforces its native `response_schema` regardless, and providers without a strict mode ignore it. | `false` |
@@ -294,6 +295,8 @@ export HINDSIGHT_API_LLM_MODEL=us.amazon.nova-2-lite-v1:0
 export AWS_ACCESS_KEY_ID=your-access-key
 export AWS_SECRET_ACCESS_KEY=your-secret-key
 export AWS_REGION_NAME=us-east-1
+# Optional: Use Flex tier for 50% cost savings (with variable latency)
+# export HINDSIGHT_API_LLM_BEDROCK_SERVICE_TIER=flex
 
 # LiteLLM (100+ providers via LiteLLM SDK)
 # Azure OpenAI via LiteLLM
@@ -504,7 +507,7 @@ two slots that retain/consolidation cannot consume.
 | `HINDSIGHT_API_EMBEDDINGS_LITELLM_SDK_OUTPUT_DIMENSIONS` | Optional output embedding dimensions (provider-dependent, e.g., `768` for Gemini embedding models) | - |
 | `HINDSIGHT_API_EMBEDDINGS_LITELLM_SDK_ENCODING_FORMAT` | Encoding format for embedding responses. Set to empty string to omit the parameter (needed for Voyage AI, Gemini). | `float` |
 | `HINDSIGHT_API_EMBEDDINGS_GEMINI_API_KEY` | Gemini API key for embeddings (falls back to `HINDSIGHT_API_LLM_API_KEY`) | - |
-| `HINDSIGHT_API_EMBEDDINGS_GEMINI_MODEL` | Gemini embedding model | `gemini-embedding-001` |
+| `HINDSIGHT_API_EMBEDDINGS_GEMINI_MODEL` | Gemini embedding model. The `gemini-embedding-2` family (e.g. `gemini-embedding-2-preview`) is supported on both the Gemini API and Vertex AI — because these multimodal models aggregate a multi-input request into one embedding, Hindsight automatically embeds one input per call to keep per-fact vectors. | `gemini-embedding-001` |
 | `HINDSIGHT_API_EMBEDDINGS_GEMINI_OUTPUT_DIMENSIONALITY` | Output embedding dimensions (Gemini supports configurable dimensionality) | `768` |
 | `HINDSIGHT_API_EMBEDDINGS_GEMINI_FORCE_IPV4` | Force the Gemini embeddings client to use an IPv4-only HTTP transport. Useful in environments where IPv6 egress is broken (e.g. some Docker/VPC setups) and AAAA DNS records cause long hangs. | `false` |
 | `HINDSIGHT_API_EMBEDDINGS_VERTEXAI_PROJECT_ID` | Vertex AI project ID for embeddings (falls back to `HINDSIGHT_API_LLM_VERTEXAI_PROJECT_ID`) | - |
@@ -1017,14 +1020,11 @@ Controls the retain (memory ingestion) pipeline.
 | `HINDSIGHT_API_RETAIN_ENTITY_RESOLUTION_BATCH_SIZE` | Max unique entity names per fuzzy candidate lookup query (`trigram` on PG, `oracle_fuzzy` on Oracle). Bounds query size so very wide retain batches don't time out a single `unnest(...)` join on banks with many entities. | `100` |
 | `HINDSIGHT_API_RETAIN_DEFAULT_STRATEGY` | Default retain strategy name. When set, all retain calls without an explicit `strategy` parameter use this strategy. | - |
 | `HINDSIGHT_API_RETAIN_BATCH_POLL_INTERVAL_SECONDS` | Batch API polling interval in seconds | `60` |
+| `HINDSIGHT_API_STORE_DOCUMENT_TEXT` | Persist the raw source text alongside extracted memories. Set to `false` to skip storing it. Static, server-level. | `true` |
 
-### Memory Defense
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `HINDSIGHT_API_MEMORY_DEFENSE_ENABLED_DEFAULT` | When `true`, new banks have `memory_defense.enabled=true` by default. Per-bank policy is unaffected. | `false` |
-
-> **Batch-capable providers.** `HINDSIGHT_API_RETAIN_BATCH_ENABLED=true` only works with a retain LLM provider that implements a batch API: `openai`, `groq`, and `fireworks`. Batch always requires async retain (`async=true`); a sync retain with batch enabled errors. Other providers fail fast at startup.
+> **Batch-capable providers.** `HINDSIGHT_API_RETAIN_BATCH_ENABLED=true` only works with a retain LLM provider that implements a batch API: `openai`, `groq`, `gemini`, and `fireworks`. Batch always requires async retain (`async=true`); a sync retain with batch enabled errors. Other providers fail fast at startup.
+>
+> **Gemini** uses the [Gemini Batch API](https://ai.google.dev/gemini-api/docs/batch-api) (flat 50% input + output discount, 24h SLA — typically minutes). It needs no extra settings beyond `HINDSIGHT_API_RETAIN_BATCH_ENABLED=true` and an API-key `gemini` provider; Vertex AI (`vertexai`) is not batch-capable.
 
 #### Fireworks batch inference
 
@@ -1046,6 +1046,31 @@ export HINDSIGHT_API_RETAIN_BATCH_ENABLED=true
 ```
 
 > **Entity labels** (`entity_labels`) and **free-form entity extraction** (`entities_allow_free_form`) are configured per bank via the [bank config API](/developer/api/memory-banks#retain-configuration), not as global environment variables — each bank can have its own controlled vocabulary. See [Entity Labels](/developer/retain#entity-labels) for details.
+
+#### Skip storing raw document text
+
+By default Hindsight keeps a verbatim copy of everything you retain so you can later read the source, re-process a document, or export it. For deployments that only want to keep the extracted memories (facts, entities, mental models) and not the source text, set:
+
+```bash
+export HINDSIGHT_API_STORE_DOCUMENT_TEXT=false
+```
+
+When disabled, the full retain pipeline still runs — chunking, fact extraction, embedding, and entity linking are unchanged, so **memory quality and recall are not affected** (recall reads from the extracted memories, never from the raw text). The difference is purely what gets persisted:
+
+- `documents.original_text` is stored as `NULL` instead of the raw payload.
+- The raw chunk text is dropped (stored as empty), while the chunk's content hash is still kept so incremental re-retain of the same document continues to deduplicate correctly.
+
+**`update_mode="append"` is rejected when text storage is disabled.** Append rebuilds a document by reading back its previously stored text and adding to it. With nothing stored, appending would silently drop the prior content, so an append retain returns an error instead. Use `update_mode="replace"` (the default).
+
+**Features that degrade when text storage is disabled** (because they read the source text back):
+
+- **Document export** carries no source text; re-importing such a bank cannot re-run extraction from the original payload.
+- **Reading a document's source** (the get-document, list-chunks, and get-chunk endpoints, including their MCP equivalents) returns empty content.
+- **Recall with `include_chunks=true`** returns empty `chunk_text` — the facts themselves are unaffected, but the surrounding source-chunk context is no longer available.
+- **Reflect** no longer offers the `expand` tool (which fetches a memory's source chunk/document), and its `recall` step stops attaching source chunks, since there is no stored text to return. Reflection over the extracted memories is otherwise unaffected.
+- **Reprocessing a document** from its stored text is a no-op (there is nothing to reprocess).
+
+This is a static, server-level setting and cannot be overridden per bank.
 
 #### Customizing retain: when to use what
 
