@@ -111,6 +111,38 @@ async def _fire_memory_defense_webhook(
         logger.warning("memory_defense webhook delivery failed", exc_info=True)
 
 
+def _audit_memory_defense(
+    audit_logger: Any,
+    *,
+    bank_id: str,
+    document_id: str | None,
+    decision: DefenseDecision,
+) -> None:
+    """Write a fire-and-forget ``memory_defense`` audit entry for a non-allow decision.
+
+    No-op when audit logging is disabled (the logger gates on its own config).
+    The action taken (redact/block) and what matched live in the entry metadata.
+    """
+    if audit_logger is None:
+        return
+    from ..audit import AuditEntry
+
+    entry = AuditEntry(
+        action="memory_defense",
+        transport="system",
+        bank_id=bank_id,
+        metadata={
+            "action": decision.action.value,
+            "detector": decision.detector,
+            "document_id": document_id,
+            "matched_types": decision.matched_types,
+            "message": decision.message,
+        },
+    )
+    entry.ended_at = entry.started_at  # point-in-time policy decision (duration 0)
+    audit_logger.log_fire_and_forget(entry)
+
+
 def _merge_processed_content_tokens(a: int | None, b: int | None) -> int | None:
     """Combine the processed-content-tokens signal across sub-results.
 
@@ -511,6 +543,7 @@ async def retain_batch(
     progress_callback: "Callable[..., Awaitable[None]] | None" = None,
     webhook_manager: Any = None,
     memory_defense_extension: "MemoryDefenseExtension | None" = None,
+    audit_logger: Any = None,
 ) -> tuple[list[list[str]], TokenUsage, int | None]:
     """
     Process a batch of content through the retain pipeline.
@@ -604,6 +637,7 @@ async def retain_batch(
                     progress_callback=progress_callback,
                     webhook_manager=webhook_manager,
                     memory_defense_extension=memory_defense_extension,
+                    audit_logger=audit_logger,
                 )
                 for group_idx, orig_idx in enumerate(original_indices[doc_key]):
                     if group_idx < len(group_ids):
@@ -661,6 +695,12 @@ async def retain_batch(
                     schema=schema,
                     bank_id=bank_id,
                     operation_id=operation_id,
+                    document_id=_item_doc_id,
+                    decision=_decision,
+                )
+                _audit_memory_defense(
+                    audit_logger,
+                    bank_id=bank_id,
                     document_id=_item_doc_id,
                     decision=_decision,
                 )

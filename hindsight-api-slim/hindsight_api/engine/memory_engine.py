@@ -3386,6 +3386,7 @@ class MemoryEngine(MemoryEngineInterface):
                 progress_callback=self._write_operation_progress,
                 webhook_manager=self._webhook_manager,
                 memory_defense_extension=self._memory_defense,
+                audit_logger=self._audit_logger,
             )
             # Map the created facts onto this retain's trace so the trace view can
             # show which memories the ingestion produced. result[0] is the

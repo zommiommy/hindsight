@@ -1013,6 +1013,7 @@
     "actionDeleteDirective": "删除指令",
     "actionFileConvertRetain": "转换文件",
     "actionWebhookDelivery": "Webhook 投递",
+    "actionMemoryDefense": "记忆防护",
     "transportAll": "所有传输",
     "transportHttp": "HTTP",
     "transportMcp": "MCP",

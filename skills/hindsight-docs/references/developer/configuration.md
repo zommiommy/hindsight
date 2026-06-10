@@ -1568,7 +1568,7 @@ For a server handling many concurrent requests, lower values (down to `1`) favor
 
 ### Audit Logging
 
-Audit logging captures mutating operations (retain, recall, reflect, bank config updates, etc.) into an `audit_log` table, queryable via the `/audit-logs` endpoint.
+Audit logging captures mutating operations (retain, recall, reflect, bank config updates, [Memory Defense](memory-defense/index.md) redact/block actions, etc.) into an `audit_log` table, queryable via the `/audit-logs` endpoint.
 
 **Audit logging is disabled by default.** With `HINDSIGHT_API_AUDIT_LOG_ENABLED=false`, the `audit_log` table stays empty and `/audit-logs` returns `{"total": 0, "items": []}` regardless of activity. Set the flag to `true` and restart the API to start capturing events.
 

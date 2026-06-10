@@ -1013,6 +1013,7 @@
     "actionDeleteDirective": "Direktive löschen",
     "actionFileConvertRetain": "Datei konvertieren",
     "actionWebhookDelivery": "Webhook-Zustellung",
+    "actionMemoryDefense": "Speicherschutz",
     "transportAll": "Alle Transportmittel",
     "transportHttp": "HTTP",
     "transportMcp": "MCP",

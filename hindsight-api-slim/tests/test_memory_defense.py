@@ -453,6 +453,51 @@ async def test_retain_fires_webhook_on_block(api_client, memory) -> None:
     assert "aws_access_key" in blocked["data"]["matched_types"]
 
 
+@pytest.mark.asyncio
+async def test_retain_writes_audit_log(api_client, memory) -> None:
+    """A non-allow decision writes a 'memory_defense' audit entry recording the
+    action taken and what matched (when audit logging is enabled)."""
+    import asyncio
+
+    # Audit logging is a static, server-level switch that defaults off; enable it
+    # on the test engine's logger for this case only.
+    memory._audit_logger._enabled = True
+    try:
+        bank = "md-audit"
+        await api_client.put(f"/v1/default/banks/{bank}", json={})
+        await _set_policy(api_client, bank, _REDACT_POLICY)
+
+        secret = "ghp_" + "A" * 36
+        rr = await api_client.post(
+            f"/v1/default/banks/{bank}/memories",
+            json={"items": [{"content": f"rotate {secret}", "document_id": "doc-audit"}]},
+        )
+        assert rr.status_code == 200, rr.text
+
+        # Audit writes are fire-and-forget — poll briefly for the row.
+        row = None
+        for _ in range(20):
+            async with memory._pool.acquire() as conn:
+                row = await conn.fetchrow(
+                    "SELECT action, transport, metadata FROM audit_log "
+                    "WHERE bank_id = $1 AND action = 'memory_defense' ORDER BY started_at DESC LIMIT 1",
+                    bank,
+                )
+            if row is not None:
+                break
+            await asyncio.sleep(0.1)
+        assert row is not None, "no memory_defense audit entry written"
+        meta = row["metadata"]
+        if isinstance(meta, str):
+            meta = json.loads(meta)
+        assert meta["action"] == "redact"
+        assert meta["detector"] == "sensitive_data"
+        assert "github_token" in meta["matched_types"]
+        assert meta["document_id"] == "doc-audit"
+    finally:
+        memory._audit_logger._enabled = False
+
+
 # ---------------------------------------------------------------------------
 # Document-body scrubbing (DB)
 # ---------------------------------------------------------------------------

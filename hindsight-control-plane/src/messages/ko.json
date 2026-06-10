@@ -1013,6 +1013,7 @@
     "actionDeleteDirective": "지시문 삭제",
     "actionFileConvertRetain": "파일 변환",
     "actionWebhookDelivery": "Webhook 전송",
+    "actionMemoryDefense": "메모리 방어",
     "transportAll": "모든 전송",
     "transportHttp": "HTTP",
     "transportMcp": "MCP",
