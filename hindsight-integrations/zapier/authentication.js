@@ -11,8 +11,7 @@ const { baseUrl, DEFAULT_API_URL } = require("./utils");
  * call below exercises the credential against a real authenticated endpoint.
  */
 
-const test = (z, bundle) =>
-  z.request({ url: `${baseUrl(bundle)}/v1/default/banks` });
+const test = (z, bundle) => z.request({ url: `${baseUrl(bundle)}/v1/default/banks` });
 
 const connectionLabel = (z, bundle) => {
   const host = ((bundle.authData && bundle.authData.apiUrl) || DEFAULT_API_URL).replace(
@@ -31,9 +30,12 @@ module.exports = {
       key: "apiKey",
       label: "API Key",
       type: "password",
-      required: true,
+      // Optional so you can connect to a self-hosted instance running without
+      // auth (leave blank). For Hindsight Cloud a key is required — a blank key
+      // there fails the connection test (401), as expected.
+      required: false,
       helpText:
-        "Your Hindsight API key (starts with `hsk_`). Create one at https://ui.hindsight.vectorize.io.",
+        "Your Hindsight API key (starts with `hsk_`). Required for Hindsight Cloud; leave blank for a self-hosted instance running without authentication. Create one at https://ui.hindsight.vectorize.io.",
     },
     {
       key: "apiUrl",

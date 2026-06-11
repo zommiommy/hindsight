@@ -72,7 +72,9 @@ describe("triggers.retainCompleted (REST hook)", () => {
   });
 
   it("returns a sample from performList", async () => {
-    const result = await appTester(App.triggers.retainCompleted.operation.performList, { authData });
+    const result = await appTester(App.triggers.retainCompleted.operation.performList, {
+      authData,
+    });
     result.should.be.an.Array();
     result[0].event.should.eql("retain.completed");
   });

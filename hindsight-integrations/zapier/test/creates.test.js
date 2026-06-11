@@ -38,7 +38,12 @@ describe("creates.retain", () => {
 
     await appTester(App.creates.retain.operation.perform, {
       authData,
-      inputData: { bank_id: "bank-1", content: "hi", context: "ctx", timestamp: "2026-01-01T00:00:00Z" },
+      inputData: {
+        bank_id: "bank-1",
+        content: "hi",
+        context: "ctx",
+        timestamp: "2026-01-01T00:00:00Z",
+      },
     });
   });
 

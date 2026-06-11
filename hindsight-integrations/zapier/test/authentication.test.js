@@ -28,11 +28,15 @@ describe("authentication", () => {
   it("throws an AuthenticationError on 401", async () => {
     nock("https://api.example.com").get("/v1/default/banks").reply(401, { error: "nope" });
 
-    await appTester(App.authentication.test, { authData }).should.be.rejectedWith(/Invalid or unauthorized/);
+    await appTester(App.authentication.test, { authData }).should.be.rejectedWith(
+      /Invalid or unauthorized/
+    );
   });
 
   it("strips a trailing slash from the API URL", async () => {
-    const scope = nock("https://api.example.com").get("/v1/default/banks").reply(200, { banks: [] });
+    const scope = nock("https://api.example.com")
+      .get("/v1/default/banks")
+      .reply(200, { banks: [] });
 
     await appTester(App.authentication.test, {
       authData: { apiKey: "hsk_test", apiUrl: "https://api.example.com/" },

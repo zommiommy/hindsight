@@ -2,17 +2,20 @@
 
 A [Zapier](https://zapier.com) app that brings [Hindsight](https://hindsight.vectorize.io) long-term memory into your Zaps — store content, search memories, get grounded answers, and start Zaps from memory events.
 
-Built with the [Zapier Platform CLI](https://platform.zapier.com/). The source lives in the Hindsight monorepo for versioning and CI; the app itself is published to Zapier's platform with `zapier push` / `zapier promote` (see [Publishing](#publishing)).
+Built with the [Zapier Platform CLI](https://platform.zapier.com/). The source lives in the Hindsight monorepo for versioning and CI; the app itself is published to Zapier's platform with `zapier-platform push` / `zapier-platform promote` (see [Publishing](#publishing)).
 
 ## What's included
 
 ### Actions
+
 - **Retain Memory** (create) — store content in a memory bank (`POST /memories`).
 - **Recall Memories** (search) — search a bank with a natural-language query (`POST /memories/recall`).
 - **Reflect** (search) — get an LLM-synthesized, memory-grounded answer (`POST /reflect`).
 
 ### Triggers (instant, via REST Hooks)
+
 Each subscribes to Hindsight's webhook API (`POST /webhooks`) and is removed on teardown (`DELETE /webhooks/{id}`):
+
 - **Retain Completed** — `retain.completed`
 - **Consolidation Completed** — `consolidation.completed`
 - **Memory Defense Triggered** — `memory_defense.triggered`
@@ -22,10 +25,15 @@ The **Bank** field on every action/trigger is a dynamic dropdown populated from 
 ## Authentication
 
 API-key auth. Provide:
-- **API Key** — your Hindsight key (starts with `hsk_`), sent as `Authorization: Bearer <key>`.
-- **API URL** — defaults to Hindsight Cloud (`https://api.hindsight.vectorize.io`); override for self-hosted.
 
-> Triggers rely on Hindsight making an outbound POST to Zapier's webhook URL, so they work for Cloud and any self-hosted instance with outbound internet — but not fully air-gapped instances. Webhook deliveries are unsigned in this version; security relies on Zapier's unguessable target URL.
+- **API Key** — your Hindsight key (starts with `hsk_`), sent as `Authorization: Bearer <key>`. Required for Hindsight Cloud; **optional** — leave it blank — for a self-hosted instance running without authentication.
+- **API URL** — defaults to Hindsight Cloud (`https://api.hindsight.vectorize.io`); set it to your own instance for self-hosted (e.g. `http://localhost:8888`).
+
+### Self-hosted
+
+Point **API URL** at your instance. If it runs without auth, leave **API Key** blank — no `Authorization` header is sent. Triggers also work self-hosted: they rely on your instance making an _outbound_ POST to Zapier's webhook URL, which works for any box with outbound internet (only fully air-gapped instances can't).
+
+> Webhook deliveries are unsigned in this version; security relies on Zapier's unguessable target URL.
 
 ## Development
 
@@ -35,24 +43,32 @@ npm run validate   # zapier validate — structural check, no login needed
 npm test           # mocha + nock unit tests, no network
 ```
 
-Live checks against a real key:
+Live checks against a real instance. `zapier invoke` reads credentials from a local
+`.env` (gitignored) — write it directly to skip the interactive `auth start`:
 
 ```bash
-export HINDSIGHT_KEY=hsk_...
-zapier invoke auth test
-zapier invoke trigger bankList
-zapier invoke create retain
-zapier invoke search recall
+# Hindsight Cloud:
+printf 'apiKey=hsk_your_key\napiUrl=https://api.hindsight.vectorize.io\n' > .env
+# …or self-hosted without auth:
+printf 'apiKey=\napiUrl=http://localhost:8888\n' > .env
+
+npx zapier-platform invoke auth test
+npx zapier-platform invoke trigger bankList
+npx zapier-platform invoke create retain --inputData '{"bank_id":"zapier-test","content":"hello"}'
+npx zapier-platform invoke search recall --inputData '{"bank_id":"zapier-test","query":"hello"}'
 ```
+
+> The CLI binary is `zapier-platform` (v19 renamed it from `zapier`). `npx zapier-platform …`
+> uses the local devDependency, so no global install or PATH setup is needed.
 
 ## Publishing
 
-Requires a Zapier developer account (`zapier login`); cannot run in CI without a `ZAPIER_DEPLOY_KEY`.
+Requires a Zapier developer account (`npx zapier-platform login`); cannot run in CI without a `ZAPIER_DEPLOY_KEY`.
 
 ```bash
-zapier register "Hindsight"   # first time only — writes .zapierapprc (gitignored)
-zapier push                   # upload the current version (private/invite testing)
-zapier promote 1.0.0          # make a version the default for new users
+npx zapier-platform register "Hindsight"   # first time only — writes .zapierapprc (gitignored)
+npx zapier-platform push                   # upload the current version (private/invite testing)
+npx zapier-platform promote 1.0.0          # make a version the default for new users
 ```
 
 Public-directory listing is a separate, manual step through Zapier's app-review (branding, descriptions, and a dedicated Hindsight Cloud test bank + API key for reviewers).
