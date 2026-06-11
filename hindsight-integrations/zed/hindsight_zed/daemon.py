@@ -84,54 +84,99 @@ def _project_dir(thread: ZedThread) -> Optional[Path]:
     return None
 
 
-def process_thread(
-    thread: ZedThread,
-    client: HindsightClient,
-    config: ZedConfig,
-    state: DaemonState,
-) -> None:
-    """Run recall (inject) and retain (capture) for a single updated thread."""
+def do_recall(thread: ZedThread, client: HindsightClient, config: ZedConfig, state: DaemonState) -> None:
+    """Recall memory for a thread and rewrite its project's instruction block.
+
+    Runs eagerly on every change (we want injected memory as fresh as Zed lets
+    us), unlike retain which is debounced until the conversation goes idle.
+    """
+    if not (config.auto_recall and thread.messages):
+        return
     project = _project_dir(thread)
     bank_id = bank_id_for_thread_paths(thread.folder_paths, config)
     if not bank_id or project is None:
-        # No on-disk project to scope a bank or write a rules file to — skip.
         return
+    query = compose_recall_query(thread.messages, config.recall_max_query_chars)
+    if not query:
+        return
+    try:
+        resp = client.recall(
+            bank_id,
+            query,
+            max_tokens=config.recall_max_tokens,
+            budget=config.recall_budget,
+            types=config.recall_types,
+        )
+        block = format_memory_block(resp.get("results", []))
+        write_memory_block(project, block, preamble=config.recall_preamble)
+        _clear_warnings(bank_id, state)
+    except Exception as e:
+        _log_api_error("recall", bank_id, e, state)
 
-    # ── Auto-recall → rewrite the project's memory block ──────────────────────
-    if config.auto_recall and thread.messages:
-        query = compose_recall_query(thread.messages, config.recall_max_query_chars)
-        if query:
-            try:
-                resp = client.recall(
-                    bank_id,
-                    query,
-                    max_tokens=config.recall_max_tokens,
-                    budget=config.recall_budget,
-                    types=config.recall_types,
-                )
-                block = format_memory_block(resp.get("results", []))
-                write_memory_block(project, block, preamble=config.recall_preamble)
-                _clear_warnings(bank_id, state)
-            except Exception as e:
-                _log_api_error("recall", bank_id, e, state)
 
-    # ── Auto-retain → store the transcript ────────────────────────────────────
-    if config.auto_retain and state.needs_retain(thread.id, thread.updated_at):
-        transcript = format_transcript(thread)
-        if transcript.strip():
-            try:
-                client.retain(
-                    bank_id,
-                    transcript,
-                    document_id=f"zed-thread-{thread.id}",
-                    context=config.retain_context,
-                    tags=config.retain_tags,
-                    metadata={"source": "zed", "thread_id": thread.id},
-                )
-                state.mark_retained(thread.id, thread.updated_at)
-                _clear_warnings(bank_id, state)
-            except Exception as e:
-                _log_api_error("retain", bank_id, e, state)
+def do_retain(thread: ZedThread, client: HindsightClient, config: ZedConfig, state: DaemonState) -> None:
+    """Retain a thread's transcript (idempotent — skips if already at this revision)."""
+    if not (config.auto_retain and state.needs_retain(thread.id, thread.updated_at)):
+        return
+    bank_id = bank_id_for_thread_paths(thread.folder_paths, config)
+    if not bank_id:
+        return
+    transcript = format_transcript(thread)
+    if not transcript.strip():
+        return
+    try:
+        client.retain(
+            bank_id,
+            transcript,
+            document_id=f"zed-thread-{thread.id}",
+            context=config.retain_context,
+            tags=config.retain_tags,
+            metadata={"source": "zed", "thread_id": thread.id},
+        )
+        state.mark_retained(thread.id, thread.updated_at)
+        _clear_warnings(bank_id, state)
+    except Exception as e:
+        _log_api_error("retain", bank_id, e, state)
+
+
+def process_thread(thread: ZedThread, client: HindsightClient, config: ZedConfig, state: DaemonState) -> None:
+    """Recall then retain a thread immediately (no debounce).
+
+    Convenience for one-shot use; the live daemon debounces retain via
+    :class:`RetainDebouncer` so it captures a settled conversation once.
+    """
+    do_recall(thread, client, config, state)
+    do_retain(thread, client, config, state)
+
+
+class RetainDebouncer:
+    """Defers a thread's retain until its ``updated_at`` has been idle.
+
+    Zed has no "conversation finished" event, so we approximate it: each time a
+    thread changes we (re)start its timer; once it's been quiet for
+    ``idle_seconds`` it becomes due for retain. This collapses a multi-turn
+    conversation into one retain and avoids capturing mid-stream snapshots.
+    """
+
+    def __init__(self, idle_seconds: float, clock=time.monotonic):
+        self.idle_seconds = idle_seconds
+        self._clock = clock
+        # thread_id -> (latest thread object, updated_at, last_change_time)
+        self._pending: dict[str, tuple[ZedThread, str, float]] = {}
+
+    def note(self, thread: ZedThread) -> None:
+        """Record a thread sighting, resetting its idle timer if it advanced."""
+        prev = self._pending.get(thread.id)
+        if prev is None or prev[1] != thread.updated_at:
+            self._pending[thread.id] = (thread, thread.updated_at, self._clock())
+
+    def due(self) -> list[ZedThread]:
+        """Return (and drop) threads that have been idle ≥ ``idle_seconds``."""
+        now = self._clock()
+        ready = [(tid, th) for tid, (th, _, t) in self._pending.items() if now - t >= self.idle_seconds]
+        for tid, _ in ready:
+            del self._pending[tid]
+        return [th for _, th in ready]
 
 
 def poll_once(
@@ -140,17 +185,22 @@ def poll_once(
     config: ZedConfig,
     state: DaemonState,
     since: Optional[str],
+    debouncer: RetainDebouncer,
 ) -> Optional[str]:
-    """Process all threads updated since ``since``. Returns the new high-water mark."""
+    """One poll: recall changed threads eagerly, retain ones that have gone idle.
+
+    Returns the new high-water mark.
+    """
     threads = read_threads(db_path, since=since)
-    if not threads:
-        return since
-    threads.sort(key=lambda t: t.updated_at)
     high = since
-    for thread in threads:
-        process_thread(thread, client, config, state)
+    for thread in sorted(threads, key=lambda t: t.updated_at):
+        do_recall(thread, client, config, state)
+        debouncer.note(thread)
         if high is None or thread.updated_at > high:
             high = thread.updated_at
+    # Retain any conversation that has settled (idle past the window).
+    for thread in debouncer.due():
+        do_retain(thread, client, config, state)
     state.save()
     return high
 
@@ -164,6 +214,7 @@ def run(db_path: Optional[Path] = None, config: Optional[ZedConfig] = None) -> N
 
     client = HindsightClient(config.hindsight_api_url, config.hindsight_api_token)
     state = DaemonState.load()
+    debouncer = RetainDebouncer(config.retain_idle_seconds)
     # Start from the newest already-retained revision so we don't reprocess the
     # entire backlog on first run (recall would still refresh on the next turn).
     since: Optional[str] = max(state.retained.values(), default=None)
@@ -171,7 +222,7 @@ def run(db_path: Optional[Path] = None, config: Optional[ZedConfig] = None) -> N
     logger.info("hindsight-zed daemon started (db=%s, api=%s)", db_path, config.hindsight_api_url)
     while True:
         try:
-            since = poll_once(db_path, client, config, state, since)
+            since = poll_once(db_path, client, config, state, since, debouncer)
         except Exception as e:  # never let one bad poll kill the daemon
             logger.debug("poll error: %s", e)
         time.sleep(config.poll_interval)

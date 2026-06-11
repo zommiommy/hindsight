@@ -44,6 +44,11 @@ class ZedConfig:
     auto_retain: bool = True
     retain_context: str = "zed"
     retain_tags: list = field(default_factory=list)
+    # A thread is retained once its updated_at has been stable for this many
+    # seconds — Zed has no "conversation finished" signal, so we approximate it
+    # with "the exchange has gone idle". Avoids re-retaining every turn and
+    # capturing mid-stream snapshots.
+    retain_idle_seconds: float = 45.0
 
     # Daemon
     poll_interval: float = 5.0  # seconds between threads.db polls
@@ -66,6 +71,7 @@ _FILE_KEYS = {
     "autoRetain": ("auto_retain", bool),
     "retainContext": ("retain_context", str),
     "retainTags": ("retain_tags", list),
+    "retainIdleSeconds": ("retain_idle_seconds", float),
     "pollInterval": ("poll_interval", float),
     "debug": ("debug", bool),
 }
@@ -82,6 +88,7 @@ _ENV_KEYS = {
     "HINDSIGHT_ZED_RECALL_BUDGET": ("recall_budget", str),
     "HINDSIGHT_ZED_RECALL_MAX_TOKENS": ("recall_max_tokens", int),
     "HINDSIGHT_ZED_RETAIN_CONTEXT": ("retain_context", str),
+    "HINDSIGHT_ZED_RETAIN_IDLE_SECONDS": ("retain_idle_seconds", float),
     "HINDSIGHT_ZED_POLL_INTERVAL": ("poll_interval", float),
     "HINDSIGHT_ZED_DEBUG": ("debug", bool),
 }

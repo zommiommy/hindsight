@@ -8,6 +8,7 @@
   "recallMaxTokens": 1024,
   "autoRetain": true,
   "retainContext": "zed",
+  "retainIdleSeconds": 45.0,
   "pollInterval": 5.0,
   "debug": false
 }

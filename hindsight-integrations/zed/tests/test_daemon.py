@@ -147,21 +147,25 @@ def _make_threads_db(tmp_path, project):
 
 
 def test_poll_once_end_to_end(tmp_path):
+    from hindsight_zed.daemon import RetainDebouncer
+
     project = tmp_path / "proj"
     project.mkdir()
     db = _make_threads_db(tmp_path, project)
     client = FakeClient(recall_results=[{"text": "prefers pytest", "type": "world"}])
     cfg = ZedConfig(bank_prefix="zed")
     state = DaemonState(path=tmp_path / "s.json")
+    # idle=0 → retain becomes due immediately, so this exercises the full path.
+    deb = RetainDebouncer(idle_seconds=0)
 
-    high = poll_once(db, client, cfg, state, since=None)
+    high = poll_once(db, client, cfg, state, since=None, debouncer=deb)
 
     assert high == "2026-06-10T10:00:00Z"
     assert client.recall_calls and client.retain_calls
     assert "prefers pytest" in (project / ".rules").read_text()
     # Polling again with the high-water mark yields no reprocessing.
     client.recall_calls.clear()
-    poll_once(db, client, cfg, state, since=high)
+    poll_once(db, client, cfg, state, since=high, debouncer=deb)
     assert not client.recall_calls
 
 
@@ -274,3 +278,69 @@ def test_warning_cleared_on_recovery(tmp_path):
     client.fail = False
     process_thread(_thread(project, id="t2"), client, ZedConfig(), state)
     assert ("auth", "zed-proj") not in state.warned
+
+
+# ── Retain debounce (idle detection) ──────────────────────────────────────────
+
+from hindsight_zed.daemon import RetainDebouncer, do_recall  # noqa: E402
+
+
+class FakeClock:
+    def __init__(self):
+        self.t = 0.0
+
+    def __call__(self):
+        return self.t
+
+    def advance(self, dt):
+        self.t += dt
+
+
+def test_debouncer_holds_until_idle():
+    clk = FakeClock()
+    deb = RetainDebouncer(idle_seconds=45, clock=clk)
+    t = ZedThread(id="t1", title="x", updated_at="A", messages=[], folder_paths=[])
+    deb.note(t)
+    assert deb.due() == []  # just changed → not due
+    clk.advance(30)
+    assert deb.due() == []  # still within window
+    clk.advance(20)  # now 50s since change
+    assert [x.id for x in deb.due()] == ["t1"]
+    assert deb.due() == []  # consumed
+
+
+def test_debouncer_resets_timer_on_new_update():
+    clk = FakeClock()
+    deb = RetainDebouncer(idle_seconds=45, clock=clk)
+    deb.note(ZedThread(id="t1", title="x", updated_at="A", messages=[], folder_paths=[]))
+    clk.advance(40)
+    # A new revision arrives before the window elapses → timer resets.
+    deb.note(ZedThread(id="t1", title="x", updated_at="B", messages=[], folder_paths=[]))
+    clk.advance(40)  # 40s since the *latest* change → still not due
+    assert deb.due() == []
+    clk.advance(10)
+    due = deb.due()
+    assert [x.id for x in due] == ["t1"]
+    assert due[0].updated_at == "B"  # retains the latest revision
+
+
+def test_poll_debounces_retain(tmp_path):
+    # A live conversation should NOT be retained mid-flight, only once idle.
+    project = tmp_path / "proj"
+    project.mkdir()
+    db = _make_threads_db(tmp_path, project)
+    client = FakeClient(recall_results=[{"text": "x", "type": "world"}])
+    cfg = ZedConfig(bank_prefix="zed")
+    state = DaemonState(path=tmp_path / "s.json")
+    clk = FakeClock()
+    deb = RetainDebouncer(idle_seconds=45, clock=clk)
+
+    # First poll: recall happens, but retain is deferred (just changed).
+    poll_once(db, client, cfg, state, since=None, debouncer=deb)
+    assert client.recall_calls
+    assert not client.retain_calls  # not idle yet
+
+    # Poll again after the idle window with no new changes → now retained once.
+    clk.advance(60)
+    poll_once(db, client, cfg, state, since="2026-06-10T10:00:00Z", debouncer=deb)
+    assert len(client.retain_calls) == 1
