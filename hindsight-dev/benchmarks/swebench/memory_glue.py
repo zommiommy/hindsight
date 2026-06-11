@@ -180,9 +180,20 @@ _SUMMARY_SYSTEM_PROCEDURAL_FAILED = (
     "present): unlike the attempt's own theory, this section IS ground truth from the test "
     "harness. Record it concretely — which required tests still fail and their exact failure "
     "mode (test name + assertion/exception, observed vs expected), and any previously-passing "
-    "tests this patch broke. These are the highest-value lessons for a re-attempt: someone "
-    "retrying this exact issue must know precisely what the tests expect and what the last "
-    "patch got wrong.\n\n" + _SUMMARY_RULES
+    "tests this patch broke. Report the evidence verbatim and scoped to THIS attempt; do not "
+    "append inferences about what the evidence 'indicates' beyond this attempt (offline "
+    "measurement showed those clauses drift into the forbidden generalizations).\n\n"
+    "EXAMPLES of the required FAILED APPROACH shape (note: each binds the change to the exact "
+    "method/file and names the failing tests, and never condemns the mechanism):\n"
+    "GOOD: 'FAILED APPROACH: adding exponential-backoff retries in HttpClient.send "
+    "(net/client.py) did not pass test_timeout_budget and test_idempotent_replay.'\n"
+    "BAD (never write this): 'Avoid retry logic in the HTTP client; the real issue lies in the "
+    "server-side timeout handling.' — condemns a mechanism and redirects without evidence; the "
+    "same retry mechanism may be the correct fix elsewhere.\n"
+    "GOOD: 'FAILED APPROACH: widening the cache key with the session id in "
+    "CacheMiddleware.process_request (middleware/cache.py) did not pass test_cache_hit_ratio.'\n"
+    "BAD (never write this): 'Cache-key changes are insufficient for this class of bug; prefer "
+    "fixing invalidation instead.'\n\n" + _SUMMARY_RULES
 )
 
 # Placebo notes: the same GENRE as real recalled memories (engineering postmortem lessons,
@@ -418,12 +429,39 @@ class MemoryGlue:
         raise RuntimeError(f"reset_bank failed after retries for {self.bank_id}: {last_exc}")
 
     def _create_bank(self) -> None:
+        observations_mission = None
         if self.retain_style == "procedural":
+            # Consolidation is the second rephrasing hop and it MERGES facts — two correctly
+            # scoped failure facts about the same mechanism at different locations can
+            # consolidate into "mechanism X fails in general", minting the exact poison the
+            # retain policy forbids. The observations mission must carry the scoping rule too.
+            observations_mission = (
+                "Synthesise durable engineering observations: working practices, verification "
+                "habits, environment facts, and test-verified subsystem insight. When "
+                "consolidating knowledge about FAILED attempts, preserve the scope of each "
+                "failure: keep the attempted change bound to the exact method/file where it was "
+                "applied and the tests it failed. NEVER merge separate scoped failures into a "
+                "general rule about a mechanism, API, or technique ('X does not work', 'avoid "
+                "X', 'prefer Y instead') — a mechanism that failed in one location may be the "
+                "correct fix in another. Never synthesise advice about which editing tools to "
+                "use. Prefer fewer, well-scoped observations over broad generalizations."
+            )
+            # Mirrors the summariser's scoping policy: stored content passes through Hindsight's
+            # server-side fact extraction (steered by this mission), which rephrases facts — so
+            # the scoped-failure rules must hold at BOTH hops or extraction can re-introduce the
+            # over-generalizations the summariser was engineered to avoid.
             mission = (
                 "Capture reusable engineering lessons: working practices, verification habits, "
                 "environment gotchas (available tools, safe editing, test invocations), and — "
-                "only when verified by passing tests — subsystem insight. Never store an "
-                "unverified or failed fix as established fact."
+                "only when verified by passing tests — subsystem insight. For FAILED attempts, "
+                "keep failure knowledge STRICTLY SCOPED: bind the attempted change to the exact "
+                "method/file where it was applied and the tests it failed ('X applied in Y did "
+                "not pass Z'). A failure proves only that one application at one location "
+                "failed; the same mechanism may be the correct fix elsewhere. Never store "
+                "prescriptive generalizations (avoid/never/use-instead), never condemn a "
+                "mechanism or API in general, and never claim where the real cause lies without "
+                "direct test evidence. Never store an unverified or failed fix as established "
+                "fact."
             )
         else:
             mission = (
@@ -438,6 +476,7 @@ class MemoryGlue:
                 "fix new issues in the same repo faster."
             ),
             retain_mission=mission,
+            observations_mission=observations_mission,
         )
 
     # -- recall (before a task) --------------------------------------------------------
