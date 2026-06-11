@@ -8,7 +8,6 @@ description: "Add automatic long-term memory to the Zed editor's AI assistant wi
 
 Automatic, always-on long-term memory for the [Zed](https://zed.dev) editor's AI assistant, powered by [Hindsight](https://vectorize.io/hindsight). When you chat with Zed's Agent Panel, relevant memory from past sessions on that project is injected automatically — no manual tool calls — and your conversations are retained so the next session builds on them.
 
-[View Changelog →](/changelog/integrations/zed)
 
 ## How It Works
 
