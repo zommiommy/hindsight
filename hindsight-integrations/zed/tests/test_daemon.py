@@ -162,3 +162,113 @@ def test_poll_once_end_to_end(tmp_path):
     client.recall_calls.clear()
     poll_once(db, client, cfg, state, since=high)
     assert not client.recall_calls
+
+# ── Auth/connection error escalation ──────────────────────────────────────────
+
+import logging  # noqa: E402
+
+from hindsight_zed.client import HindsightHTTPError  # noqa: E402
+
+
+class AuthFailClient(FakeClient):
+    """A bad token fails *every* call (401/403), like the real server."""
+
+    def __init__(self, status=401):
+        super().__init__()
+        self.status = status
+
+    def recall(self, *a, **k):
+        raise HindsightHTTPError(self.status, "http://x/recall", "denied")
+
+    def retain(self, *a, **k):
+        raise HindsightHTTPError(self.status, "http://x/retain", "denied")
+
+
+def test_auth_error_escalated_to_warning(tmp_path, caplog):
+    project = tmp_path / "proj"
+    project.mkdir()
+    state = DaemonState(path=tmp_path / "s.json")
+    with caplog.at_level(logging.WARNING, logger="hindsight_zed.daemon"):
+        process_thread(_thread(project), AuthFailClient(401), ZedConfig(), state)
+    assert any("HINDSIGHT_API_TOKEN" in r.getMessage() for r in caplog.records)
+    assert ("auth", "zed-proj") in state.warned
+
+
+def test_auth_warning_deduped_across_polls(tmp_path, caplog):
+    project = tmp_path / "proj"
+    project.mkdir()
+    client = AuthFailClient(403)
+    state = DaemonState(path=tmp_path / "s.json")
+    with caplog.at_level(logging.WARNING, logger="hindsight_zed.daemon"):
+        process_thread(_thread(project), client, ZedConfig(), state)
+        process_thread(_thread(project, id="t2"), client, ZedConfig(), state)
+    # One WARNING total despite recall+retain failing on two polls (4 failures).
+    warns = [r for r in caplog.records if r.levelno >= logging.WARNING]
+    assert len(warns) == 1
+
+
+def test_connection_error_escalated(tmp_path, caplog):
+    import urllib.error
+
+    project = tmp_path / "proj"
+    project.mkdir()
+
+    class Down(FakeClient):
+        def recall(self, *a, **k):
+            raise urllib.error.URLError("connection refused")
+
+        def retain(self, *a, **k):
+            raise urllib.error.URLError("connection refused")
+
+    state = DaemonState(path=tmp_path / "s.json")
+    with caplog.at_level(logging.WARNING, logger="hindsight_zed.daemon"):
+        process_thread(_thread(project), Down(), ZedConfig(), state)
+    assert any("could not reach" in r.getMessage() for r in caplog.records)
+    assert ("conn", "zed-proj") in state.warned
+
+
+def test_transient_error_stays_debug(tmp_path, caplog):
+    project = tmp_path / "proj"
+    project.mkdir()
+
+    class Boom(FakeClient):
+        def recall(self, *a, **k):
+            raise RuntimeError("weird transient")
+
+        def retain(self, *a, **k):
+            raise RuntimeError("weird transient")
+
+    state = DaemonState(path=tmp_path / "s.json")
+    with caplog.at_level(logging.WARNING, logger="hindsight_zed.daemon"):
+        process_thread(_thread(project), Boom(), ZedConfig(), state)
+    assert not any(r.levelno >= logging.WARNING for r in caplog.records)
+    assert not state.warned
+
+
+def test_warning_cleared_on_recovery(tmp_path):
+    project = tmp_path / "proj"
+    project.mkdir()
+    state = DaemonState(path=tmp_path / "s.json")
+
+    class Flappy(FakeClient):
+        def __init__(self):
+            super().__init__(recall_results=[{"text": "ok", "type": "world"}])
+            self.fail = True
+
+        def recall(self, *a, **k):
+            if self.fail:
+                raise HindsightHTTPError(401, "http://x", "no")
+            return super().recall(*a, **k)
+
+        def retain(self, *a, **k):
+            if self.fail:
+                raise HindsightHTTPError(401, "http://x", "no")
+            return super().retain(*a, **k)
+
+    client = Flappy()
+    process_thread(_thread(project), client, ZedConfig(), state)
+    assert ("auth", "zed-proj") in state.warned
+    # User fixes the token → both calls succeed → warning state cleared.
+    client.fail = False
+    process_thread(_thread(project, id="t2"), client, ZedConfig(), state)
+    assert ("auth", "zed-proj") not in state.warned

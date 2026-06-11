@@ -16,11 +16,12 @@ threads drives recall and retain together.
 
 import logging
 import time
+import urllib.error
 from pathlib import Path
 from typing import Optional
 
 from .bank import bank_id_for_thread_paths
-from .client import HindsightClient
+from .client import HindsightClient, HindsightHTTPError
 from .config import ZedConfig, load_config
 from .content import compose_recall_query, format_memory_block, format_transcript
 from .rules_file import write_memory_block
@@ -28,6 +29,49 @@ from .state import DaemonState
 from .threads_db import ZedThread, default_threads_db_path, read_threads
 
 logger = logging.getLogger("hindsight_zed.daemon")
+
+# Connection-level failures that mean "can't reach the server".
+_CONNECTION_ERRORS = (urllib.error.URLError, ConnectionError, TimeoutError, OSError)
+
+
+def _log_api_error(op: str, bank_id: str, exc: Exception, state: DaemonState) -> None:
+    """Log an API failure, escalating auth/connection errors to WARNING.
+
+    A wrong token or unreachable server otherwise fails silently — the user just
+    sees no memory in Zed. Those two cases are surfaced at WARNING (once per
+    bank, until a later success clears it, so the poll loop doesn't spam the
+    log); everything else stays at DEBUG to avoid noise from transient blips.
+    """
+    if isinstance(exc, HindsightHTTPError) and exc.status_code in (401, 403):
+        key = ("auth", bank_id)
+        if key not in state.warned:
+            logger.warning(
+                "Hindsight rejected %s for bank %s (HTTP %s) — check your "
+                "HINDSIGHT_API_TOKEN (~/.hindsight/zed.json). Memory will not "
+                "work until this is fixed.",
+                op, bank_id, exc.status_code,
+            )
+            state.warned.add(key)
+        return
+    if isinstance(exc, _CONNECTION_ERRORS) or (
+        isinstance(exc, HindsightHTTPError) and exc.status_code >= 500
+    ):
+        key = ("conn", bank_id)
+        if key not in state.warned:
+            logger.warning(
+                "Hindsight %s could not reach the server for bank %s: %s — "
+                "check the API URL and your network.",
+                op, bank_id, exc,
+            )
+            state.warned.add(key)
+        return
+    logger.debug("%s failed for bank %s: %s", op, bank_id, exc)
+
+
+def _clear_warnings(bank_id: str, state: DaemonState) -> None:
+    """A successful call clears prior warnings so a later failure re-surfaces."""
+    state.warned.discard(("auth", bank_id))
+    state.warned.discard(("conn", bank_id))
 
 
 def _project_dir(thread: ZedThread) -> Optional[Path]:
@@ -66,8 +110,9 @@ def process_thread(
                 )
                 block = format_memory_block(resp.get("results", []))
                 write_memory_block(project, block, preamble=config.recall_preamble)
+                _clear_warnings(bank_id, state)
             except Exception as e:
-                logger.debug("recall failed for bank %s: %s", bank_id, e)
+                _log_api_error("recall", bank_id, e, state)
 
     # ── Auto-retain → store the transcript ────────────────────────────────────
     if config.auto_retain and state.needs_retain(thread.id, thread.updated_at):
@@ -83,8 +128,9 @@ def process_thread(
                     metadata={"source": "zed", "thread_id": thread.id},
                 )
                 state.mark_retained(thread.id, thread.updated_at)
+                _clear_warnings(bank_id, state)
             except Exception as e:
-                logger.debug("retain failed for bank %s: %s", bank_id, e)
+                _log_api_error("retain", bank_id, e, state)
 
 
 def poll_once(

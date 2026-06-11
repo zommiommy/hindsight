@@ -18,6 +18,9 @@ class DaemonState:
 
     retained: dict = field(default_factory=dict)  # thread_id -> updated_at string
     path: Path = DEFAULT_STATE_FILE
+    # Runtime-only (not persisted): which (kind, bank) error warnings we've
+    # already emitted, so a persistent failure isn't logged every poll.
+    warned: set = field(default_factory=set)
 
     @classmethod
     def load(cls, path: Path = DEFAULT_STATE_FILE) -> "DaemonState":

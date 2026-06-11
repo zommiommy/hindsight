@@ -16,6 +16,18 @@ HEALTH_CHECK_RETRIES = 3
 HEALTH_CHECK_DELAY = 2  # seconds
 
 
+class HindsightHTTPError(RuntimeError):
+    """An HTTP error response from the Hindsight API, carrying the status code.
+
+    Lets callers distinguish auth failures (401/403) from transient errors so
+    they can be surfaced more loudly.
+    """
+
+    def __init__(self, status_code: int, url: str, body: str):
+        self.status_code = status_code
+        super().__init__(f"HTTP {status_code} from {url}: {body}")
+
+
 def _validate_api_url(url: str) -> str:
     """Validate and normalize the API URL. Reject non-HTTP schemes."""
     parsed = urllib.parse.urlparse(url)
@@ -52,7 +64,7 @@ class HindsightClient:
                 body_text = e.read().decode()
             except Exception:
                 pass
-            raise RuntimeError(f"HTTP {e.code} from {url}: {body_text}") from e
+            raise HindsightHTTPError(e.code, url, body_text) from e
 
     def health_check(self, timeout: int = 5) -> bool:
         """Return True if the Hindsight server is reachable (retries a few times)."""
