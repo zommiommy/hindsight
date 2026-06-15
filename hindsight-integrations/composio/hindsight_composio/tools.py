@@ -28,7 +28,7 @@ from typing import Any
 from hindsight_client import Hindsight
 from pydantic import BaseModel, Field
 
-from .config import get_config
+from .config import Budget, TagsMatch, get_config
 from .errors import HindsightError
 
 logger = logging.getLogger(__name__)
@@ -87,15 +87,15 @@ def register_hindsight_tools(
     hindsight_api_url: str | None = None,
     api_key: str | None = None,
     default_bank: str | None = None,
-    budget: str = "mid",
+    budget: Budget = "mid",
     max_tokens: int = 4096,
     tags: list[str] | None = None,
     recall_tags: list[str] | None = None,
-    recall_tags_match: str = "any",
+    recall_tags_match: TagsMatch = "any",
     enable_retain: bool = True,
     enable_recall: bool = True,
     enable_reflect: bool = True,
-) -> list:
+) -> list[Any]:
     """Create Hindsight memory custom tools for a Composio session.
 
     Returns a list of Composio ``CustomTool`` objects (one each for retain,
@@ -150,9 +150,11 @@ def register_hindsight_tools(
             return
         try:
             resolved.create_bank(bank_id=bank, name=bank)
-        except Exception:
-            # Bank likely already exists; treat as created either way.
-            pass
+        except Exception as e:
+            # Bank likely already exists; treat as created either way. Logged at
+            # debug so a real auth/network failure is visible here rather than
+            # only surfacing later on the retain call.
+            logger.debug(f"create_bank({bank!r}) failed (assuming it exists): {e}")
         created_banks.add(bank)
 
     def hindsight_retain(input: RetainInput, ctx: Any) -> dict:
@@ -220,7 +222,7 @@ def register_hindsight_tools(
 
     decorate = composio.experimental.tool
 
-    tools: list = []
+    tools: list[Any] = []
     if enable_retain:
         tools.append(decorate(hindsight_retain))
     if enable_recall:
@@ -237,12 +239,12 @@ def memory_instructions(
     hindsight_api_url: str | None = None,
     api_key: str | None = None,
     query: str = "relevant context about the user",
-    budget: str = "low",
+    budget: Budget = "low",
     max_results: int = 5,
     max_tokens: int = 4096,
     prefix: str = "Relevant memories:\n",
     tags: list[str] | None = None,
-    tags_match: str = "any",
+    tags_match: TagsMatch = "any",
 ) -> str:
     """Pre-recall memories for injection into an agent's system prompt.
 

@@ -4,9 +4,13 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass
+from typing import Literal
 
 DEFAULT_HINDSIGHT_API_URL = "https://api.hindsight.vectorize.io"
 HINDSIGHT_API_KEY_ENV = "HINDSIGHT_API_KEY"
+
+Budget = Literal["low", "mid", "high"]
+TagsMatch = Literal["any", "all", "any_strict", "all_strict"]
 
 
 @dataclass
@@ -28,11 +32,11 @@ class HindsightComposioConfig:
     hindsight_api_url: str = DEFAULT_HINDSIGHT_API_URL
     api_key: str | None = None
     default_bank: str | None = None
-    budget: str = "mid"
+    budget: Budget = "mid"
     max_tokens: int = 4096
     tags: list[str] | None = None
     recall_tags: list[str] | None = None
-    recall_tags_match: str = "any"
+    recall_tags_match: TagsMatch = "any"
     verbose: bool = False
 
 
@@ -43,11 +47,11 @@ def configure(
     hindsight_api_url: str | None = None,
     api_key: str | None = None,
     default_bank: str | None = None,
-    budget: str = "mid",
+    budget: Budget = "mid",
     max_tokens: int = 4096,
     tags: list[str] | None = None,
     recall_tags: list[str] | None = None,
-    recall_tags_match: str = "any",
+    recall_tags_match: TagsMatch = "any",
     verbose: bool = False,
 ) -> HindsightComposioConfig:
     """Configure Hindsight connection and default settings.
