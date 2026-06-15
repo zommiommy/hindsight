@@ -1,66 +1,53 @@
-"""End-to-end: drive the daemon pipeline against a live Hindsight server.
+"""End-to-end: the MCP endpoint our Zed config points at actually serves the tools.
 
-Exercises the real recall + retain HTTP path (no real Zed needed — we build a
-thread in memory). Gated behind HINDSIGHT_API_URL and marked requires_real_llm,
-so it is excluded from the deterministic PR-CI bucket.
+This is the real-LLM bucket (``requires_real_llm``) and is skipped unless a
+Hindsight server is reachable. It builds the same MCP URL the integration writes
+into Zed's settings and confirms a JSON-RPC ``tools/list`` returns the Hindsight
+memory tools — i.e. that the config we generate points at a working server.
+
+    HINDSIGHT_API_URL=http://localhost:8888 \
+        uv run pytest tests -v -m requires_real_llm
 """
 
+from __future__ import annotations
+
+import json
 import os
-import time
-import uuid
+import urllib.request
 
 import pytest
 
-from hindsight_zed.client import HindsightClient
-from hindsight_zed.config import ZedConfig
-from hindsight_zed.daemon import process_thread
-from hindsight_zed.rules_file import BEGIN_MARKER
-from hindsight_zed.state import DaemonState
-from hindsight_zed.threads_db import ThreadMessage, ZedThread
+from hindsight_zed.zed_settings import mcp_endpoint_url
 
-pytestmark = pytest.mark.requires_real_llm
-
-API_URL = os.environ.get("HINDSIGHT_API_URL")
+HINDSIGHT_API_URL = os.getenv("HINDSIGHT_API_URL", "http://localhost:8888")
+HINDSIGHT_API_TOKEN = os.getenv("HINDSIGHT_API_TOKEN")
 
 
-@pytest.mark.skipif(not API_URL, reason="HINDSIGHT_API_URL not set")
-def test_retain_then_recall_roundtrip(tmp_path):
-    project = tmp_path / f"zed-e2e-{uuid.uuid4().hex[:8]}"
-    project.mkdir()
-    client = HindsightClient(API_URL, os.environ.get("HINDSIGHT_API_TOKEN"))
-    cfg = ZedConfig(bank_prefix=f"zed-e2e-{uuid.uuid4().hex[:6]}")
-    state = DaemonState(path=tmp_path / "s.json")
+def _reachable() -> bool:
+    try:
+        with urllib.request.urlopen(f"{HINDSIGHT_API_URL}/health", timeout=3) as r:
+            return r.status == 200
+    except Exception:
+        return False
 
-    # Turn 1 — retain a clear, recallable fact (recall has nothing yet).
-    t1 = ZedThread(
-        id="e2e-1",
-        title="prefs",
-        updated_at="2026-06-10T10:00:00Z",
-        messages=[
-            ThreadMessage("user", "Remember that my favorite language is Haskell."),
-            ThreadMessage("assistant", "Got it — Haskell."),
-        ],
-        folder_paths=[str(project)],
-    )
-    process_thread(t1, client, cfg, state)
 
-    # Turn 2 — after extraction settles, a new thread's recall should surface it
-    # into the project's instruction file.
-    found = False
-    for _ in range(20):
-        time.sleep(3)
-        t2 = ZedThread(
-            id="e2e-2",
-            title="q",
-            updated_at="2026-06-10T10:05:00Z",
-            messages=[ThreadMessage("user", "What is my favorite language?")],
-            folder_paths=[str(project)],
-        )
-        process_thread(t2, client, cfg, state)
-        rules = project / ".rules"
-        if rules.is_file() and "haskell" in rules.read_text().lower():
-            assert BEGIN_MARKER in rules.read_text()
-            found = True
-            break
+pytestmark = [
+    pytest.mark.requires_real_llm,
+    pytest.mark.skipif(not _reachable(), reason=f"Hindsight not reachable at {HINDSIGHT_API_URL}"),
+]
 
-    assert found, "retained memory was not recalled into the project's .rules within the timeout"
+
+def test_mcp_endpoint_lists_memory_tools():
+    url = mcp_endpoint_url(HINDSIGHT_API_URL, "zed-e2e")
+    body = json.dumps({"jsonrpc": "2.0", "method": "tools/list", "id": 1}).encode()
+    req = urllib.request.Request(url, data=body, method="POST")
+    req.add_header("Content-Type", "application/json")
+    req.add_header("Accept", "application/json, text/event-stream")
+    if HINDSIGHT_API_TOKEN:
+        req.add_header("Authorization", f"Bearer {HINDSIGHT_API_TOKEN}")
+
+    with urllib.request.urlopen(req, timeout=15) as r:
+        text = r.read().decode("utf-8", "replace")
+
+    # Streamable-HTTP may answer as SSE; tolerate either by scanning the text.
+    assert "recall" in text and "retain" in text, f"tools/list did not surface memory tools: {text[:300]}"

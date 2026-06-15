@@ -1,44 +1,43 @@
 ---
 sidebar_position: 7
 title: "Zed Persistent Memory with Hindsight | Integration"
-description: "Add automatic long-term memory to the Zed editor's AI assistant with Hindsight. Recalls relevant project memory into every conversation and retains sessions — no manual steps."
+description: "Add long-term memory to the Zed editor's AI assistant with Hindsight via MCP. One command wires up the Hindsight MCP server plus a recall/retain rule, so memory works automatically in the Agent Panel."
 ---
 
 # Zed
 
-Automatic, always-on long-term memory for the [Zed](https://zed.dev) editor's AI assistant, powered by [Hindsight](https://vectorize.io/hindsight). When you chat with Zed's Agent Panel, relevant memory from past sessions on that project is injected automatically — no manual tool calls — and your conversations are retained so the next session builds on them.
-
+Long-term memory for the [Zed](https://zed.dev) editor's AI assistant, powered by [Hindsight](https://vectorize.io/hindsight). One command connects Zed's Agent Panel to the Hindsight MCP server and adds a rule telling the agent to use it — so it recalls relevant memory at the start of a task and retains durable facts as it goes. Recall happens at query time against your actual message, and from your seat it's automatic.
 
 ## How It Works
 
-Zed has no AI-conversation hook, but it **always includes a project's instruction file** (`.rules` / `AGENTS.md` / …) in every agent conversation, and it stores conversations in a local `threads.db`. `hindsight-zed` runs a small background daemon that uses both:
+Zed has no pre-prompt hook, but it supports two things this integration uses:
 
-- **Auto-recall (passive injection):** when a Zed conversation updates, the daemon recalls relevant memory for that project and writes it into a fenced `<!-- HINDSIGHT -->` block in the project's instruction file. Zed includes that file automatically, so memory "just shows up" on the next turn. The block is written into the file Zed actually reads — it never hijacks your existing `AGENTS.md`/`CLAUDE.md`.
-- **Auto-retain (passive capture):** the daemon reads finished and updated threads from `threads.db` and retains their transcripts into the project's Hindsight bank.
+- **MCP context servers:** Zed runs MCP servers configured under `context_servers` in `settings.json` and surfaces their tools in the Agent Panel. `hindsight-zed` registers the Hindsight MCP server there, giving the agent `recall` / `retain` / `reflect` tools.
+- **A global instructions file** (`~/.config/zed/AGENTS.md`) that Zed includes in every conversation. The integration adds a small rule there telling the agent to recall first and retain what it learns.
 
-Memory is **per-project** by default — each git repository gets its own bank, so context from one codebase doesn't leak into another.
+Zed doesn't yet have native HTTP-MCP transport, so the server is connected through the [`mcp-remote`](https://www.npmjs.com/package/mcp-remote) stdio bridge (run via `npx`), which means Node.js must be installed.
 
 ## Setup
 
 ```bash
 pip install hindsight-zed
-hindsight-zed init --api-token YOUR_HINDSIGHT_API_KEY
+hindsight-zed init --api-token YOUR_HINDSIGHT_API_KEY --bank-id my-memory
 ```
 
-`init` writes config to `~/.hindsight/zed.json` and installs a background service (launchd on macOS, systemd user service on Linux). After that it's hands-off — open any project in Zed and memory works.
+`init` adds the `hindsight` MCP server to `~/.config/zed/settings.json` and the recall/retain rule to `~/.config/zed/AGENTS.md`. Restart Zed, open the Agent Panel, and the `hindsight` server should show a green dot.
 
-Use a [Hindsight Cloud](https://hindsight.vectorize.io) key, or point at a self-hosted server with `--api-url http://localhost:8888`. To share one bank across all projects, pass `--fixed-bank-id my-memory`.
+Use a [Hindsight Cloud](https://hindsight.vectorize.io) key, or point at a self-hosted server with `--api-url http://localhost:8888` (no token needed for an open local server). If your `settings.json` has comments (JSONC), `init` prints the entry to paste rather than rewriting the file — or run `hindsight-zed init --print-only` anytime.
 
 ## Commands
 
 | Command | Description |
 | --- | --- |
-| `hindsight-zed init` | One-time setup: config + background daemon |
-| `hindsight-zed status` | Whether the daemon is running |
-| `hindsight-zed uninstall` | Stop and remove the daemon |
+| `hindsight-zed init` | Add the MCP server + recall/retain rule |
+| `hindsight-zed status` | Show whether the server + rule are configured |
+| `hindsight-zed uninstall` | Remove the server + rule |
 
-## Limitation
+## Note
 
-Zed exposes no per-prompt hook, so injection is **periodic** (refreshed when a conversation updates) rather than recomputed against each individual keystroke. In practice the relevant project memory is present in context for every turn.
+Recall and retain run through MCP tools the agent calls, guided by the always-on rule. This makes recall query-time precise (no lag), with the tradeoff that it relies on the agent following the "recall first" instruction rather than the editor enforcing it.
 
 See the [package README](https://github.com/vectorize-io/hindsight/tree/main/hindsight-integrations/zed) for full configuration options.

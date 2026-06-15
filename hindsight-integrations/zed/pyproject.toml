@@ -27,10 +27,9 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
 
-# Zed compresses its thread database with zstd, so a zstd codec is required.
-dependencies = [
-    "zstandard>=0.21.0",
-]
+# Configuration-only: the integration writes Zed's MCP settings + a rules file
+# using the standard library, so it has no runtime dependencies.
+dependencies = []
 
 [project.scripts]
 hindsight-zed = "hindsight_zed.cli:main"
@@ -57,5 +56,4 @@ markers = [
 dev = [
     "pytest>=9.0.2",
     "ruff>=0.8.0",
-    "zstandard>=0.21.0",
 ]
