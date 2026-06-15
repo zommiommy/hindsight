@@ -29,9 +29,14 @@ class DefenseAction(str, Enum):
 
 _VALID_ACTIONS = {a.value for a in DefenseAction}
 
-# Detector identifiers valid as ``policy.rules[*].on``. The OSS extension only
-# screens for sensitive data (secrets/PII), so that's the only accepted value.
-_VALID_DETECTORS = {"sensitive_data"}
+# ``policy.rules[*].on`` names a detector. The OSS extension only screens for
+# ``sensitive_data``; any other name is a silent no-op here and is dispatched
+# by whichever extension is loaded (e.g. hindsight-cloud screens cloud-only
+# detectors). The parser therefore does NOT validate ``on`` against a fixed
+# list — pinning the OSS roster to cloud's would force an OSS bump for every
+# new cloud detector just to avoid 422-ing a write it never interprets. We
+# only require ``on`` to be a non-empty string; entitlement and dispatch are
+# the loaded extension's ``screen()`` job.
 
 
 @dataclass(frozen=True)
@@ -53,19 +58,58 @@ class DefenseDecision:
     message: str = ""
     redacted_content: str | None = None
     matched_types: list[str] = field(default_factory=list)
+    # Per-match fingerprinted previews. Each entry is
+    # ``{"detector": <pattern label>, "preview": <fingerprinted value>}``.
+    # The preview is *never* the raw value — see :func:`_fingerprint_value`.
+    # OSS populates this from ``apply_redaction``; downstream extensions
+    # populate it from their own detectors. Optional: empty when the
+    # match path didn't capture per-hit values.
+    hits: list[dict] = field(default_factory=list)
 
 
 @dataclass
 class RedactionResult:
     content: str
     matched_types: list[str]
+    # Same shape as ``DefenseDecision.hits`` — one entry per matched value
+    # (so a single content with two GitHub tokens produces two entries).
+    hits: list[dict] = field(default_factory=list)
+
+
+def _fingerprint_value(value: str) -> str:
+    """Return a redaction-identifiable preview of a matched value.
+
+    The preview keeps the prefix and a short suffix so a SIEM operator can
+    correlate against their credential inventory (the prefix names the
+    provider; the suffix disambiguates specific instances) without the raw
+    secret crossing the wire. Length-aware so short values don't accidentally
+    leak material:
+
+    - Length < 6:  redact entirely (return a fixed-length mask). Catches
+      noise like a single ``-----BEGIN...`` marker line.
+    - Length 6-15: keep the first 2 + last 2 around an ellipsis.
+    - Length > 15: keep the first 4 + last 4 around an ellipsis.
+
+    Examples::
+
+        _fingerprint_value("ghp_AAAA...AAAA" + "A" * 36)  -> "ghp_...AAAA"
+        _fingerprint_value("AKIA" + "B" * 16)              -> "AKIA...BBBB"
+        _fingerprint_value("123-45-6789")                  -> "12...89"
+        _fingerprint_value("abc")                          -> "[redacted]"
+    """
+    n = len(value)
+    if n < 6:
+        return "[redacted]"
+    if n <= 15:
+        return f"{value[:2]}...{value[-2:]}"
+    return f"{value[:4]}...{value[-4:]}"
 
 
 def parse_policy(raw: dict | None) -> DefensePolicy:
     """Parse a raw bank-config dict into a frozen DefensePolicy.
 
-    Raises ValueError for unknown detectors or actions; the HTTP layer
-    converts those into a 422 response.
+    Raises ValueError for a missing/empty ``on`` or an unknown action; the
+    HTTP layer converts those into a 422 response.
     """
     if raw is None:
         return DefensePolicy()
@@ -73,8 +117,8 @@ def parse_policy(raw: dict | None) -> DefensePolicy:
     rules: list[PolicyRule] = []
     for item in raw.get("rules", []) or []:
         on_raw = item.get("on")
-        if on_raw not in _VALID_DETECTORS:
-            raise ValueError(f"invalid on {on_raw!r}; must be one of {sorted(_VALID_DETECTORS)}")
+        if not isinstance(on_raw, str) or not on_raw:
+            raise ValueError(f"invalid on {on_raw!r}; must be a non-empty string")
         action_raw = item.get("action")
         if action_raw not in _VALID_ACTIONS:
             raise ValueError(f"invalid action {action_raw!r}; must be one of {sorted(_VALID_ACTIONS)}")
@@ -166,16 +210,42 @@ _COMPILED_REDACTIONS: list[tuple[str, re.Pattern]] = [
 def apply_redaction(content: str) -> RedactionResult:
     """Scrub known secret/PII patterns from content with [REDACTED:type] markers.
 
-    Returns the (possibly unchanged) content alongside the list of pattern
-    labels that matched (empty when nothing matched).
+    Returns the (possibly unchanged) content alongside:
+      - ``matched_types``: pattern labels that matched (deduplicated, in
+        first-occurrence order). Empty when nothing matched.
+      - ``hits``: per-match fingerprinted previews — one entry per matched
+        substring (so two GitHub tokens in the same content produce two
+        entries). Each entry is ``{"detector": label, "preview": fingerprint}``
+        where ``preview`` is a length-aware redaction of the original value.
+        The raw secret never appears in ``hits``.
+
+    The two-pass shape (find matches first, then substitute) lets us capture
+    raw values for fingerprinting before they're replaced by ``[REDACTED:type]``
+    markers. A single-pass approach would lose the originals.
     """
     matched: list[str] = []
+    hits: list[dict] = []
     for label, pattern in _COMPILED_REDACTIONS:
-        new_content = pattern.sub(f"[REDACTED:{label}]", content)
-        if new_content != content:
+        raw_hits = pattern.findall(content)
+        if not raw_hits:
+            continue
+        if label not in matched:
             matched.append(label)
-            content = new_content
-    return RedactionResult(content=content, matched_types=matched)
+        for raw in raw_hits:
+            # findall returns either a string or a tuple of capture groups
+            # depending on the pattern. The redaction-pattern catalog uses a
+            # mix; coerce to the matched substring as best we can.
+            if isinstance(raw, tuple):
+                # Pick the longest non-empty group as the canonical match.
+                non_empty = [g for g in raw if g]
+                raw_str = max(non_empty, key=len) if non_empty else ""
+            else:
+                raw_str = raw
+            if not raw_str:
+                continue
+            hits.append({"detector": label, "preview": _fingerprint_value(raw_str)})
+        content = pattern.sub(f"[REDACTED:{label}]", content)
+    return RedactionResult(content=content, matched_types=matched, hits=hits)
 
 
 class MemoryDefenseExtension(Extension, ABC):

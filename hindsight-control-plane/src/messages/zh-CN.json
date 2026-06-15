@@ -52,11 +52,20 @@
       "empty": "还没有记忆库。",
       "create": "创建新记忆库",
       "switchTitle": "切换记忆库",
-      "returnTo": "返回 {bank}"
+      "returnTo": "返回 {bank}",
+      "copyName": "复制名称",
+      "copied": "已复制到剪贴板"
     },
     "viewOnGitHub": "在 GitHub 查看"
   },
   "bank": {
+    "dryRunExtraction": "试运行提取",
+    "dryRunExtractionDescription": "预览此记忆库的当前配置（保留任务、提取模式、分块大小）会从文本中提取出什么——不会写入，不存储任何内容。",
+    "dryRunExtractionTextLabel": "文本",
+    "dryRunExtractionPlaceholder": "粘贴文档或文本块以提取事实……",
+    "dryRunExtractionResponseLabel": "响应",
+    "dryRunExtractionEmptyState": "运行提取以查看 JSON 响应。",
+    "dryRunExtractionRun": "提取（试运行）",
     "bankConfiguration": "记忆库配置",
     "bankConfigurationDescription": "管理记忆库设置、配置文件和后台操作。",
     "actions": "操作",
@@ -315,6 +324,8 @@
     "retainFailedToSave": "无法保存保留设置",
     "chunkSizeLabel": "分块大小",
     "chunkSizeDescription": "处理的文本分块大小（字符数）",
+    "structuredChunkSizeLabel": "结构化分块大小",
+    "structuredChunkSizeDescription": "单条 JSONL 行或对话轮次保持完整的最大字符数。留空则使用分块大小。",
     "missionLabel": "使命",
     "retainMissionDescription": "此库在提取期间应关注的内容。在不替换提取规则的情况下引导 LLM — 与任何提取模式配合使用。",
     "retainMissionPlaceholder": "例如：始终包含技术决策、API 设计选择和架构权衡。忽略会议事务、问候语和社交交流。",
@@ -422,7 +433,16 @@
     "memoryDefenseAction_redact": "脱敏",
     "memoryDefenseAction_block": "拦截",
     "memoryDefenseSecretLeakTitle": "密钥泄露防护",
-    "memoryDefenseSecretLeakDescription": "扫描保留内容中的密钥。44 种模式,涵盖常见提供商密钥、AWS 和个人信息。"
+    "memoryDefenseSecretLeakDescription": "扫描保留内容中的密钥。44 种模式,涵盖常见提供商密钥、AWS 和个人信息。",
+    "memoryDefenseEnterpriseTitle": "Memory Defense Enterprise",
+    "memoryDefenseEnterpriseSubtitle": "检测更多、智能编辑、全面审计 — Hindsight Cloud 中提供。",
+    "memoryDefenseEnterpriseFeatureDetectSecrets": "高级密钥检测:200+ 模式,涵盖提供商密钥、AWS、GitHub 和 CI 令牌",
+    "memoryDefenseEnterpriseFeatureBase64": "Base64 解码:捕获编码负载中隐藏的密钥",
+    "memoryDefenseEnterpriseFeatureLlm": "LLM 筛查:捕获正则表达式无法识别的新型外泄模式",
+    "memoryDefenseEnterpriseFeaturePromptInjection": "提示词注入检测:阻止覆盖代理行为的尝试",
+    "memoryDefenseEnterpriseFeatureSizeAnomaly": "大小异常:拒绝可疑的过大负载",
+    "memoryDefenseEnterpriseFeatureProtectedKeys": "受保护的标签命名空间:强制使用不可变的身份标签",
+    "memoryDefenseEnterpriseCta": "申请演示"
   },
   "bankOperations": {
     "title": "后台操作",

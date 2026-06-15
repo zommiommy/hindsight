@@ -52,11 +52,20 @@
       "empty": "還沒有記憶庫。",
       "create": "建立新記憶庫",
       "switchTitle": "切換記憶庫",
-      "returnTo": "返回 {bank}"
+      "returnTo": "返回 {bank}",
+      "copyName": "複製名稱",
+      "copied": "已複製到剪貼簿"
     },
     "viewOnGitHub": "在 GitHub 上檢視"
   },
   "bank": {
+    "dryRunExtraction": "試執行擷取",
+    "dryRunExtractionDescription": "預覽此記憶庫目前的設定（保留任務、擷取模式、分塊大小）會從文字中擷取出什麼——不會寫入，不儲存任何內容。",
+    "dryRunExtractionTextLabel": "文字",
+    "dryRunExtractionPlaceholder": "貼上文件或文字區塊以擷取事實……",
+    "dryRunExtractionResponseLabel": "回應",
+    "dryRunExtractionEmptyState": "執行擷取以查看 JSON 回應。",
+    "dryRunExtractionRun": "擷取（試執行）",
     "bankConfiguration": "記憶庫設定",
     "bankConfigurationDescription": "管理記憶庫設定、設定檔和背景作業。",
     "actions": "操作",
@@ -315,6 +324,8 @@
     "retainFailedToSave": "無法儲存保留設定",
     "chunkSizeLabel": "片段大小",
     "chunkSizeDescription": "處理的文字片段大小（字元數）",
+    "structuredChunkSizeLabel": "結構化片段大小",
+    "structuredChunkSizeDescription": "單條 JSONL 行或對話輪次保持完整的最大字元數。留空則使用片段大小。",
     "missionLabel": "使命",
     "retainMissionDescription": "此記憶庫在擷取期間應關注的內容。在不取代擷取規則的情況下引導 LLM — 可與任何擷取模式搭配使用。",
     "retainMissionPlaceholder": "例如：始終包含技術決策、API 設計選擇和架構權衡。忽略會議事務、問候語和社交交流。",
@@ -422,7 +433,16 @@
     "memoryDefenseAction_redact": "去敏",
     "memoryDefenseAction_block": "阻擋",
     "memoryDefenseSecretLeakTitle": "密鑰外洩防護",
-    "memoryDefenseSecretLeakDescription": "掃描保留內容中的密鑰。44 種模式涵蓋常見供應商金鑰、AWS 與個人資訊。"
+    "memoryDefenseSecretLeakDescription": "掃描保留內容中的密鑰。44 種模式涵蓋常見供應商金鑰、AWS 與個人資訊。",
+    "memoryDefenseEnterpriseTitle": "Memory Defense Enterprise",
+    "memoryDefenseEnterpriseSubtitle": "偵測更多、智能編輯、全面稽核 — Hindsight Cloud 提供。",
+    "memoryDefenseEnterpriseFeatureDetectSecrets": "進階密鑰偵測:200+ 種樣式,涵蓋供應商金鑰、AWS、GitHub 與 CI 權杖",
+    "memoryDefenseEnterpriseFeatureBase64": "Base64 解碼:擷取編碼負載中隱藏的密鑰",
+    "memoryDefenseEnterpriseFeatureLlm": "LLM 篩查:擷取正則表達式無法識別的新型外洩模式",
+    "memoryDefenseEnterpriseFeaturePromptInjection": "提示詞注入偵測:阻止覆寫代理行為的嘗試",
+    "memoryDefenseEnterpriseFeatureSizeAnomaly": "大小異常:拒絕可疑的過大負載",
+    "memoryDefenseEnterpriseFeatureProtectedKeys": "受保護的標籤命名空間:強制使用不可變的身份標籤",
+    "memoryDefenseEnterpriseCta": "申請示範"
   },
   "bankOperations": {
     "title": "背景作業",

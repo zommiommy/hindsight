@@ -52,11 +52,20 @@
       "empty": "Noch keine Speicherbänke vorhanden.",
       "create": "Neue Bank erstellen",
       "switchTitle": "Speicherbank wechseln",
-      "returnTo": "Zurück zu {bank}"
+      "returnTo": "Zurück zu {bank}",
+      "copyName": "Name kopieren",
+      "copied": "In Zwischenablage kopiert"
     },
     "viewOnGitHub": "Auf GitHub ansehen"
   },
   "bank": {
+    "dryRunExtraction": "Probelauf-Extraktion",
+    "dryRunExtractionDescription": "Vorschau, was die aktuelle Konfiguration dieses Speichers (Retain-Mission, Extraktionsmodus, Chunk-Größe) aus dem Text extrahiert – ohne Aufnahme, es wird nichts gespeichert.",
+    "dryRunExtractionTextLabel": "Text",
+    "dryRunExtractionPlaceholder": "Fügen Sie ein Dokument oder einen Abschnitt ein, um Fakten zu extrahieren…",
+    "dryRunExtractionResponseLabel": "Antwort",
+    "dryRunExtractionEmptyState": "Führen Sie die Extraktion aus, um die JSON-Antwort zu sehen.",
+    "dryRunExtractionRun": "Extrahieren (Probelauf)",
     "bankConfiguration": "Bankkonfiguration",
     "bankConfigurationDescription": "Verwalten Sie Bankeinstellungen, Profil und Operationen.",
     "actions": "Aktionen",
@@ -315,6 +324,8 @@
     "retainFailedToSave": "Retain-Einstellungen konnten nicht gespeichert werden",
     "chunkSizeLabel": "Chunk-Größe",
     "chunkSizeDescription": "Größe der Textblöcke für die Verarbeitung (Zeichen)",
+    "structuredChunkSizeLabel": "Strukturierte Chunk-Größe",
+    "structuredChunkSizeDescription": "Maximale Zeichenanzahl für eine JSONL-Zeile oder Konversationsrunde, die vollständig beibehalten wird. Leer lassen, um die Chunk-Größe zu verwenden.",
     "missionLabel": "Mission",
     "retainMissionDescription": "Worauf diese Bank während der Extraktion achten soll. Steuert das LLM, ohne die Extraktionsregeln zu ersetzen — funktioniert zusammen mit jedem Extraktionsmodus.",
     "retainMissionPlaceholder": "z. B. Technische Entscheidungen, API-Designentscheidungen und architektonische Kompromisse immer einbeziehen. Meeting-Logistik, Begrüßungen und soziale Austausche ignorieren.",
@@ -422,7 +433,16 @@
     "memoryDefenseAction_redact": "Schwärzen",
     "memoryDefenseAction_block": "Blockieren",
     "memoryDefenseSecretLeakTitle": "Geheimnislecks verhindern",
-    "memoryDefenseSecretLeakDescription": "Gespeicherte Inhalte auf Geheimnisse prüfen. 44 Muster für gängige Anbieter-Schlüssel, AWS und persönliche Daten."
+    "memoryDefenseSecretLeakDescription": "Gespeicherte Inhalte auf Geheimnisse prüfen. 44 Muster für gängige Anbieter-Schlüssel, AWS und persönliche Daten.",
+    "memoryDefenseEnterpriseTitle": "Memory Defense Enterprise",
+    "memoryDefenseEnterpriseSubtitle": "Mehr erkennen, intelligenter redigieren, alles auditieren — verfügbar in Hindsight Cloud.",
+    "memoryDefenseEnterpriseFeatureDetectSecrets": "Erweiterte Geheimnis-Erkennung: 200+ Muster für Anbieter-Schlüssel, AWS, GitHub und CI-Token",
+    "memoryDefenseEnterpriseFeatureBase64": "Base64-Decodierung: erkennt Geheimnisse in codierten Nutzlasten",
+    "memoryDefenseEnterpriseFeatureLlm": "LLM-Screening: erkennt neuartige Exfiltrationsmuster, die Regex nicht erfasst",
+    "memoryDefenseEnterpriseFeaturePromptInjection": "Prompt-Injection-Erkennung: blockiert Versuche, das Verhalten des Agenten zu überschreiben",
+    "memoryDefenseEnterpriseFeatureSizeAnomaly": "Größenanomalie: lehnt verdächtig große Nutzlasten ab",
+    "memoryDefenseEnterpriseFeatureProtectedKeys": "Geschützte Tag-Namespaces: erzwingt unveränderliche Identitäts-Tags",
+    "memoryDefenseEnterpriseCta": "Demo anfragen"
   },
   "bankOperations": {
     "title": "Hintergrundoperationen",
